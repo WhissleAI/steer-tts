@@ -45,7 +45,9 @@ or `cc app.c $(pkg-config --cflags --libs steertts)`, or vendor the directory wi
 
 [`c/examples/`](../c/examples): `simple.c` (one sentence to a WAV), `stream.c` (sentence streaming to raw PCM, play
 it with `| aplay -f S16_LE -r 24000 -c 1`), `json_request.c` (full JSON requests, voice / tag listing, prompt
-resolution, error handling). They build with the library (`build/example_*`).
+resolution, error handling), `speak.c` (a long-running app: the model loaded once, every typed line played through
+the speakers as it renders, voice switching, errors reported without leaving the loop; POSIX). They build with the
+library (`build/example_*`).
 
 ### Python binding
 
@@ -105,16 +107,38 @@ export STEERTTS_MODEL=$PWD/steer-tts            # or --model DIR
 steertts "I can't believe it worked." --tag happiness --ctrl rate=1,f0_iqr=1.5 -o happy.wav
 steertts "Well, *that* was fast. [pause 400ms] <slow>Let me think.</slow>" --markup -o markup.wav
 steertts "First sentence. Second one." --stream -o - | aplay -f S16_LE -r 24000 -c 1   # plays as it renders
+steertts "First sentence. Second one." --stream --play                                # the same, player found for you
+steertts -i --voice voice_0372      # interactive: loads once, speaks each line you type (/help for commands)
 steertts "See you soon." --prompt "excited, a bit faster" -o prompt.wav               # v1
 steertts "Now in your voice." --ref-wav consenting_speaker.wav -o clone.wav            # v1
 steertts --json '{"text": "Are you serious?", "ctrl": {"f0_end": 2}, "guidance": 1.5}' -o q.wav
 steertts --json '{"text": "Hi.", "prompt": "soft and sad"}' --resolve                 # the request it maps to
 steertts --list voices | tags | controls
+steertts --list voices --gender male            # 96 male / 104 female voices in edge (voices.json "gender")
+steertts "Good morning." --voice male --play     # female / male: that gender's default voice
 steertts --bench --threads 1                    # real-time factor, latency, peak memory on this machine
 ```
 
 Other flags: `--voice`, `--pace`, `--guidance`, `--word-shift 3:pitch=2,dur=1.3`, `--seed`, `--no-flow`,
 `--flow-steps`, `--precision fp32|int8`, `--threads N` (0 = all cores), `--assets DIR`.
+
+Voices: `--voice` takes a voice name or `female` / `male`. The female default is the model's default voice
+(`voice_1688`); the male one is `config.json` `"default_voices": {"male": ...}` when the model names one, else
+`voice_2500`: of the mid-pitch, average-pace male voices it scored best (every word right under Whisper on hard
+sentences with numbers and names, heard as male with p = 0.999 by a gender classifier). In C: `steertts_voice_gender(e, i)` and
+`steertts_gender_voice(e, "male")`.
+
+Playback: `--play` sends the audio to the speakers instead of `out.wav` (with `-o FILE` it does both); it implies
+`--stream`, so markup is parsed and playback starts after the first sentence. `-i` keeps the
+model loaded and speaks every line read from stdin, with inline markup and sentence streaming, until Ctrl-D or
+`/quit`; `/voice NAME`, `/tag TAG`, `/ctrl k=z,...` change the request for the following lines, and `/voices`, `/tags`,
+`/controls` list what the model has. With `-o -` it writes the raw PCM to stdout instead of playing. The player is
+`$STEERTTS_PLAYER` (any command that reads raw 16-bit 24 kHz mono PCM on stdin), else the first of `play` (sox),
+`aplay`, `paplay`, `ffplay` on `PATH`; on a stock macOS without them each utterance is played with `afplay`.
+Players hold back a partial buffer until more input arrives (sox: 340 ms by default), so `-i` follows every line
+with 400 ms of silence; otherwise a line's last word would play only with the next line. On
+Windows set `STEERTTS_PLAYER`, for example to the `ffplay` line: `ffplay -loglevel error -nodisp -autoexit -f s16le
+-ar 24000 -i -`.
 
 ## C API
 

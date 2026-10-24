@@ -20,7 +20,7 @@ else
 endif
 
 all: $(OUT)/libsteertts.a $(SHARED) $(OUT)/steertts $(OUT)/example_simple $(OUT)/example_stream \
-     $(OUT)/example_json_request
+     $(OUT)/example_json_request $(OUT)/example_speak
 
 $(OUT)/obj/%.o: %.c
 	@mkdir -p $(dir $@)

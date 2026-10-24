@@ -77,6 +77,22 @@ int main(void) {
   CHECK(steertts_resolve_json(e, "{\"text\": \"x\"}", NULL, err, sizeof err) != 0, "NULL resolve output");
   CHECK(steertts_has(e, NULL) == 0 && steertts_model_type(NULL) == NULL && steertts_num_voices(NULL) == 0,
         "NULL-tolerant getters");
+  /* per-gender defaults: each names a voice of that gender; the default voice is the female one when it is female */
+  for (int gi = 0; gi < 2; ++gi) {
+    const char* g = gi ? "male" : "female";
+    const char* v = steertts_gender_voice(e, g);
+    int k = -1;
+    for (int i = 0; v && i < steertts_num_voices(e); ++i)
+      if (!strcmp(steertts_voice(e, i), v)) k = i;
+    CHECK(k >= 0 && !strcmp(steertts_voice_gender(e, k), g), "gender default voice has that gender");
+  }
+  for (int i = 0; i < steertts_num_voices(e); ++i)
+    if (!strcmp(steertts_voice(e, i), steertts_default_voice(e)) && steertts_voice_gender(e, i) &&
+        !strcmp(steertts_voice_gender(e, i), "female"))
+      CHECK(!strcmp(steertts_gender_voice(e, "female"), steertts_default_voice(e)), "female default = default voice");
+  CHECK(steertts_gender_voice(e, "other") == NULL && steertts_gender_voice(NULL, "male") == NULL &&
+            steertts_voice_gender(e, -1) == NULL && steertts_voice_gender(e, steertts_num_voices(e)) == NULL,
+        "gender getters reject bad input");
   CHECK(steertts_synthesize(e, "x", NULL, &y, &n, NULL, 0) == 0, "err == NULL is allowed");
   steertts_free(y);
 

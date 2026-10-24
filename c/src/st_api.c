@@ -240,6 +240,8 @@ struct steertts_engine {
   int voice_dim;
   st_weights* w_voices;
   char* default_voice;
+  char* voice_gender;        /* per voice: 'f', 'm' or 0 (voices.json "gender") */
+  int gender_default[2];     /* default voice per gender (female, male), -1 = none */
   int n_tags;
   char** tags;
   /* models */
@@ -320,6 +322,45 @@ static int find_str(char* const* l, int n, const char* s) {
   for (int i = 0; i < n; ++i)
     if (!strcmp(l[i], s)) return i;
   return -1;
+}
+
+/* Fallback default voices per gender when config.json has no "default_voices": female = the models' default voice;
+ * male = voice_2500, the best of the mid-pitch, average-pace male voices in an evaluation of the edge build (no word
+ * errors under Whisper on hard sentences, heard as male with p = 0.999 by audeering's age/gender model). */
+static const char* const gender_picks[2] = {"voice_1688", "voice_2500"};
+
+/* voices.json "gender" for each voice (optional: without it the per-gender calls return NULL), then the default voice
+ * of each gender: config.json "default_voices", else default_voice when it has that gender, else the pick above, else
+ * the first voice of that gender. */
+static int load_genders(steertts_engine* e) {
+  e->gender_default[0] = e->gender_default[1] = -1;
+  e->voice_gender = (char*)st_calloc((size_t)e->n_voices + 1);
+  if (!e->voice_gender) return -1;
+  char* p = path_join(e->dir, "voices.json");
+  st_json* vj = p && file_exists(p) ? load_json_file(p) : NULL;
+  st_free(p);
+  const st_json* vl = st_json_get(vj, "voices");
+  for (int i = 0; vl && vl->type == ST_JARR && i < vl->n; ++i) {
+    const char* g = st_json_str(st_json_get(&vl->items[i], "gender"), "");
+    const char* name = st_json_str(st_json_get(&vl->items[i], "name"), "");
+    /* edge: voices.json is the voice table, same order; v1: matched by name against voices_order */
+    int k = i < e->n_voices && !strcmp(e->voices[i], name) ? i : find_str(e->voices, e->n_voices, name);
+    if (k >= 0) e->voice_gender[k] = !strcmp(g, "female") ? 'f' : !strcmp(g, "male") ? 'm' : 0;
+  }
+  st_json_free(vj);
+  static const char* const keys[2] = {"female", "male"};
+  const st_json* dv = st_json_get(e->cfg_json, "default_voices");
+  for (int gi = 0; gi < 2; ++gi) {
+    char want = keys[gi][0];
+    const char* cand[3] = {st_json_str(st_json_get(dv, keys[gi]), NULL), e->default_voice, gender_picks[gi]};
+    for (int c = 0; c < 3 && e->gender_default[gi] < 0; ++c) {
+      int k = cand[c] ? find_str(e->voices, e->n_voices, cand[c]) : -1;
+      if (k >= 0 && e->voice_gender[k] == want) e->gender_default[gi] = k;
+    }
+    for (int k = 0; k < e->n_voices && e->gender_default[gi] < 0; ++k)
+      if (e->voice_gender[k] == want) e->gender_default[gi] = k;
+  }
+  return 0;
 }
 
 void steertts_default_config(steertts_config* c) {
@@ -507,6 +548,7 @@ steertts_engine* steertts_create_ex(const char* model_dir, const steertts_config
     st_seterr("default voice %s is not in the voice table", e->default_voice);
     goto fail;
   }
+  if (load_genders(e)) goto fail;
   return e;
 fail:
   copy_err(err, err_len);
@@ -544,6 +586,7 @@ void steertts_destroy(steertts_engine* e) {
   free_list(e->tags, e->n_tags);
   free_list(e->ptags, e->n_ptags);
   st_free(e->default_voice);
+  st_free(e->voice_gender);
   st_free(e->dir);
   st_free(e->assets);
   st_free(e->precision);
@@ -556,6 +599,14 @@ const char* steertts_model_type(const steertts_engine* e) { return !e ? NULL : e
 int steertts_num_voices(const steertts_engine* e) { return e ? e->n_voices : 0; }
 const char* steertts_voice(const steertts_engine* e, int i) { return e && i >= 0 && i < e->n_voices ? e->voices[i] : NULL; }
 const char* steertts_default_voice(const steertts_engine* e) { return e ? e->default_voice : NULL; }
+const char* steertts_voice_gender(const steertts_engine* e, int i) {
+  if (!e || i < 0 || i >= e->n_voices || !e->voice_gender) return NULL;
+  return e->voice_gender[i] == 'f' ? "female" : e->voice_gender[i] == 'm' ? "male" : NULL;
+}
+const char* steertts_gender_voice(const steertts_engine* e, const char* gender) {
+  int gi = !gender ? -1 : !strcmp(gender, "female") ? 0 : !strcmp(gender, "male") ? 1 : -1;
+  return e && gi >= 0 && e->gender_default[gi] >= 0 ? e->voices[e->gender_default[gi]] : NULL;
+}
 int steertts_num_tags(const steertts_engine* e) { return e ? e->n_tags : 0; }
 const char* steertts_tag(const steertts_engine* e, int i) { return e && i >= 0 && i < e->n_tags ? e->tags[i] : NULL; }
 int steertts_num_controls(void) { return N_CTRL; }

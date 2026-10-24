@@ -77,7 +77,11 @@ if(STEERTTS_BUILD_CLI)
 endif()
 
 if(STEERTTS_BUILD_EXAMPLES)
-  foreach(ex simple stream json_request)
+  set(ST_EXAMPLES simple stream json_request)
+  if(NOT WIN32)
+    list(APPEND ST_EXAMPLES speak)   # popen
+  endif()
+  foreach(ex ${ST_EXAMPLES})
     add_executable(example_${ex} examples/${ex}.c)
     target_link_libraries(example_${ex} steertts::steertts $<$<NOT:$<PLATFORM_ID:Windows>>:m>)
   endforeach()

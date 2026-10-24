@@ -9,6 +9,8 @@ cmake -B build && cmake --build build -j          # or: make
 hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
     --include config.json --include "*.safetensors" --include voices.json --include "native/*"
 ./build/steertts --model models/steer-tts-edge "Hello from C." -o hello.wav
+./build/steertts --model models/steer-tts-edge "Hello from C." --play     # to the speakers (sox, aplay, ...)
+./build/steertts --model models/steer-tts-edge -i                         # keep it loaded, type lines to speak
 ```
 
 ```c

@@ -83,6 +83,11 @@ STEERTTS_API const char* steertts_model_type(const steertts_engine* e);   /* "st
 STEERTTS_API int steertts_num_voices(const steertts_engine* e);
 STEERTTS_API const char* steertts_voice(const steertts_engine* e, int i);   /* NULL if out of range */
 STEERTTS_API const char* steertts_default_voice(const steertts_engine* e);
+/* "female", "male" or NULL (unknown) for voice i, from the model's voices.json. */
+STEERTTS_API const char* steertts_voice_gender(const steertts_engine* e, int i);
+/* The default voice of a gender ("female" / "male"): config.json "default_voices", else the default voice if it has
+ * that gender, else an evaluated pick; NULL if the model has no voice of that gender (or no gender metadata). */
+STEERTTS_API const char* steertts_gender_voice(const steertts_engine* e, const char* gender);
 STEERTTS_API int steertts_num_tags(const steertts_engine* e);
 STEERTTS_API const char* steertts_tag(const steertts_engine* e, int i);
 STEERTTS_API int steertts_num_controls(void);                                /* 12 */

@@ -7,14 +7,33 @@
  *   steertts "See you soon." --prompt "excited, a bit faster" -o s.wav           (v1)
  *   steertts "Now in your voice." --ref-wav me.wav -o clone.wav                   (v1)
  *   steertts --json '{"text": "Hi.", "ctrl": {"f0_end": 2}}' -o hi.wav
- *   steertts --list voices | tags | controls
+ *   steertts "Hello there. How are you today?" --play                                 (to the speakers)
+ *   steertts -i --voice NAME            (interactive: the model stays loaded, one line = one utterance, played)
+ *   steertts "Good morning." --voice male --play                     (--voice female / male: that gender's default)
+ *   steertts --list voices [--gender female|male] | tags | controls
  *   steertts --bench [--bench-json]
  *
- * The model directory is --model, else $STEERTTS_MODEL, else $STEERTTS_EDGE_MODEL, else the current directory. */
+ * The model directory is --model, else $STEERTTS_MODEL, else $STEERTTS_EDGE_MODEL, else the current directory.
+ * Playback (--play, -i) pipes raw 16-bit PCM into $STEERTTS_PLAYER, else the first of play (sox), aplay, paplay,
+ * ffplay found on PATH; on macOS without any of them each utterance is played with afplay from a temporary WAV. */
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L   /* popen, mkstemp, access */
+#endif
 #include <math.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <io.h>
+#define popen _popen
+#define pclose _pclose
+#define isatty _isatty
+#define fileno _fileno
+#else
+#include <unistd.h>
+#endif
 
 #include "steertts.h"
 
@@ -23,12 +42,18 @@ static const char* usage =
     "                [--rate Z] [--pace X] [--guidance S] [--markup] [--stream] [--threads N]\n"
     "                [--prompt TEXT] [--ref-wav WAV] [--word-shift W:key=v,...;...] [--seed N] [--no-flow]\n"
     "                [--flow-steps N] [--precision fp32|int8] [--assets DIR] [--json REQUEST] [--resolve]\n"
-    "                [--list voices|tags|controls] [--bench] [--bench-json] [--version]\n"
+    "                [--play] [-i] [--list voices|tags|controls] [--gender female|male] [--bench] [--bench-json]\n"
+    "                [--version]\n"
     "\n"
     "  TEXT           text to speak ('-' reads stdin)\n"
     "  -o OUT         output WAV (16-bit, 24 kHz; default out.wav). '-' writes raw 16-bit PCM to stdout\n"
+    "  --voice V      a voice name, or female / male for that gender's default voice\n"
+    "  --gender G     with --list voices: only the female or male voices\n"
     "  --markup       parse inline markup (*emphasis*, [pause 300ms], <slow>, <whisper> ...)\n"
     "  --stream       render sentence by sentence (implies markup), writing each chunk as soon as it is ready\n"
+    "  --play         play through the speakers instead of writing out.wav (with -o FILE: both); implies --stream\n"
+    "  -i             interactive: load once, then speak each line read from stdin (implies --stream; plays unless\n"
+    "                 -o -). Lines starting with / are commands: /voice NAME, /tag TAG, /ctrl k=z,..., /voices, /help\n"
     "  --guidance S   style guidance scale (1.0 = off)\n"
     "  --pace X       global duration divisor (1.2 = 20% faster)\n"
     "  --threads N    worker threads (default 1, 0 = all CPUs)\n"
@@ -53,7 +78,8 @@ static double num_arg(const char* flag, const char* v) {
   return x;
 }
 
-static void write_pcm(const float* y, size_t n) {
+/* 0 on success, -1 when the reader went away (a closed pipe or player) */
+static int write_pcm(FILE* f, const float* y, size_t n) {
   short buf[4096];
   for (size_t i = 0; i < n;) {
     size_t k = 0;
@@ -61,9 +87,100 @@ static void write_pcm(const float* y, size_t n) {
       float v = y[i] < -1.f ? -1.f : y[i] > 1.f ? 1.f : y[i];
       buf[k] = (short)lrintf(v * 32767.0f);
     }
-    fwrite(buf, 2, k, stdout);
+    if (fwrite(buf, 2, k, f) != k) return -1;
   }
-  fflush(stdout);
+  return fflush(f) ? -1 : 0;
+}
+
+/* ------------------------------------------------------------------ playback */
+typedef struct {
+  FILE* pipe;        /* a player reading raw s16le 24 kHz mono from stdin, or */
+  const char* file;  /* a player taking a WAV path (macOS afplay): the audio is collected and played per utterance */
+} player;
+
+#ifndef _WIN32
+static int on_path(const char* exe) {
+  const char* p = getenv("PATH");
+  char buf[1024];
+  while (p && *p) {
+    size_t k = strcspn(p, ":");
+    if (k && k + strlen(exe) + 2 < sizeof buf) {
+      snprintf(buf, sizeof buf, "%.*s/%s", (int)k, p, exe);
+      if (access(buf, X_OK) == 0) return 1;
+    }
+    p += k + (p[k] == ':');
+  }
+  return 0;
+}
+#endif
+
+static int player_open(player* pl) {
+  static const char* const cmds[][2] = {
+      {"play", "play -q --buffer 1024 -t raw -r 24000 -e signed -b 16 -c 1 -"},   /* small buffer: low latency */
+      {"aplay", "aplay -q -t raw -f S16_LE -r 24000 -c 1"},
+      {"paplay", "paplay --raw --format=s16le --rate=24000 --channels=1"},
+      {"ffplay", "ffplay -loglevel error -nodisp -autoexit -f s16le -ar 24000 -i -"}};
+  const char* cmd = getenv("STEERTTS_PLAYER");
+  pl->pipe = NULL;
+  pl->file = NULL;
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);   /* a player that quits is a write error, not a crash */
+  for (size_t i = 0; !(cmd && *cmd) && i < sizeof cmds / sizeof cmds[0]; ++i)
+    if (on_path(cmds[i][0])) cmd = cmds[i][1];
+  if (!(cmd && *cmd) && on_path("afplay")) {
+    pl->file = "afplay";
+    return 0;
+  }
+#endif
+  if (!(cmd && *cmd)) {
+    fprintf(stderr, "steertts: no audio player found: install sox (play) or alsa-utils (aplay), or set "
+                    "STEERTTS_PLAYER to a command that reads raw 16-bit 24 kHz mono PCM from stdin\n");
+    return -1;
+  }
+#ifdef _WIN32
+  pl->pipe = popen(cmd, "wb");
+#else
+  pl->pipe = popen(cmd, "w");
+#endif
+  if (!pl->pipe) {
+    fprintf(stderr, "steertts: cannot start the player: %s\n", cmd);
+    return -1;
+  }
+  return 0;
+}
+
+/* Players hold back their last partial buffer until more input arrives (sox's default buffer is 340 ms): without
+ * this the end of each line would only play together with the next one. 400 ms of silence pushes it out. */
+static int player_flush_tail(FILE* f) {
+  static const float silence[STEERTTS_SAMPLE_RATE * 2 / 5];
+  return write_pcm(f, silence, sizeof silence / sizeof silence[0]);
+}
+
+/* file players: play one utterance's collected audio (returns once it has played) */
+static int player_play_file(const player* pl, const float* y, size_t n) {
+#ifdef _WIN32
+  (void)pl, (void)y, (void)n;
+  return -1;
+#else
+  const char* dir = getenv("TMPDIR");
+  char path[512], cmd[600];
+  snprintf(path, sizeof path, "%s/steertts-play-XXXXXX", dir && *dir ? dir : "/tmp");
+  int fd = mkstemp(path);
+  if (fd < 0) return -1;
+  close(fd);
+  int rc = steertts_save_wav(y, n, path);
+  if (!rc) {
+    snprintf(cmd, sizeof cmd, "%s '%s'", pl->file, path);
+    rc = system(cmd) ? -1 : 0;
+  }
+  remove(path);
+  return rc;
+#endif
+}
+
+static void player_close(player* pl) {
+  if (pl->pipe) pclose(pl->pipe);   /* returns once the queued audio has played */
+  pl->pipe = NULL;
 }
 
 /* Same sentences and probes as edge/tools/bench_speed.py and the native CLI, so numbers compare across runtimes. */
@@ -95,6 +212,7 @@ typedef struct {
   FILE* raw;
   float* y;
   size_t n, cap;
+  int closed;   /* the raw output went away */
 } sink;
 
 double now_ms(void);
@@ -111,7 +229,12 @@ static int collect(const float* a, size_t n, void* u) {
   sink* s = (sink*)u;
   if (s->first < 0) s->first = now_ms() - s->t0;
   if (s->raw) {
-    write_pcm(a, n);
+    if (write_pcm(s->raw, a, n)) {
+      fprintf(stderr, "steertts: the audio output was closed\n");
+      s->closed = 1;
+      return 1;
+    }
+    s->n += n;   /* counted only */
     return 0;
   }
   if (s->n + n > s->cap) {
@@ -163,7 +286,7 @@ static int bench(steertts_engine* e, const steertts_options* base, double load_s
     steertts_free(y);
   }
   for (int i = 0; i < 5; ++i) {
-    sink s = {now_ms(), -1, NULL, NULL, 0, 0};
+    sink s = {now_ms(), -1, NULL, NULL, 0, 0, 0};
     if (steertts_stream(e, "Hello, how are you? And a second sentence follows.", &o, first_only, &s, err, sizeof err)) {
       fprintf(stderr, "steertts: %s\n", err);
       return 2;
@@ -218,11 +341,165 @@ static char* read_stdin(void) {
   return s;
 }
 
+/* one line of stdin without its line ending (malloc'd), NULL at end of input */
+static char* read_line(void) {
+  size_t cap = 256, n = 0;
+  char* s = (char*)malloc(cap);
+  int c;
+  while (s && (c = getchar()) != EOF && c != '\n') {
+    if (n + 1 >= cap) {
+      char* t = (char*)realloc(s, cap *= 2);
+      if (!t) {
+        free(s);
+        return NULL;
+      }
+      s = t;
+    }
+    s[n++] = (char)c;
+  }
+  if (!s || (c == EOF && n == 0)) {
+    free(s);
+    return NULL;
+  }
+  while (n && (s[n - 1] == '\r' || s[n - 1] == ' ' || s[n - 1] == '\t')) --n;
+  s[n] = 0;
+  return s;
+}
+
+/* <whisper>, </slow>, [pause 300ms], *word*: text that is read aloud literally unless markup is on */
+static int looks_like_markup(const char* t) {
+  if (strstr(t, "[pause")) return 1;
+  for (const char* p = t; (p = strchr(p, '<')) != NULL; ++p) {
+    const char* q = p + 1 + (p[1] == '/');
+    if ((*q >= 'a' && *q <= 'z') && strchr(q, '>')) return 1;
+  }
+  const char* a = strchr(t, '*');
+  return a && a[1] && a[1] != ' ' && strchr(a + 1, '*');
+}
+
+/* --voice / /voice: a voice name, or "female" / "male" for that gender's default; NULL (message printed) if unknown */
+static const char* resolve_voice(const steertts_engine* e, const char* v) {
+  for (int i = 0; i < steertts_num_voices(e); ++i)
+    if (!strcmp(steertts_voice(e, i), v)) return v;
+  if (!strcmp(v, "female") || !strcmp(v, "male")) {
+    const char* g = steertts_gender_voice(e, v);
+    if (!g) fprintf(stderr, "steertts: this model has no %s voice (or no gender metadata)\n", v);
+    return g;
+  }
+  fprintf(stderr, "steertts: unknown voice '%s' (--list voices lists them; female / male pick a default)\n", v);
+  return NULL;
+}
+
+static void list_voices(const steertts_engine* e, const char* gender) {
+  for (int i = 0; i < steertts_num_voices(e); ++i) {
+    const char* g = steertts_voice_gender(e, i);
+    if (!gender || (g && !strcmp(g, gender))) printf("%s\n", steertts_voice(e, i));
+  }
+}
+
+static int has_name(const char* x, int count, const char* (*get)(const steertts_engine*, int), const steertts_engine* e) {
+  for (int i = 0; i < count; ++i)
+    if (!strcmp(get(e, i), x)) return 1;
+  return 0;
+}
+
+static const char* interactive_help =
+    "  TEXT           speak it (inline markup: *emphasis*, [pause 300ms], <slow>..</slow>, <whisper>..</whisper>)\n"
+    "  /voice NAME    switch voice (or female / male)   /voices [female|male]  list them\n"
+    "  /tag TAG       style tag (none)      /tags      list them\n"
+    "  /ctrl k=z,...  controls (none)       /controls  list them\n"
+    "  /quit          or Ctrl-D\n";
+
+/* -i: the engine stays loaded; each stdin line is streamed to raw (a player pipe or stdout) or, with a file player,
+ * collected and played. A failed line is reported and the loop goes on; a closed output ends it. */
+static int interactive(steertts_engine* e, steertts_options o, FILE* raw, const player* pl) {
+  char voice[128], tag[128], ctrl[512], err[1024];
+  int tty = isatty(fileno(stdin)), rc = 0;
+  if (tty)
+    fprintf(stderr, "%s, voice %s. Type a line to speak it; /voice male, /voices and /help, Ctrl-D quits.\n",
+            steertts_model_type(e), o.voice ? o.voice : steertts_default_voice(e));
+  for (;;) {
+    if (tty) fputs("> ", stderr);
+    char* line = read_line();
+    if (!line) break;
+    char* t = line;
+    while (*t == ' ' || *t == '\t') ++t;
+    if (!*t) {
+      free(line);
+      continue;
+    }
+    if (*t == '/') {
+      char* arg = t + strcspn(t, " \t");
+      if (*arg) *arg++ = 0;
+      while (*arg == ' ' || *arg == '\t') ++arg;
+      if (!strcmp(t, "/quit") || !strcmp(t, "/exit") || !strcmp(t, "/q")) {
+        free(line);
+        break;
+      } else if (!strcmp(t, "/voices")) {
+        const char* cur = o.voice ? o.voice : steertts_default_voice(e);
+        int col = 0;
+        for (int i = 0; i < steertts_num_voices(e); ++i) {
+          const char *v = steertts_voice(e, i), *g = steertts_voice_gender(e, i);
+          if (*arg && (!g || strcmp(g, arg))) continue;
+          if (col + (int)strlen(v) + 4 > 100) fputc('\n', stderr), col = 0;
+          col += fprintf(stderr, "%s%s %c", strcmp(v, cur) ? "  " : " *", v, g ? g[0] : ' ');
+        }
+        fprintf(stderr, "\n  (f = female, m = male; defaults: female %s, male %s)\n",
+                steertts_gender_voice(e, "female") ? steertts_gender_voice(e, "female") : "-",
+                steertts_gender_voice(e, "male") ? steertts_gender_voice(e, "male") : "-");
+      } else if (!strcmp(t, "/tags")) {
+        for (int i = 0; i < steertts_num_tags(e); ++i) fprintf(stderr, "%s%s", i ? ", " : "", steertts_tag(e, i));
+        fputc('\n', stderr);
+      } else if (!strcmp(t, "/controls")) {
+        for (int i = 0; i < steertts_num_controls(); ++i) fprintf(stderr, "%s%s", i ? ", " : "", steertts_control(i));
+        fputc('\n', stderr);
+      } else if (!strcmp(t, "/voice") && *arg) {
+        const char* v = resolve_voice(e, arg);
+        if (v) {
+          snprintf(voice, sizeof voice, "%s", v), o.voice = voice;
+          if (strcmp(v, arg)) fprintf(stderr, "  %s\n", v);
+        }
+      } else if (!strcmp(t, "/tag") && *arg) {
+        if (!strcmp(arg, "none"))
+          o.tag = NULL;
+        else if (!has_name(arg, steertts_num_tags(e), steertts_tag, e))
+          fprintf(stderr, "unknown tag '%s' (/tags lists them)\n", arg);
+        else
+          snprintf(tag, sizeof tag, "%s", arg), o.tag = tag;
+      } else if (!strcmp(t, "/ctrl")) {
+        if (!*arg || !strcmp(arg, "none"))
+          o.ctrl = NULL;
+        else
+          snprintf(ctrl, sizeof ctrl, "%s", arg), o.ctrl = ctrl;   /* checked when the next line renders */
+      } else
+        fputs(interactive_help, stderr);
+      free(line);
+      continue;
+    }
+    sink s = {now_ms(), -1, raw, NULL, 0, 0, 0};
+    int r = steertts_stream(e, t, &o, collect, &s, err, sizeof err);
+    free(line);
+    if (raw && raw != stdout && !s.closed && player_flush_tail(raw)) s.closed = 1;
+    if (r)
+      fprintf(stderr, "steertts: %s\n", err);
+    else if (!raw && player_play_file(pl, s.y, s.n))
+      fprintf(stderr, "steertts: %s could not play the audio\n", pl->file);
+    else if (tty && !s.closed && s.first >= 0)
+      fprintf(stderr, "  (%.2f s of audio, first chunk after %.0f ms)\n", (double)s.n / STEERTTS_SAMPLE_RATE, s.first);
+    free(s.y);
+    if (s.closed) {
+      rc = 2;
+      break;
+    }
+  }
+  return rc;
+}
+
 int main(int argc, char** argv) {
-  const char *text = NULL, *out = "out.wav", *model = NULL, *list = NULL, *json = NULL, *ctrl = NULL;
+  const char *text = NULL, *out = "out.wav", *model = NULL, *list = NULL, *json = NULL, *ctrl = NULL, *gender = NULL;
   char ctrl_buf[512];
   double rate = 0;
-  int have_rate = 0, stream = 0, do_bench = 0, bench_json = 0, resolve = 0;
+  int have_rate = 0, stream = 0, do_bench = 0, bench_json = 0, resolve = 0, play = 0, inter = 0, out_set = 0;
   steertts_config cfg;
   steertts_options o;
   steertts_default_config(&cfg);
@@ -236,7 +513,7 @@ int main(int argc, char** argv) {
     } else if (!strcmp(a, "--version")) {
       printf("steertts %s\n", steertts_version());
       return 0;
-    } else if (!strcmp(a, "-o") || !strcmp(a, "--out")) out = NEXT();
+    } else if (!strcmp(a, "-o") || !strcmp(a, "--out")) out = NEXT(), out_set = 1;
     else if (!strcmp(a, "--model")) model = NEXT();
     else if (!strcmp(a, "--voice")) o.voice = NEXT();
     else if (!strcmp(a, "--tag")) o.tag = NEXT();
@@ -252,6 +529,8 @@ int main(int argc, char** argv) {
     }
     else if (!strcmp(a, "--markup")) o.markup = 1;
     else if (!strcmp(a, "--stream")) stream = 1;
+    else if (!strcmp(a, "--play")) play = 1;
+    else if (!strcmp(a, "-i") || !strcmp(a, "--interactive")) inter = 1;
     else if (!strcmp(a, "--threads")) cfg.threads = (int)num_arg(a, NEXT());
     else if (!strcmp(a, "--prompt")) o.prompt = NEXT();
     else if (!strcmp(a, "--ref-wav")) o.ref_wav = NEXT();
@@ -264,6 +543,7 @@ int main(int argc, char** argv) {
     else if (!strcmp(a, "--json")) json = NEXT();
     else if (!strcmp(a, "--resolve")) resolve = 1;
     else if (!strcmp(a, "--list")) list = NEXT();
+    else if (!strcmp(a, "--gender")) gender = NEXT();
     else if (!strcmp(a, "--bench")) do_bench = 1;
     else if (!strcmp(a, "--bench-json")) do_bench = bench_json = 1;
     else if (a[0] == '-' && a[1]) {
@@ -281,6 +561,19 @@ int main(int argc, char** argv) {
     ctrl = ctrl_buf;
   }
   o.ctrl = ctrl;
+  int to_stdout = !strcmp(out, "-");
+  if (inter && (text || json)) {
+    fprintf(stderr, "steertts: -i reads its text from stdin: drop TEXT / --json\n");
+    return 2;
+  }
+  if (inter && out_set && !to_stdout) {
+    fprintf(stderr, "steertts: -i plays, or with -o - writes raw PCM to stdout; it does not write WAV files\n");
+    return 2;
+  }
+  if (play && to_stdout) {
+    fprintf(stderr, "steertts: --play and -o - both claim the audio; use one\n");
+    return 2;
+  }
   if (!model) model = getenv("STEERTTS_MODEL");
   if (!model) model = getenv("STEERTTS_EDGE_MODEL");
   if (!model) model = ".";
@@ -294,8 +587,11 @@ int main(int argc, char** argv) {
   double load = (now_ms() - t0) / 1000;
   int rc = 0;
   if (list) {
-    if (!strcmp(list, "voices"))
-      for (int i = 0; i < steertts_num_voices(e); ++i) printf("%s\n", steertts_voice(e, i));
+    if (!strcmp(list, "voices") && gender && strcmp(gender, "female") && strcmp(gender, "male")) {
+      fprintf(stderr, "steertts: --gender takes female or male\n");
+      rc = 2;
+    } else if (!strcmp(list, "voices"))
+      list_voices(e, gender);
     else if (!strcmp(list, "tags"))
       for (int i = 0; i < steertts_num_tags(e); ++i) printf("%s\n", steertts_tag(e, i));
     else if (!strcmp(list, "controls"))
@@ -309,6 +605,18 @@ int main(int argc, char** argv) {
   }
   if (do_bench) {
     rc = bench(e, &o, load, cfg.threads, bench_json);
+    steertts_destroy(e);
+    return rc;
+  }
+  if (o.voice && !(o.voice = resolve_voice(e, o.voice))) {
+    steertts_destroy(e);
+    return 2;
+  }
+  player pl = {NULL, NULL};
+  if (inter) {
+    if (!to_stdout && player_open(&pl)) rc = 2;
+    else rc = interactive(e, o, to_stdout ? stdout : pl.pipe, &pl);
+    player_close(&pl);
     steertts_destroy(e);
     return rc;
   }
@@ -337,7 +645,17 @@ int main(int argc, char** argv) {
     free(owned);
     return rc;
   }
-  sink s = {now_ms(), -1, !strcmp(out, "-") ? stdout : NULL, NULL, 0, 0};
+  int save = !play || out_set;   /* --play alone does not write out.wav */
+  if (play && !json) stream = 1;  /* play as it renders (and parse markup, as -i does) */
+  if (text && !json && !stream && !o.markup && looks_like_markup(text))
+    fprintf(stderr, "steertts: warning: the text looks like markup but is read as plain text; add --markup\n");
+  if (play && player_open(&pl)) {
+    steertts_destroy(e);
+    free(owned);
+    return 2;
+  }
+  /* --play without a file streams straight into a pipe player; otherwise the audio is collected first */
+  sink s = {now_ms(), -1, to_stdout ? stdout : (!save && pl.pipe) ? pl.pipe : NULL, NULL, 0, 0, 0};
   float* y = NULL;
   size_t n = 0;
   if (stream) {
@@ -356,11 +674,14 @@ int main(int argc, char** argv) {
     if (r) {
       fprintf(stderr, "steertts: %s\n", err);
       rc = 2;
-    } else if (s.raw)
-      write_pcm(y, n);
+    } else if (s.raw && write_pcm(s.raw, y, n)) {
+      fprintf(stderr, "steertts: the audio output was closed\n");
+      rc = 2;
+    }
   }
   double synth = (now_ms() - s.t0) / 1000;
-  if (rc == 0 && !s.raw) {
+  if (s.closed) rc = 2;
+  if (rc == 0 && !s.raw && save) {
     if (steertts_save_wav(y, n, out)) {
       fprintf(stderr, "steertts: cannot write %s\n", out);
       rc = 2;
@@ -372,6 +693,13 @@ int main(int argc, char** argv) {
       fprintf(stderr, ", peak RSS %.0f MB\n", st_peak_rss_kb() / 1024.0);
     }
   }
+  if (rc == 0 && play && !s.raw) {
+    if (pl.pipe ? write_pcm(pl.pipe, y, n) : player_play_file(&pl, y, n)) {
+      fprintf(stderr, "steertts: the player could not play the audio\n");
+      rc = 2;
+    }
+  }
+  player_close(&pl);
   if (stream) free(y);
   else steertts_free(y);
   free(owned);
