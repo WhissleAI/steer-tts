@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/@PC_UP@
+libdir=${pcfiledir}/..
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: steertts
+Description: SteerTTS text-to-speech (v1 and edge models), stand-alone C library
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lsteertts@PC_LIBS_EXTRA@
+Libs.private: -lm -lpthread
+Cflags: -I${includedir}

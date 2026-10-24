@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Model weights and model card
+    url: https://huggingface.co/WhissleAI/steer-tts
+    about: Weights, voices, evaluation numbers and the full model card live on Hugging Face.

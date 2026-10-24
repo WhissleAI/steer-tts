@@ -1,0 +1,84 @@
+# SteerTTS
+
+A tiny English text-to-speech model you steer with numbers: 12 speaker-relative controls (rate, loudness, pitch,
+pitch range, final rise/fall, tilt, breathiness …), 51 style tags, plain-text prompts and inline markup, all compiled
+into one inspectable request. The full model has 9.6M parameters; the edge build fits in 12 MB and runs on a
+Raspberry Pi-class CPU without Python. Both run from one dependency-free C library.
+
+**[Listen to samples](https://whissleai.github.io/steer-tts/)** (no login) ·
+[v1 weights](https://huggingface.co/WhissleAI/steer-tts) · [edge weights](https://huggingface.co/WhissleAI/steer-tts-edge) ·
+[Issues](../../issues)
+
+## Pick a build
+
+| Build | Size | Runtime | Use it for |
+|---|---|---|---|
+| [v1](docs/models.md) (fp32 / int8) | 215 / 52 MB | Python + PyTorch, GPU or CPU | Best quality, free-text prompts, voice cloning, 2,825 voices |
+| [edge, Python](docs/python.md#steertts_edge-edge) | 12.6 MB | Python + ONNX Runtime (or PyTorch) | Small and fast CPU synthesis from Python, 200 voices |
+| [**C library**](docs/c.md) (v1 or edge) | v1 or edge files | C11, no dependencies | Apps, devices, Raspberry Pi; every feature of both models, no Python, ~27 MB RAM for edge |
+| [edge, native](docs/native.md) | 13.9 MB | C++17 / C API + ONNX Runtime | The edge build on ONNX Runtime |
+
+Every build takes the same [request](docs/request.md) (text, voice, tag, controls, guidance, markup) and renders
+sentence by sentence for streaming. The edge build reproduces v1 without its flow refiner: the same intelligibility
+(Seed-TTS WER 0.96 % in both), about 0.1 lower UTMOS, and at least 95 % of v1's effect on every control
+([numbers](docs/models.md#quality)).
+
+## Quick start
+
+**v1** (the Hugging Face repo asks you to accept the licence once; `huggingface-cli login` first):
+
+```bash
+pip install "steertts[all] @ git+https://github.com/WhissleAI/steer-tts"
+steertts say "I can't believe it worked." --tag happiness --ctrl rate=1,f0_iqr=1.5 -o happy.wav
+steertts play "Hi there. <whisper>This plays as it is rendered.</whisper>"
+```
+
+**Edge from Python** (ONNX Runtime, no torch):
+
+```bash
+pip install "steertts-edge[hub] @ git+https://github.com/WhissleAI/steer-tts#subdirectory=edge"
+steertts-edge "Are you coming with us tonight?" --ctrl f0_end=2,f0_iqr=1.5 -o question.wav
+```
+
+```python
+from steertts_edge import OnnxTTS
+tts = OnnxTTS.from_pretrained("WhissleAI/steer-tts-edge")
+wav = tts("Well, *that* was fast. [pause 400ms] <whisper>Don't tell anyone.</whisper>", markup=True)
+tts.save(wav, "out.wav")
+```
+
+**C library** (both models; any C11 compiler, x86-64 or ARM64):
+
+```bash
+cd c && cmake -B build && cmake --build build -j                 # or: make
+hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
+    --include config.json --include "*.safetensors" --include voices.json --include "native/*"
+./build/steertts --model models/steer-tts-edge "Hello from C." -o hello.wav
+```
+
+## Documentation
+
+- [Models and builds](docs/models.md): what each build includes, quality, memory and speed, how the edge graphs are made
+- [The request](docs/request.md): controls, tags, guidance, per-word shifts, markup
+- [Python](docs/python.md): `steertts` and `steertts_edge` APIs and CLIs
+- [C library](docs/c.md): the dependency-free C11 library and CLI for both models, API, parity, speed
+- [Native C++ + ONNX Runtime](docs/native.md): the edge build on ONNX Runtime
+- [Raspberry Pi](docs/raspberry-pi.md): what runs on a Pi 4 / Pi 5, measured and estimated
+- [FAQ](docs/faq.md): memory, speed, licensing, limitations
+
+## Repository layout
+
+| Path | What |
+|---|---|
+| `steertts/` | v1 inference package (Python, MIT) |
+| `edge/` | `steertts_edge`: edge runtimes (ONNX Runtime, PyTorch), tests, ONNX export and packing tools |
+| `c/` | stand-alone C11 library + CLI for v1 and edge, helper-model converters, parity tests |
+| `native/` | C++17 runtime on ONNX Runtime (edge): text front end port, engine, CLI, tests |
+| `docs/` | Documentation and the [samples page](https://whissleai.github.io/steer-tts/) |
+| `leaderboard/` | Open TTS Leaderboard evaluation container |
+| `tests/` | v1 tests |
+
+## Licence
+
+Code (this repo): MIT. Weights (Hugging Face): CC BY-NC 4.0, non-commercial use only. See each model card for the
+intended-use notes.

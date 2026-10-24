@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "steertts-edge"
+version = "1.2.0"
+description = "SteerTTS v1 edge build: a 12 MB on-device, numerically steerable English TTS (int4 acoustic model + int4 vocoder)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Code: MIT. Weights: CC BY-NC 4.0. See LICENSE.md" }
+# Only what steertts_edge imports at runtime. The text front end is pure numpy (no NLTK / g2p_en / num2words),
+# the default runtime is ONNX Runtime (OnnxTTS); the PyTorch runtime (EdgeTTS) is the [torch] extra. WAV output uses
+# the stdlib `wave` module. Versions verified in a fresh env: see TEST_LOG.md.
+dependencies = [
+  "onnxruntime>=1.20",
+  "numpy>=1.24,<2.5",
+  "safetensors>=0.4",
+]
+
+[project.optional-dependencies]
+hub = ["huggingface_hub>=0.23"]          # OnnxTTS / EdgeTTS.from_pretrained("WhissleAI/steer-tts-edge")
+torch = ["torch>=2.4,<2.15"]             # EdgeTTS, the PyTorch reference runtime
+test = ["pytest>=8"]
+
+[project.scripts]
+steertts-edge = "steertts_edge.cli:main"
+
+[tool.setuptools]
+# Code only: the weights stay at the repo root and are loaded from a directory or the Hugging Face repo.
+packages = ["steertts_edge", "steertts_edge.edge_front"]
+include-package-data = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

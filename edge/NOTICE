@@ -1,0 +1,21 @@
+SteerTTS v1 edge build - third-party notices
+
+* front/cmudict.lex is derived from the CMU Pronouncing Dictionary (Copyright (C) 1993-2015 Carnegie Mellon
+  University; BSD-style license, see http://www.speech.cs.cmu.edu/cgi-bin/cmudict).
+* front/gru.npz is an int8 re-encoding of the g2p_en grapheme-to-phoneme model weights (Copyright 2019 Kyubyong
+  Park and Jongseok Kim; Apache License, Version 2.0, http://www.apache.org/licenses/LICENSE-2.0). Changes: weights
+  quantized to int8 per row with fp16 scales, numpy decoder (steertts_edge/edge_front/gru_np.py).
+* steertts_edge/vocoder.py re-implements the Vocos architecture (ConvNeXt backbone + iSTFT head; Copyright (c) 2023
+  Charactr Inc.; MIT License, https://github.com/gemelo-ai/vocos), and vocoder.safetensors is derived from the
+  charactr/vocos-mel-24khz weights (MIT License).
+* steertts_edge/edge_front/normnum.py ports g2p_en's normalize_numbers, which comes from keithito/tacotron
+  text/numbers.py (Copyright (c) 2017 Keith Ito; MIT License); edge_front/tok.py ports regular expressions of NLTK's
+  TweetTokenizer and edge_front/hetero.py is derived from decisions of NLTK's averaged-perceptron tagger (NLTK:
+  Apache License, Version 2.0).
+* steertts_edge/edge_front/numwords.py: inflect_words() ports the number_to_words logic of inflect (Copyright (c)
+  Jason R. Coombs and contributors; MIT License, https://github.com/jaraco/inflect). cardinal() / ordinal() are an
+  independent implementation written to match num2words' English output (no num2words code is included).
+* native/front/ holds the same front end data as front/ (CMUdict entries, the int8 g2p_en GRU, heteronym and Unicode
+  tables) re-encoded for the C++ runtime; the notices above apply to it unchanged. onnx/ holds the acoustic model and
+  vocoder (same weights as the safetensors) as ONNX graphs.
+* Model weights (acoustic, vocoder, voices) and code: see LICENSE.md (code MIT, weights CC BY-NC 4.0).
