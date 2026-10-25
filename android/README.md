@@ -21,6 +21,31 @@ adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es speak "Hello t
 adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es bench 0,1,4,6     # 0 = Auto
 ```
 
+## Assistant
+
+The app also speaks things the phone otherwise doesn't, in the user's SteerTTS voice, each behind a permission the user
+grants on the app's screen:
+
+| Feature | Permission | What it does |
+|---|---|---|
+| Message readouts | Notification access | "Priya on WhatsApp: running late." New messages only (not the history a messaging app reposts, not the user's own replies), from the apps picked (messaging apps by default), when allowed: headphones or car only (default), also with the screen off, or any time; never in a call, in Do Not Disturb or, out loud, with the ringer off. |
+| Caller announce | Notification access | "Incoming call from Mom", from the ringing call's notification (dialer or VoIP app): no phone or contacts permission. |
+| Meeting announce | Calendar | "In 5 minutes: standup with Arun, on Google Meet." 1 to 15 minutes ahead; all-day, declined and cancelled events skipped. |
+| Read aloud | none | "Read with SteerTTS" in any app's text-selection menu and share sheet; a shared link is fetched and its article read. Plays as a foreground service with a Stop button (the app's Stop button also stops it). |
+
+`Announcer` is the shared voice: its own engine (closed after two idle minutes), a sentence at a time, at most 8 s
+ahead of playback, other audio ducked. `ContextStyler` styles each utterance (a call is announced as an alert, late at
+night softer). adb hooks for testing, besides the ones above:
+
+```bash
+adb shell cmd notification allow_listener ai.whissle.steertts.demo/ai.whissle.steertts.demo.ReadoutListener
+adb shell am start -n ai.whissle.steertts.demo/.MainActivity --ei readout_when 2 --es readout_allow com.android.shell
+adb shell "cmd notification post -S messaging --conversation Plans --message 'Priya:Dinner at eight?' t1 x"
+adb shell am start -n ai.whissle.steertts.demo/.MainActivity --ei meetings_check 600   # announce events within 10 h
+adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "Read this." \
+    -n ai.whissle.steertts.demo/.ReadAloudActivity
+```
+
 ## Using it in your app
 
 Copy `app/src/main/cpp` (JNI bridge + CMake), `SteerTTS.java` and `Player.java`:

@@ -20,13 +20,14 @@ import java.util.regex.Pattern;
 final class ContextStyler {
     private static final Pattern ALERT = Pattern.compile(
             "\\b(urgent|warning|alert|emergency|alarm|critical|danger|immediately|failed|failure|error|"
-                    + "low battery|battery (is )?low|security|fraud|missed call|wake up|timer)\\b");
+                    + "low battery|battery (is )?low|security|fraud|missed call|incoming call|wake up|timer)\\b");
     private static final Pattern GOOD = Pattern.compile(
             "\\b(congratulations|congrats|great news|success(ful(ly)?)?|completed|done|arrived|approved|delivered|"
                     + "welcome|happy birthday|well done)\\b");
 
     static final String MAPS = "com.google.android.apps.maps", WAZE = "com.waze",
             TALKBACK = "com.google.android.marvin.talkback";
+    // caller may also be one of the Announcer's sources: "calendar", "read-aloud", or the package a message is from
 
     private ContextStyler() {}
 

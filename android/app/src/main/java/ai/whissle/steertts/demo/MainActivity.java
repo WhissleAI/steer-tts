@@ -46,6 +46,11 @@ import java.util.Locale;
  *   adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es speak "Hello there." [--es voice male] [--ei threads N]
  *   adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es bench 0,1,4   (0 = Auto)
  *   adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es systts "Text"   (through android.speech.tts)
+ * and for the assistant:
+ *   --es announce "Text"            speak through the assistant's voice (Announcer)
+ *   --ei readout_when 0|1|2         when messages are read (AssistantPrefs: headphones / + screen off / any time)
+ *   --es readout_allow PACKAGE      read that app's messages too (e.g. com.android.shell for `cmd notification post`)
+ *   --ei meetings_check MINUTES     announce now every event starting within MINUTES
  */
 public class MainActivity extends Activity {
     static final String TAG = "SteerTTS";
@@ -61,6 +66,7 @@ public class MainActivity extends Activity {
     private File modelDir;
     private Player player;
     private TextToSpeech systemTts;
+    private AssistantPanel assistant;
 
     private Style base;
     private EditText input;
@@ -119,6 +125,15 @@ public class MainActivity extends Activity {
         });
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        assistant.refresh();
+    }
+
+    @Override public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
+        assistant.onPermission(req, results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED);
+    }
+
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
         engineThread.post(() -> handleIntent(i));
@@ -149,6 +164,17 @@ public class MainActivity extends Activity {
     private void handleIntent(Intent i) {
         if (i == null) return;
         if (i.hasExtra("threads")) threadsSel = i.getIntExtra("threads", 0);
+        AssistantPrefs ap = new AssistantPrefs(this);
+        if (i.hasExtra("readout_when")) ap.setWhen(i.getIntExtra("readout_when", AssistantPrefs.PRIVATE));
+        if (i.hasExtra("readout_allow")) {
+            java.util.Set<String> on = ap.appsOn();
+            on.add(i.getStringExtra("readout_allow"));
+            ap.setAppsOn(on);
+        }
+        if (i.hasExtra("meetings_check") && MeetingAnnouncer.allowed(this)) ap.setAnnounceMeetings(true);
+        if (i.hasExtra("meetings_check")) MeetingAnnouncer.check(this, i.getIntExtra("meetings_check", 60));
+        if (i.getStringExtra("announce") != null)
+            Announcer.get(this).say(i.getStringExtra("announce"), getPackageName(), true, null);
         String bench = i.getStringExtra("bench");
         String text = i.getStringExtra("speak");
         String sys = i.getStringExtra("systts");
@@ -350,6 +376,14 @@ public class MainActivity extends Activity {
         title.setTextSize(22);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(title);
+        assistant = new AssistantPanel(this);
+        root.addView(assistant.build());
+
+        TextView voiceTitle = new TextView(this);
+        voiceTitle.setText("Voice");
+        voiceTitle.setTextSize(18);
+        voiceTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        root.addView(voiceTitle);
 
         input = new EditText(this);
         input.setMinLines(2);
@@ -372,6 +406,7 @@ public class MainActivity extends Activity {
         stop.setOnClickListener(v -> {
             if (tts != null) tts.cancel();
             player.flush();
+            Announcer.get(this).stop();   // readouts and read aloud too
             say("Stopped.");
         });
         bench.setOnClickListener(v -> {

@@ -5,17 +5,21 @@ import android.media.AudioFormat;
 import android.media.AudioTrack;
 
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Plays float chunks on its own thread, so rendering never waits for playback. end() marks the end of an utterance:
  * the track is drained with stop(), which plays everything written (a streaming AudioTrack otherwise holds a partly
- * filled buffer back until more audio arrives, and the last word would play only with the next line).
+ * filled buffer back until more audio arrives, and the last word would play only with the next line). end(done) also
+ * runs done once the utterance has been heard out.
  */
 final class Player {
     private static final float[] END = new float[0];
-    private final LinkedBlockingQueue<float[]> q = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<Object> q = new LinkedBlockingQueue<>();   // float[] audio, END, Runnable
+    private final AtomicLong pending = new AtomicLong();   // samples queued, not yet handed to the track
     private final AudioTrack track;
     private final Thread thread;
+    private long playStartNs, frames, heardAtNs;   // player thread: the current utterance
 
     Player() {
         int min = AudioTrack.getMinBufferSize(SteerTTS.SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
@@ -35,13 +39,26 @@ final class Player {
         thread.start();
     }
 
-    void write(float[] audio) { q.add(audio); }
+    void write(float[] audio) {
+        pending.addAndGet(audio.length);
+        q.add(audio);
+    }
 
     void end() { q.add(END); }
+
+    /** end(), then done on the player thread once everything written has played (dropped by flush()). */
+    void end(Runnable done) {
+        q.add(END);
+        q.add(done);
+    }
+
+    /** Audio written but not yet in the track, in samples: lets a writer stay only a few seconds ahead. */
+    long pendingSamples() { return Math.max(0, pending.get()); }
 
     /** Drops queued audio and silences the track now. */
     void flush() {
         q.clear();
+        pending.set(0);
         track.pause();
         track.flush();
     }
@@ -54,13 +71,27 @@ final class Player {
     private void run() {
         try {
             while (!Thread.interrupted()) {
-                float[] a = q.take();
-                if (a == END) {
-                    track.stop();   // plays out what was written, then stops
+                Object o = q.take();
+                if (o instanceof Runnable) {
+                    long wait = (heardAtNs - System.nanoTime()) / 1000000;
+                    if (wait > 0) Thread.sleep(wait);
+                    ((Runnable) o).run();
                     continue;
                 }
-                if (track.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) track.play();
+                float[] a = (float[]) o;
+                if (a == END) {
+                    track.stop();   // plays out what was written, then stops (stop() itself returns at once)
+                    heardAtNs = playStartNs + frames * 1000000000L / SteerTTS.SAMPLE_RATE + 250000000L;
+                    continue;
+                }
+                if (track.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
+                    track.play();
+                    playStartNs = System.nanoTime();
+                    frames = 0;
+                }
                 track.write(a, 0, a.length, AudioTrack.WRITE_BLOCKING);
+                frames += a.length;
+                pending.addAndGet(-a.length);
             }
         } catch (InterruptedException ignored) {
         } catch (IllegalStateException ignored) {   // released
