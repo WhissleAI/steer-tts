@@ -37,10 +37,11 @@ public class ClipReadActivity extends Activity {
             try {
                 Doc d = Article.isLink(s) ? Extract.fromUrl(s) : Extract.fromText(s, null);
                 if (!d.sentences.isEmpty()) {
-                    d.save(app);
+                    String id = d.saveOrExisting(app);
+                    Doc open = id.equals(d.id) ? d : Doc.load(app, id);   // a link already in the list: where it was left
                     runOnUiThread(() -> {
                         Narrator n = Narrator.get(app);
-                        n.open(d);
+                        n.open(open != null ? open : d);
                         n.play();
                     });
                 }

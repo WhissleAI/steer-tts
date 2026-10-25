@@ -67,11 +67,23 @@ final class Narrator {
                 .setWillPauseWhenDucked(true)
                 .setOnAudioFocusChangeListener(this::onFocus)
                 .build();
+        // headphones unplugged or a Bluetooth headset gone: pause, as every player does, rather than carry on out loud
+        app.registerReceiver(new android.content.BroadcastReceiver() {
+            @Override public void onReceive(Context c, android.content.Intent i) {
+                main.post(() -> {
+                    if (playing || suspended) pause();
+                    Announcer.get(app).stop();
+                });
+            }
+        }, new android.content.IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
     }
 
     // ---------------------------------------------------------------- state
     Doc doc() { return doc; }
     boolean playing() { return playing; }
+    /** Playing, but the first sound is not out yet (the voice loading, a book's characters being worked out). */
+    boolean preparing() { return playing && preparing; }
+    private volatile boolean preparing;
     int position() { return doc == null ? 0 : heard; }
     float pace() { return prefs.getFloat("pace", 1.0f); }
 
@@ -277,6 +289,7 @@ final class Narrator {
 
     private void renderFrom(int start) {
         int g = gen.incrementAndGet();
+        preparing = true;
         player.flush();   // after the bump: a render still in flight sees the new generation and writes nothing more
         Doc d = doc;
         Style base = Style.load(app).copy();
@@ -317,10 +330,21 @@ final class Narrator {
                     }
                 }
                 if (gen.get() == g) player.mark(() -> finished(g));
-            } catch (Exception e) {
+            } catch (Exception | OutOfMemoryError e) {
                 Log.e(TAG, "narrator", e);
+                main.post(() -> failed(g));
             }
         });
+    }
+
+    /** The voice could not render: back to paused with a message, instead of a Pause button over silence. */
+    private void failed(int g) {
+        if (gen.get() != g) return;
+        stop(false);
+        preparing = false;
+        changed();
+        android.widget.Toast.makeText(app, "Couldn't start the voice. Try again; if it keeps happening, restart the app.",
+                android.widget.Toast.LENGTH_LONG).show();
     }
 
     /** The voice for dialogue: a featured voice of the other gender (a book's characters stand apart from its narrator). */
@@ -334,6 +358,7 @@ final class Narrator {
 
     private void heardSentence(int g, int i) {
         if (gen.get() != g || doc == null) return;
+        preparing = false;
         heard = i;
         doc.pos = i;
         if (i % 5 == 0) doc.savePos(app);
@@ -358,7 +383,9 @@ final class Narrator {
             doc.done = true;
             doc.savePos(app);
             if (SteerTTS.debug(app)) Log.i(TAG, "narrator finished " + doc.title);
-            java.util.List<Doc.Meta> next = Doc.upNext(app, doc.id);
+            java.util.List<Doc.Meta> next = new java.util.ArrayList<>();
+            for (Doc.Meta m : Doc.upNext(app, doc.id))   // things read once (copied or typed text) don't play on their own
+                if (!"text".equals(m.kind)) next.add(m);
             if (autoNext() && !sleepAtEnd && !next.isEmpty()) {
                 // straight on to the next document, still playing: the player never leaves the foreground in between;
                 // the book is loaded off the main thread

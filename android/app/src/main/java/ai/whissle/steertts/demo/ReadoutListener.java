@@ -49,7 +49,9 @@ public class ReadoutListener extends NotificationListenerService {
 
     @Override public void onListenerConnected() {
         Recent.init(this);
+        Digest.init(this);
         MeetingAnnouncer.watchCalendar(this);
+        restoreKept();
         seed();
         if (batteryWatch == null) watchBattery();
         android.media.AudioManager am = getSystemService(android.media.AudioManager.class);
@@ -65,6 +67,39 @@ public class ReadoutListener extends NotificationListenerService {
             }
         };
         am.registerAudioDeviceCallback(headphones, new android.os.Handler(android.os.Looper.getMainLooper()));
+    }
+
+    /**
+     * Messages kept for catch-up before a restart: read again from their notifications, which are still showing (the
+     * words were never stored). Keys whose notifications are gone were seen or dismissed meanwhile.
+     */
+    private void restoreKept() {
+        Set<String> kept = Digest.savedKeys();
+        if (kept.isEmpty()) return;
+        Set<String> active = new HashSet<>();
+        try {
+            for (StatusBarNotification sbn : getActiveNotifications()) {
+                active.add(sbn.getKey());
+                if (!kept.contains(sbn.getKey())) continue;
+                Bundle x = sbn.getNotification().extras;
+                String app = label(sbn.getPackageName());
+                Parcelable[] msgs = x.getParcelableArray(Notification.EXTRA_MESSAGES);
+                if (msgs != null && msgs.length > 0) {
+                    for (int i = Math.max(0, msgs.length - 3); i < msgs.length; ++i)
+                        if (msgs[i] instanceof Bundle) {
+                            Bundle m = (Bundle) msgs[i];
+                            CharSequence who = senderOf(m);
+                            if (who != null) Digest.restore(sbn.getKey(), who.toString(), app, String.valueOf(m.getCharSequence("text")));
+                        }
+                } else {
+                    CharSequence t = x.getCharSequence(Notification.EXTRA_TITLE), b = x.getCharSequence(Notification.EXTRA_TEXT);
+                    Digest.restore(sbn.getKey(), t != null ? t.toString() : app, app, b != null ? b.toString() : "");
+                }
+            }
+        } catch (RuntimeException e) {   // the listener may be unbound again already
+            return;
+        }
+        Digest.forgetExcept(active);
     }
 
     /**

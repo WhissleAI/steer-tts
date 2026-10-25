@@ -43,9 +43,9 @@ public class ReadAloudActivity extends Activity {
                     d = Article.isLink(s) ? Extract.fromUrl(s) : Extract.fromText(s, subject);
                 }
                 if (d.sentences.isEmpty()) throw new Extract.Unsupported("There's no text to read in this one.");
-                d.save(app);
+                String id = d.saveOrExisting(app);
                 // the player in SteerTTS's own task, not inside the app that shared
-                runOnUiThread(() -> startActivity(ReaderActivity.open(this, d.id, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+                runOnUiThread(() -> startActivity(ReaderActivity.open(this, id, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
             } catch (Extract.Unsupported e) {
                 error = e.getMessage();
             } catch (Exception | OutOfMemoryError e) {

@@ -298,7 +298,8 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
         playBtn.setContentDescription(playing ? "Pause" : "Play");
         int at = Math.min(narrator.position(), Math.max(0, d.sentences.size() - 1));
         seek.setProgress(at);
-        left.setText(at >= d.sentences.size() - 1 && !playing && narrator.position() >= d.sentences.size()
+        left.setText(narrator.preparing() ? "Getting the voice ready…"
+                : at >= d.sentences.size() - 1 && !playing && narrator.position() >= d.sentences.size()
                 ? "Finished" : d.minutesLeft(narrator.pace() * Style.load(this).pace) + " min left · "
                 + Math.round(100 * d.progress()) + "%");
         voiceLine.setText(Voices.get(this).nameOf(Style.load(this).voice, null) + "  ·  change voice");

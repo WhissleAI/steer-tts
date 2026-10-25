@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 public class FreeBooks extends Activity {
     private static final String BASE = "https://www.gutenberg.org/ebooks/search.opds/";
     private static final String[][] SHELVES = {
-            {"Popular", ""}, {"Children's", "s.children l.en"}, {"Fairy tales", "s.fairy l.en"}, {"Adventure", "s.adventure l.en"},
+            {"Popular", ""}, {"Children's", "bookshelf/20"}, {"Fairy tales", "bookshelf/216"}, {"Adventure", "s.adventure l.en"},
             {"Mystery", "s.detective l.en"}, {"Science fiction", "s.science fiction l.en"}, {"Poetry", "s.poetry l.en"},
             {"Humour", "s.humor l.en"}, {"Classics", "s.fiction l.en"}};
 
@@ -93,6 +93,8 @@ public class FreeBooks extends Activity {
             if (id == EditorInfo.IME_ACTION_SEARCH || (e != null && e.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
                 String q = v.getText().toString().trim();
                 if (!q.isEmpty()) load(q + " l.en", true, -1);
+                getSystemService(android.view.inputmethod.InputMethodManager.class).hideSoftInputFromWindow(v.getWindowToken(), 0);
+                v.clearFocus();
                 return true;
             }
             return false;
@@ -146,15 +148,25 @@ public class FreeBooks extends Activity {
         int r = ++request;
         status.setText("Loading…");
         more.setVisibility(View.GONE);
-        String url = BASE + "?sort_order=downloads&start_index=" + start + (q.isEmpty() ? "" : "&query=" + enc(q));
+        // a curated Gutenberg bookshelf ("bookshelf/20": Children's Literature) or a search; a subject search is too
+        // loose for children (it brings up The Scarlet Letter)
+        String url = q.startsWith("bookshelf/") ? "https://www.gutenberg.org/ebooks/" + q + ".opds?sort_order=downloads&start_index=" + start
+                : BASE + "?sort_order=downloads&start_index=" + start + (q.isEmpty() ? "" : "&query=" + enc(q));
         new Thread(() -> {
             List<Book> books;
+            int page = 0;   // books on the page before English-only filtering (the next page starts after them all)
             try {
-                books = parse(get(url, 1 << 20));
+                byte[] xml = get(url, 1 << 20);
+                Matcher m = ID.matcher(new String(xml, java.nio.charset.StandardCharsets.UTF_8));
+                java.util.Set<String> ids = new java.util.HashSet<>();
+                while (m.find()) ids.add(m.group(1));
+                page = ids.size();
+                books = parse(xml);
             } catch (Exception e) {
                 books = null;
             }
             List<Book> got = books;
+            int seen = page;
             runOnUiThread(() -> {
                 if (r != request || isDestroyed()) return;
                 if (got == null) {
@@ -163,8 +175,8 @@ public class FreeBooks extends Activity {
                 }
                 status.setText(got.isEmpty() && start == 1 ? "No books found." : "");
                 for (Book bk : got) list.addView(row(bk));
-                start += got.size();
-                more.setVisibility(got.size() >= 25 ? View.VISIBLE : View.GONE);
+                start += seen;
+                more.setVisibility(seen >= 25 ? View.VISIBLE : View.GONE);
             });
         }, "steertts-books").start();
     }
@@ -178,7 +190,9 @@ public class FreeBooks extends Activity {
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         t.addView(title);
-        if (!b.author.isEmpty()) t.addView(u.text(b.author, 13, Ui.MUTED, false));
+        boolean have = Doc.findSource(this, "https://www.gutenberg.org/ebooks/" + b.id, b.title) != null;
+        String sub = (b.author.isEmpty() ? "" : b.author) + (have ? (b.author.isEmpty() ? "" : " · ") + "In your list" : "");
+        if (!sub.isEmpty()) t.addView(u.text(sub, 13, have ? Ui.ACCENT : Ui.MUTED, have));
         r.addView(t, Ui.weight(1));
         r.addView(u.icon(R.drawable.ic_play, "Listen to " + b.title, 44, false, v -> open(b)));
         r.setOnClickListener(v -> open(b));
@@ -191,6 +205,11 @@ public class FreeBooks extends Activity {
 
     /** Download the book (EPUB without images; with images if that is all there is), add it, play it. */
     private void open(Book b) {
+        String have = Doc.findSource(this, "https://www.gutenberg.org/ebooks/" + b.id, b.title);
+        if (have != null) {   // already in the list: carry on where it was left, no second copy
+            startActivity(ReaderActivity.open(this, have, true));
+            return;
+        }
         @SuppressWarnings("deprecation")
         ProgressDialog pd = ProgressDialog.show(this, null, "Getting “" + b.title + "”…", true);
         new Thread(() -> {
@@ -227,6 +246,10 @@ public class FreeBooks extends Activity {
     private static final Pattern TITLE = Pattern.compile("(?s)<title>(.*?)</title>");
     private static final Pattern AUTHOR = Pattern.compile("(?s)<content type=\"text\">(.*?)</content>");
 
+    private static final Pattern OTHER_LANGUAGE = Pattern.compile("\\((German|Dutch|French|Spanish|Italian|Portuguese|Finnish|Swedish|"
+            + "Danish|Norwegian|Esperanto|Latin|Hungarian|Polish|Czech|Greek|Russian|Chinese|Japanese|Tagalog|Catalan|Welsh|Icelandic|"
+            + "Afrikaans|Frisian|Galician|Romanian|Bulgarian|Slovenian|Serbian|Croatian|Hebrew|Arabic)\\)\\s*$");
+
     /** The books in an OPDS page (entries that are not books, such as "sort by", have no numeric id). */
     static List<Book> parse(byte[] xml) {
         String s = new String(xml, java.nio.charset.StandardCharsets.UTF_8);
@@ -238,6 +261,8 @@ public class FreeBooks extends Activity {
             if (!id.find() || !t.find()) continue;
             String title = Extract.decode(t.group(1)).replaceAll("\\s+", " ").trim();
             String author = a.find() ? Extract.decode(a.group(1)).replaceAll("\\s+", " ").trim() : "";
+            if (author.matches("\\d+ downloads?")) author = "";   // bookshelves put the download count where the author goes
+            if (OTHER_LANGUAGE.matcher(title).find()) continue;     // the voice reads English: "(German)", "(Dutch)" books left out
             out.add(new Book(id.group(1), title, author));
         }
         return out;

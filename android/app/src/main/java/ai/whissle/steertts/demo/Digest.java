@@ -7,9 +7,10 @@ import java.util.Map;
 
 /**
  * Messages that arrived while they could not be read out (no headphones, Do Not Disturb), for "catch me up": when
- * headphones connect, from the Quick Settings tile, or the Assistant tab. Memory only (never written to storage); a
- * message leaves when its notification is dismissed or opened (the user has seen it), when it has been caught up on,
- * or after twelve hours.
+ * headphones connect, from the Quick Settings tile, or the Assistant tab. The words are held in memory only, never
+ * written to storage; only the notifications' keys are saved, so after a restart (an app update, the process ended)
+ * the listener rebuilds the list from the notifications still showing (restore). A message leaves when its
+ * notification is dismissed or opened (the user has seen it), when it has been caught up on, or after twelve hours.
  */
 final class Digest {
     private Digest() {}
@@ -31,24 +32,78 @@ final class Digest {
     private static final int MAX_ITEMS = 40;
     private static final List<Item> items = new ArrayList<>();
 
+    private static java.io.File store;
+    private static final java.util.Map<String, Long> saved = new java.util.HashMap<>();   // key -> when it was kept
+
+    /** Loads the saved keys once (what was kept before a restart, for restore). */
+    static synchronized void init(android.content.Context c) {
+        if (store != null) return;
+        store = new java.io.File(c.getApplicationContext().getFilesDir(), "kept.keys");
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(store))) {
+            for (String line; (line = r.readLine()) != null; ) {
+                int tab = line.lastIndexOf('\t');
+                if (tab > 0) saved.put(line.substring(0, tab), Long.parseLong(line.substring(tab + 1)));
+            }
+        } catch (Exception ignored) {   // nothing kept
+        }
+    }
+
+    /** Keys kept before a restart and not restored yet. */
+    static synchronized java.util.Set<String> savedKeys() { return new java.util.HashSet<>(saved.keySet()); }
+
+    /** A message kept before a restart, read again from its notification (keeps its first time, not added twice). */
+    static synchronized void restore(String key, String person, String app, String text) {
+        Long t = saved.get(key);
+        if (t == null) return;
+        for (Item i : items) if (i.key.equals(key) && i.text.equals(text)) return;
+        items.add(new Item(key, person, app, text, t));
+    }
+
+    /** After a restore: forget keys whose notifications are gone (seen or dismissed while the app was not running). */
+    static synchronized void forgetExcept(java.util.Set<String> active) {
+        saved.keySet().retainAll(active);
+        persist();
+    }
+
+    private static void persist() {
+        if (store == null) return;
+        try (java.io.FileWriter w = new java.io.FileWriter(store)) {
+            for (java.util.Map.Entry<String, Long> e : saved.entrySet()) w.write(e.getKey() + "\t" + e.getValue() + "\n");
+        } catch (Exception ignored) {
+        }
+    }
+
     static synchronized void add(String key, String person, String app, String text) {
-        items.add(new Item(key, person, app, text, System.currentTimeMillis()));
+        long now = System.currentTimeMillis();
+        items.add(new Item(key, person, app, text, now));
         while (items.size() > MAX_ITEMS) items.remove(0);
+        if (!saved.containsKey(key)) {
+            saved.put(key, now);
+            persist();
+        }
     }
 
     /** The notification is gone: the user has seen or dismissed it. */
-    static synchronized void removeKey(String key) { items.removeIf(i -> i.key.equals(key)); }
+    static synchronized void removeKey(String key) {
+        items.removeIf(i -> i.key.equals(key));
+        if (saved.remove(key) != null) persist();
+    }
 
     static synchronized int size() {
         prune();
         return items.size();
     }
 
-    static synchronized void clear() { items.clear(); }
+    static synchronized void clear() {
+        items.clear();
+        saved.clear();
+        persist();
+    }
 
     private static void prune() {
         long old = System.currentTimeMillis() - MAX_AGE;
         items.removeIf(i -> i.time < old);
+        if (saved.values().removeIf(t -> t < old)) persist();
     }
 
     /**
@@ -80,6 +135,8 @@ final class Digest {
             sp.add(body, Expression.of(body), personVoices ? Voices.forPerson(e.getKey(), ownVoice) : null, 400);
         }
         items.clear();
+        saved.clear();
+        persist();
         return sp;
     }
 

@@ -109,6 +109,7 @@ final class Doc {
     static final class Meta {
         final String id, title, kind;
         final long added;
+        String source = "";   // where it came from (a link, a file, a Gutenberg book): the same source is the same document
         long opened;
         int pos, count;
         long chars;
@@ -135,6 +136,7 @@ final class Doc {
         long chars = 0;
         for (String x : sentences) chars += x.length();
         Meta m = new Meta(id, title, kind, added, sentences.size(), chars);
+        m.source = source == null ? "" : source;
         m.opened = opened;
         m.pos = pos;
         m.done = done;
@@ -144,7 +146,7 @@ final class Doc {
     private static void writeMeta(Context c, Meta m) {
         try (FileOutputStream out = new FileOutputStream(new File(dir(c), m.id + ".meta"))) {
             out.write(new JSONObject().put("title", m.title).put("kind", m.kind).put("added", m.added).put("count", m.count)
-                    .put("chars", m.chars).toString().getBytes("UTF-8"));
+                    .put("chars", m.chars).put("source", m.source).toString().getBytes("UTF-8"));
         } catch (Exception ignored) {
         }
     }
@@ -162,6 +164,7 @@ final class Doc {
                 try (FileInputStream in = new FileInputStream(mf)) {
                     JSONObject o = new JSONObject(new String(in.readAllBytes(), "UTF-8"));
                     m = new Meta(id, o.getString("title"), o.optString("kind", "text"), o.optLong("added"), o.optInt("count"), o.optLong("chars"));
+                    m.source = o.optString("source", "");
                 } catch (Exception ignored) {
                 }
             }
@@ -210,6 +213,33 @@ final class Doc {
         File d = new File(c.getFilesDir(), "library");
         d.mkdirs();
         return d;
+    }
+
+    /**
+     * Saves this document unless the list already has it, and returns the id to open. The same book, link or file opens
+     * the copy already there, where it was left; the same copied or typed text replaces its older copy (heard again
+     * from the top) instead of piling up.
+     */
+    String saveOrExisting(Context c) {
+        Meta mine = meta();
+        for (Meta m : list(c)) {
+            boolean same = !mine.source.isEmpty() ? mine.source.equals(m.source)
+                    || (m.source.isEmpty() && m.kind.equals(kind) && m.title.equals(title))   // saved before sources were kept
+                    : m.kind.equals(kind) && m.title.equals(title) && m.chars == mine.chars;
+            if (!same) continue;
+            if (!"text".equals(kind)) return m.id;
+            delete(c, m.id);
+            break;
+        }
+        save(c);
+        return id;
+    }
+
+    /** The id of a document in the list that came from this source (or has this title, for older copies), or null. */
+    static String findSource(Context c, String source, String titlePrefix) {
+        for (Meta m : list(c))
+            if (source.equals(m.source) || (m.source.isEmpty() && titlePrefix != null && m.title.startsWith(titlePrefix))) return m.id;
+        return null;
     }
 
     void save(Context c) {

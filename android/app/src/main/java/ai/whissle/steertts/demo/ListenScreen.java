@@ -390,11 +390,11 @@ final class ListenScreen implements Narrator.Listener {
             try {
                 Doc d = s.get();
                 if (d.sentences.isEmpty()) throw new Extract.Unsupported("There's no text to read in this one.");
-                d.save(a);
+                String id = d.saveOrExisting(a);
                 a.runOnUiThread(() -> {
                     if (gone(a)) return;   // rotated or closed meanwhile: the document is saved, the list shows it
                     pd.dismiss();
-                    a.startActivity(ReaderActivity.open(a, d.id, true));
+                    a.startActivity(ReaderActivity.open(a, id, true));
                 });
             } catch (Exception | OutOfMemoryError ex) {
                 a.runOnUiThread(() -> {
