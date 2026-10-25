@@ -34,12 +34,15 @@ final class Player {
         if (d.isDirectory()) tapDir = d;
     }
 
-    Player() {
+    Player() { this(AudioAttributes.USAGE_ASSISTANT); }
+
+    /** usage: USAGE_ASSISTANT for the assistant's short replies, USAGE_MEDIA for reading documents aloud. */
+    Player(int usage) {
         int min = AudioTrack.getMinBufferSize(SteerTTS.SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_FLOAT);
         track = new AudioTrack.Builder()
                 .setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                        .setUsage(usage)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                 .setAudioFormat(new AudioFormat.Builder()
                         .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
@@ -51,6 +54,16 @@ final class Player {
         thread = new Thread(this::run, "steertts-player");
         thread.start();
     }
+
+    /** A marker in the queue: `when` runs (on the main thread) as the audio queued after it starts to be heard. */
+    void mark(Runnable when) { q.add(new Mark(when)); }
+
+    private static final class Mark {
+        final Runnable r;
+        Mark(Runnable r) { this.r = r; }
+    }
+
+    private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
 
     void write(float[] audio) {
         pending.addAndGet(audio.length);
@@ -128,6 +141,12 @@ final class Player {
         try {
             while (!Thread.interrupted()) {
                 Object o = q.take();
+                if (o instanceof Mark) {          // heard once what is already in the track has played out
+                    long buffered = track.getPlayState() == AudioTrack.PLAYSTATE_PLAYING
+                            ? (playStartNs + frames * 1000000000L / SteerTTS.SAMPLE_RATE - System.nanoTime()) / 1000000 : 0;
+                    MAIN.postDelayed(((Mark) o).r, Math.max(0, buffered));
+                    continue;
+                }
                 if (o instanceof Runnable) {
                     long wait = (heardAtNs - System.nanoTime()) / 1000000;
                     if (wait > 0) Thread.sleep(wait);

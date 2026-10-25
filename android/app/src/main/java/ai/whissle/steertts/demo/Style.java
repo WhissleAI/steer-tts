@@ -23,6 +23,7 @@ final class Style {
     final float[] z = new float[SteerTTS.CONTROLS.length];
     boolean contextual = true;       // let ContextStyler adjust system utterances
     float pace = DEFAULT_PACE;       // speaking speed (1 = the voice's own; the default voice is a slow speaker)
+    String preset = "Natural";       // the Voices screen's style chip (the tag and controls hold the delivery itself)
     static final float DEFAULT_PACE = 1.1f, MIN_PACE = 0.7f, MAX_PACE = 1.6f;
     String reason = "";              // why a context style looks the way it does (shown in the app)
 
@@ -33,6 +34,7 @@ final class Style {
         System.arraycopy(z, 0, s.z, 0, z.length);
         s.contextual = contextual;
         s.pace = pace;
+        s.preset = preset;
         s.reason = reason;
         return s;
     }
@@ -43,9 +45,25 @@ final class Style {
      */
     static final String[] PRESETS = {"Happy", "Whisper", "Excited", "Sad", "Calm"};
 
+    /** The voice's styles on the Voices screen: Natural (no style) plus the deliveries that clearly work. */
+    static final String[] STYLES = {"Natural", "Calm", "Warm", "Happy", "Excited", "Serious", "Sad", "Whisper"};
+
+    /** The style, as the user's base: the controls reset, then the preset's tag and controls; the name is kept. */
+    void applyPreset(String name) {
+        java.util.Arrays.fill(z, 0f);
+        tag = "none";
+        Style p = preset(name);
+        tag = p.tag;
+        System.arraycopy(p.z, 0, z, 0, z.length);
+        preset = name;
+    }
+
     Style preset(String name) {
         Style s = copy();
         switch (name) {
+            case "Natural": s.tag = "none"; break;
+            case "Warm": s.tag = "contentment"; s.add("f0_iqr", 0.6f); s.add("h1h2", 0.6f); s.add("rate", -0.2f); break;
+            case "Serious": s.tag = "confidence"; s.add("f0_med", -0.6f); s.add("f0_iqr", -0.5f); s.add("loud", 0.4f); s.add("f0_end", -0.8f); break;
             case "Calm": s.tag = "serenity"; s.add("rate", -0.4f); s.add("f0_iqr", -0.6f); s.add("loud", -0.4f); break;
             case "Happy": s.tag = "happiness"; s.add("f0_iqr", 1.3f); s.add("f0_med", 0.7f); s.add("rate", 0.4f); s.add("tilt", 0.5f); break;
             case "Excited": s.tag = "excited"; s.add("rate", 0.9f); s.add("loud", 1.1f); s.add("f0_iqr", 1.6f); s.add("f0_med", 1.0f); break;
@@ -87,6 +105,7 @@ final class Style {
             o.put("z", a);
             o.put("contextual", contextual);
             o.put("pace", (double) pace);
+            o.put("preset", preset);
             o.put("reason", reason);
             return o;
         } catch (Exception e) {
@@ -102,6 +121,7 @@ final class Style {
         for (int i = 0; a != null && i < Math.min(a.length(), s.z.length); ++i) s.z[i] = clamp((float) a.optDouble(i, 0));
         s.contextual = o.optBoolean("contextual", true);
         s.pace = Math.max(MIN_PACE, Math.min(MAX_PACE, (float) o.optDouble("pace", DEFAULT_PACE)));
+        s.preset = o.optString("preset", "Natural");
         s.reason = o.optString("reason", "");
         return s;
     }

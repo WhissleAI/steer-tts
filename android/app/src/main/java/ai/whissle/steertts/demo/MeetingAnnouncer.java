@@ -111,6 +111,15 @@ public class MeetingAnnouncer extends BroadcastReceiver {
         return when + ": " + title + place + ".";
     }
 
+    /** "10 AM", "9:55 AM", "noon": a clock time as it is said aloud. */
+    static String spokenTime(java.time.LocalTime t) {
+        int h = t.getHour(), m = t.getMinute();
+        if (h == 12 && m == 0) return "noon";
+        if (h == 0 && m == 0) return "midnight";
+        int h12 = h % 12 == 0 ? 12 : h % 12;
+        return h12 + (m == 0 ? "" : m < 10 ? ":0" + m : ":" + m) + (h < 12 ? " AM" : " PM");
+    }
+
     static boolean allowed(Context c) {
         return c.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED;
     }

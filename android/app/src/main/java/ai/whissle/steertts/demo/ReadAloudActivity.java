@@ -2,26 +2,63 @@ package ai.whissle.steertts.demo;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Toast;
 
 /**
- * "Read with SteerTTS": in any app's text-selection menu (ACTION_PROCESS_TEXT) and share sheet (ACTION_SEND, text or
- * a link). No window: hands the text to ReadAloudService and finishes.
+ * "Read with SteerTTS": in any app's text-selection menu (ACTION_PROCESS_TEXT), share sheet (text, a link, or a file)
+ * and "Open with" for documents (PDF, EPUB, Word, HTML, Markdown, text). Turns what it was given into a Doc on a
+ * background thread, adds it to the reading list and opens the player, playing. No window of its own.
  */
 public class ReadAloudActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         Intent i = getIntent();
-        CharSequence text = Intent.ACTION_PROCESS_TEXT.equals(i.getAction())
+        String action = i.getAction();
+        CharSequence text = Intent.ACTION_PROCESS_TEXT.equals(action)
                 ? i.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT) : i.getCharSequenceExtra(Intent.EXTRA_TEXT);
-        if (text != null && text.toString().trim().length() > 0) {
-            startForegroundService(new Intent(this, ReadAloudService.class)
-                    .putExtra(ReadAloudService.EXTRA_TEXT, text.toString()));
-            Toast.makeText(this, "Reading aloud", Toast.LENGTH_SHORT).show();
-        } else {
+        Uri stream = Intent.ACTION_VIEW.equals(action) ? i.getData()
+                : Intent.ACTION_SEND.equals(action) ? stream(i) : null;
+        String subject = i.getStringExtra(Intent.EXTRA_SUBJECT);
+        if (stream == null && (text == null || text.toString().trim().isEmpty())) {
             Toast.makeText(this, "Nothing to read", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
         }
-        finish();
+        Toast.makeText(this, "Getting it ready…", Toast.LENGTH_SHORT).show();
+        String mime = i.getType();
+        android.content.Context app = getApplicationContext();
+        new Thread(() -> {
+            String error = null;
+            try {
+                Doc d;
+                if (stream != null) {
+                    d = Extract.fromUri(app, stream, mime);
+                } else {
+                    String s = text.toString().trim();
+                    d = Article.isLink(s) ? Extract.fromUrl(s) : Extract.fromText(s, subject);
+                }
+                if (d.sentences.isEmpty()) throw new Extract.Unsupported("There's no text to read in this one.");
+                d.save(app);
+                runOnUiThread(() -> startActivity(ReaderActivity.open(this, d.id, true)));
+            } catch (Extract.Unsupported e) {
+                error = e.getMessage();
+            } catch (Exception e) {
+                android.util.Log.e(MainActivity.TAG, "read aloud", e);
+                error = "Couldn't open that one.";
+            }
+            String msg = error;
+            runOnUiThread(() -> {
+                if (msg != null) Toast.makeText(app, msg, Toast.LENGTH_LONG).show();
+                finish();
+            });
+        }, "steertts-extract").start();
+    }
+
+    @SuppressWarnings("deprecation")
+    private static Uri stream(Intent i) {
+        return android.os.Build.VERSION.SDK_INT >= 33 ? i.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class)
+                : i.getParcelableExtra(Intent.EXTRA_STREAM);
     }
 }

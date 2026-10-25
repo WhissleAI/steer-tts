@@ -21,19 +21,19 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * The home screen's assistant card: one row each for message readouts, incoming calls, meeting reminders and read
- * aloud, a switch per feature, details (which apps, when, how early) in a dialog behind the row. A missing permission
- * shows as the row's subtitle, and switching the feature on asks for it. refresh() after the user returns from a
- * permission screen.
+ * The Assistant tab: one row each for message readouts, incoming calls, meeting reminders and read aloud, a switch per
+ * feature, details (which apps, when, how early) in a dialog behind the row; and the daily briefing (on/off, time,
+ * Health Connect, play now). A feature without its permission shows "Off" and asks, with an explanation first, when
+ * switched on. refresh() after the user returns from a permission screen.
  */
 final class AssistantPanel {
-    static final int REQ_CALENDAR = 1, REQ_NOTIFY = 2;
+    static final int REQ_CALENDAR = 1, REQ_NOTIFY = 2, REQ_HEALTH = 3, REQ_BRIEF_CALENDAR = 4;
 
     private final Activity a;
     private final Ui ui;
     private final AssistantPrefs prefs;
-    private LinearLayout readRow, callRow, meetRow;
-    private Switch read, calls, meetings;
+    private LinearLayout readRow, callRow, meetRow, briefRow, timeRow, healthRow;
+    private Switch read, calls, meetings, brief;
 
     AssistantPanel(Activity a, Ui ui) {
         this.a = a;
@@ -42,8 +42,9 @@ final class AssistantPanel {
     }
 
     View build() {
+        LinearLayout box = ui.column();
         LinearLayout card = ui.card();
-        card.addView(ui.label("Assistant"));
+        card.addView(ui.label("Speaks up"));
 
         read = ui.toggle(prefs.readMessages());
         readRow = ui.settingRow("Message readouts", "", read, v -> readoutOptions());
@@ -69,31 +70,58 @@ final class AssistantPanel {
         meetRow = ui.settingRow("Meeting reminders", "", meetings, v -> leadOptions());
         meetings.setOnCheckedChangeListener((v, on) -> {
             prefs.setAnnounceMeetings(on);
-            if (on && !MeetingAnnouncer.allowed(a)) askCalendarAccess();
+            if (on && !MeetingAnnouncer.allowed(a)) askCalendarAccess(REQ_CALENDAR, meetings);
             MeetingAnnouncer.reschedule(a);
             refresh();
         });
         card.addView(meetRow);
         card.addView(ui.divider());
 
-        card.addView(ui.settingRow("Read aloud anywhere", "Select text or share a link → Read with SteerTTS",
+        card.addView(ui.settingRow("Read aloud anywhere", "Select text or tap Share in any app → Read with SteerTTS",
                 null, null));
+        box.addView(card);
 
-        if (Build.VERSION.SDK_INT >= 33
-                && a.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-            a.requestPermissions(new String[] {Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFY);   // read-aloud's Stop
-        return card;
+        LinearLayout bc = ui.card();
+        bc.addView(ui.label("Daily briefing"));
+        brief = ui.toggle(Briefing.daily(a));
+        briefRow = ui.settingRow("Every morning", "", brief, null);
+        brief.setOnCheckedChangeListener((v, on) -> {
+            Briefing.setDaily(a, on, Briefing.minuteOfDay(a));
+            refresh();
+        });
+        bc.addView(briefRow);
+        bc.addView(ui.divider());
+        timeRow = ui.settingRow("Time", "", ui.chevron(), v -> new android.app.TimePickerDialog(a, (tp, h, m) -> {
+            Briefing.setDaily(a, true, h * 60 + m);
+            brief.setChecked(true);
+            refresh();
+        }, Briefing.minuteOfDay(a) / 60, Briefing.minuteOfDay(a) % 60, android.text.format.DateFormat.is24HourFormat(a)).show());
+        bc.addView(timeRow);
+        bc.addView(ui.divider());
+        healthRow = ui.settingRow("Sleep, steps and heart rate", "", ui.chevron(), v -> askHealthAccess());
+        bc.addView(healthRow);
+        bc.addView(ui.divider());
+        bc.addView(ui.settingRow("Play it now", "Hear today's briefing", ui.chevron(), v -> {
+            if (!MeetingAnnouncer.allowed(a) && !a.getSharedPreferences("briefing", Activity.MODE_PRIVATE).getBoolean("asked_calendar", false)) {
+                a.getSharedPreferences("briefing", Activity.MODE_PRIVATE).edit().putBoolean("asked_calendar", true).apply();
+                askCalendarAccess(REQ_BRIEF_CALENDAR, null);
+            } else {
+                Briefing.play(a);
+            }
+        }));
+        box.addView(bc);
+        return box;
     }
 
     void refresh() {
         boolean access = listenerOn();
-        sub(readRow, !access ? "Tap the switch to allow notification access"
-                : AssistantPrefs.WHEN_SHORT[prefs.when()] + " · " + appsOnCount() + " apps", !access);
-        sub(callRow, access ? "Says who is calling" : "Needs notification access", !access);
+        sub(readRow, !access ? "Off · reads new messages aloud when you have headphones in"
+                : AssistantPrefs.WHEN_SHORT[prefs.when()] + " · " + appsOnCount() + " apps · tap for options", false);
+        sub(callRow, access ? "Says who is calling" : "Off · says who is calling", false);
         if (!MeetingAnnouncer.allowed(a)) {
             prefs.setAnnounceMeetings(false);
             meetings.setChecked(false);
-            sub(meetRow, "Needs calendar access", false);
+            sub(meetRow, "Off · a heads-up before each meeting", false);
         } else {
             int m = prefs.leadMinutes();
             sub(meetRow, m + (m == 1 ? " minute" : " minutes") + " before each event", false);
@@ -107,9 +135,26 @@ final class AssistantPanel {
             calls.setChecked(false);
         }
         MeetingAnnouncer.reschedule(a);
+        int at = Briefing.minuteOfDay(a);
+        String time = MeetingAnnouncer.spokenTime(java.time.LocalTime.of(at / 60, at % 60));
+        sub(briefRow, Briefing.daily(a) ? "On · at " + time + ", when headphones or the car are connected"
+                : "Off · your day, sleep and steps, spoken", false);
+        sub(timeRow, time, false);
+        sub(healthRow, !Briefing.healthAvailable() ? "Needs Android 14 or later"
+                : Briefing.healthGranted(a) ? "✓ From Health Connect" : "Tap to connect Health Connect", false);
+        if (Briefing.healthGranted(a)) ((TextView) healthRow.getTag()).setTextColor(Ui.ACCENT);
     }
 
     void onPermission(int req, boolean granted) {
+        if (req == REQ_HEALTH) {
+            refresh();
+            return;
+        }
+        if (req == REQ_BRIEF_CALENDAR) {
+            Briefing.play(a);
+            refresh();
+            return;
+        }
         if (req != REQ_CALENDAR) return;
         prefs.setAnnounceMeetings(granted);
         meetings.setChecked(granted);
@@ -142,25 +187,53 @@ final class AssistantPanel {
                 .show();
     }
 
-    private void askCalendarAccess() {
+    private void askCalendarAccess(int req, Switch from) {
         new AlertDialog.Builder(a)
                 .setTitle("Let SteerTTS see your calendar?")
-                .setMessage("To announce meetings a few minutes before they start, SteerTTS reads the title, time and "
-                        + "place of your upcoming events. It stays on this phone and is never sent anywhere.")
+                .setMessage("To announce meetings before they start and tell you about your day, SteerTTS reads the "
+                        + "title, time and place of your upcoming events. It stays on this phone and is never sent anywhere.")
                 .setPositiveButton("Continue",
-                        (d, w) -> a.requestPermissions(new String[] {Manifest.permission.READ_CALENDAR}, REQ_CALENDAR))
-                .setNegativeButton("Not now", (d, w) -> meetings.setChecked(false))
-                .setOnCancelListener(d -> meetings.setChecked(false))
+                        (d, w) -> a.requestPermissions(new String[] {Manifest.permission.READ_CALENDAR}, req))
+                .setNegativeButton("Not now", (d, w) -> {
+                    if (from != null) from.setChecked(false);
+                    else if (req == REQ_BRIEF_CALENDAR) Briefing.play(a);
+                })
+                .setOnCancelListener(d -> { if (from != null) from.setChecked(false); })
+                .show();
+    }
+
+    /** What the briefing reads from Health Connect, before Android's own permission screen. */
+    private void askHealthAccess() {
+        if (!Briefing.healthAvailable()) return;
+        if (Briefing.healthGranted(a)) {
+            try {
+                a.startActivity(new Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS")
+                        .putExtra(Intent.EXTRA_PACKAGE_NAME, a.getPackageName()));
+            } catch (Exception e) {
+                a.startActivity(new Intent("android.health.connect.action.HEALTH_HOME_SETTINGS"));
+            }
+            return;
+        }
+        new AlertDialog.Builder(a)
+                .setTitle("Add your health to the briefing?")
+                .setMessage("SteerTTS can read last night's sleep, your steps and your resting heart rate from Health "
+                        + "Connect, and say them in your briefing.\n\nIt only reads; it stores nothing and sends nothing "
+                        + "anywhere. Next, choose what to allow.")
+                .setPositiveButton("Continue", (d, w) -> a.requestPermissions(Briefing.HEALTH_PERMISSIONS, REQ_HEALTH))
+                .setNegativeButton("Not now", null)
                 .show();
     }
 
     private ComponentName listener() { return new ComponentName(a, ReadoutListener.class); }
 
-    private boolean listenerOn() {
+    private boolean listenerOn() { return listenerOn(a); }
+
+    static boolean listenerOn(android.content.Context c) {
+        ComponentName l = new ComponentName(c, ReadoutListener.class);
         if (Build.VERSION.SDK_INT >= 27)
-            return a.getSystemService(NotificationManager.class).isNotificationListenerAccessGranted(listener());
-        String s = Settings.Secure.getString(a.getContentResolver(), "enabled_notification_listeners");
-        return s != null && s.contains(listener().flattenToString());
+            return c.getSystemService(NotificationManager.class).isNotificationListenerAccessGranted(l);
+        String s = Settings.Secure.getString(c.getContentResolver(), "enabled_notification_listeners");
+        return s != null && s.contains(l.flattenToString());
     }
 
     private void openListenerSettings() {

@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Whissle green; the dark variant is in values-night. Views pick their colours from Ui.init(). -->
     <style name="SteerTTS" parent="@android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:colorPrimary">#5B4BDB</item>
-        <item name="android:colorAccent">#5B4BDB</item>
-        <item name="android:colorControlActivated">#5B4BDB</item>
-        <item name="android:windowBackground">#F5F4FA</item>
-        <item name="android:statusBarColor">#F5F4FA</item>
-        <item name="android:navigationBarColor">#F5F4FA</item>
+        <item name="android:colorPrimary">#1A6A55</item>
+        <item name="android:colorAccent">#1A6A55</item>
+        <item name="android:colorControlActivated">#1A6A55</item>
+        <item name="android:windowBackground">#F4F6F5</item>
+        <item name="android:statusBarColor">#F4F6F5</item>
+        <item name="android:navigationBarColor">#F4F6F5</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
     </style>
