@@ -246,7 +246,31 @@ final class AssistantScreen {
             t.addView(u.text(e.app + (e.who.isEmpty() ? "" : " · " + e.who) + "  ·  " + tf.format(new java.util.Date(e.time)), 14, Ui.INK, true));
             t.addView(u.text(e.outcome, 13, e.spoken ? Ui.ACCENT : Ui.MUTED, false));
             r.addView(t, Ui.weight(1));
+            if (e.fix != null) {
+                r.setOnClickListener(v -> fix(e));
+                r.addView(u.chevron());
+            }
             recent.addView(r);
+        }
+    }
+
+    /** A tap on a "not read" row: fix it right there. */
+    private void fix(Recent.Event e) {
+        switch (e.fix) {
+            case "app":
+                new AlertDialog.Builder(a).setTitle("Read messages from " + e.app + "?")
+                        .setPositiveButton("Add " + e.app, (d, w) -> {
+                            java.util.Set<String> on = prefs.appsOn();
+                            on.add(e.pkg);
+                            prefs.setAppsOn(on);
+                            refresh();
+                        }).setNegativeButton("Not now", null).show();
+                break;
+            case "when": askWhen(); break;
+            case "messages": toggle(MESSAGES); break;
+            case "email": toggle(EMAIL); break;
+            case "calls": toggle(CALLS); break;
+            default: break;
         }
     }
 

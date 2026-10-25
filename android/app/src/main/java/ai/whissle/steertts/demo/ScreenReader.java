@@ -326,7 +326,8 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
             if (toolbar(n)) return;
             StringBuilder b = new StringBuilder();
             Rect box = new Rect();
-            if (text(n, b, box, 0) && n.isVisibleToUser()) add(b.toString(), box, out);
+            int[] links = new int[2];   // characters in links, links
+            if (text(n, b, box, 0, links) && n.isVisibleToUser() && !navigation(b.toString(), links)) add(b.toString(), box, out);
             return;
         }
         CharSequence t = n.getText();
@@ -338,9 +339,21 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         for (int i = 0; i < n.getChildCount(); ++i) collect(n.getChild(i), out, depth + 1);
     }
 
+    /** Mostly links and no sentence of its own: a navigation box or a footer ("Peter Rabbit Fictional character The…"). */
+    private static boolean navigation(String text, int[] links) {
+        String s = text.trim();
+        return links[1] >= 4 && links[0] >= s.replaceAll("\\s", "").length() * 0.75f;
+    }
+
+    // licences, copyright and site boilerplate, which nobody wants read aloud
+    private static final java.util.regex.Pattern LEGAL = java.util.regex.Pattern.compile(
+            "(?i)(CC BY-SA|Creative Commons|all rights reserved|©|terms of (use|service)|privacy policy|cookie (policy|settings)|"
+                    + "rendered with Parsoid|content is available under|this page was last edited)");
+
     private static void add(String text, Rect box, List<Item> out) {
         String s = text.replaceAll("\\s+", " ").trim();
         if (s.length() < 2 || box.height() <= 0) return;
+        if (LEGAL.matcher(s).find() && s.length() < 400) return;
         boolean words = s.split(" ").length >= 3 || s.matches(".*[.!?:]$");   // a label of one or two words is chrome
         if (words) out.add(new Item(s, box));
     }
@@ -389,11 +402,15 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
     }
 
     /** The text leaves of an inline container, in order, and the box around the visible ones. */
-    private static boolean text(AccessibilityNodeInfo n, StringBuilder b, Rect box, int depth) {
+    private static boolean text(AccessibilityNodeInfo n, StringBuilder b, Rect box, int depth, int[] links) {
         if (n.getChildCount() == 0) {
             CharSequence t = n.getText();
             if (t == null) return false;
             String s = t.toString();
+            if (n.isClickable() || (n.getParent() != null && n.getParent().isClickable())) {
+                links[0] += s.trim().length();
+                links[1]++;
+            }
             if (b.length() > 0 && !Character.isWhitespace(b.charAt(b.length() - 1)) && !s.isEmpty()
                     && Character.isLetterOrDigit(s.charAt(0)) && Character.isLetterOrDigit(b.charAt(b.length() - 1))) b.append(' ');
             b.append(s);
@@ -406,7 +423,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
             return true;
         }
         boolean any = false;
-        for (int i = 0; i < n.getChildCount(); ++i) any |= text(n.getChild(i), b, box, depth + 1);
+        for (int i = 0; i < n.getChildCount(); ++i) any |= text(n.getChild(i), b, box, depth + 1, links);
         return any;
     }
 

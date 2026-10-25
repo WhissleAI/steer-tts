@@ -122,7 +122,7 @@ final class Announcer {
             for (Speech.Part part : sp.parts) {
                 Style s = moodStyle(base, part.mood);
                 String voice = voice(tts, part.voice != null ? part.voice : s.voice);
-                for (String sentence : SteerTtsService.sentences(Expression.bmp(part.text))) {
+                for (String sentence : SteerTtsService.sentences(Spoken.say(part.text))) {
                     while (player.pendingSamples() > AHEAD && gen.get() == g) SystemClock.sleep(50);
                     if (gen.get() != g) break;
                     float[] y = tts.synthesize(sentence, voice, s.tagOrNull(), s.ctrl(), s.pace, false);

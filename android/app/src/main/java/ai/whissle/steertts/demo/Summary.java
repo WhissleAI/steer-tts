@@ -76,6 +76,7 @@ final class Summary {
             }
             if (items.isEmpty()) return null;
             if (references(items)) return items.size() >= 3 ? "A list of " + items.size() + " references, skipped." : null;
+            if (footer(items)) return "";   // a site's footer or menu: nothing worth saying
             if (items.size() < 6 || len / items.size() > 60) return null;   // a short list, or one of sentences: read it
             return "A list of " + items.size() + " items, starting with " + join(firstWords(items.subList(0, 3), 6)) + ".";
         }
@@ -104,6 +105,14 @@ final class Summary {
         b.append(". ");
         if (rows.size() > 1) b.append("The first row: ").append(String.join(", ", firstWords(rows.get(1).subList(0, Math.min(rows.get(1).size(), 5)), 5))).append(".");
         return b.toString().trim();
+    }
+
+    private static boolean footer(List<String> items) {
+        int hits = 0;
+        for (String s : items)
+            if (s.matches("(?i).*\\b(privacy|terms|cookies?|contact|about( us)?|legal|disclaimer|accessibility|help|sign in|log in|"
+                    + "careers|developers|statistics|mobile view|code of conduct)\\b.*")) hits++;
+        return hits >= 2;
     }
 
     private static boolean references(List<String> items) {

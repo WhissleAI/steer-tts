@@ -15,6 +15,7 @@ final class Recent {
         final long time;
         final String app, who, outcome;
         final boolean spoken;
+        String pkg, fix;   // what a tap on the row offers: "app" (add pkg to the list), "when", "messages", "email", "calls"…
 
         Event(String app, String who, String outcome, boolean spoken) {
             this.time = System.currentTimeMillis();
@@ -28,8 +29,13 @@ final class Recent {
     private static final List<Event> events = new ArrayList<>();
     static volatile Runnable onChange;
 
-    static synchronized void add(String app, String who, String outcome, boolean spoken) {
-        events.add(0, new Event(app, who == null ? "" : who, outcome, spoken));
+    static synchronized void add(String app, String who, String outcome, boolean spoken) { add(app, who, outcome, spoken, null, null); }
+
+    static synchronized void add(String app, String who, String outcome, boolean spoken, String pkg, String fix) {
+        Event e = new Event(app, who == null ? "" : who, outcome, spoken);
+        e.pkg = pkg;
+        e.fix = fix;
+        events.add(0, e);
         while (events.size() > 12) events.remove(events.size() - 1);
         Runnable r = onChange;
         if (r != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(r);

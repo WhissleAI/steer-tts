@@ -138,7 +138,7 @@ public class ReadoutListener extends NotificationListenerService {
             Ranking cr = new Ranking();
             // in Do Not Disturb only a call that is allowed to ring (a starred contact, a repeat caller) is announced
             boolean rings = !AssistantPrefs.doNotDisturb(this) || (ranking != null && ranking.getRanking(sbn.getKey(), cr) && cr.matchesInterruptionFilter());
-            if (!prefs.announceCalls()) Recent.add(label(pkg), null, "Call not announced: Calls are off", false);
+            if (!prefs.announceCalls()) Recent.add(label(pkg), null, "Call not announced: Calls are off", false, pkg, "calls");
             else if (!rings) Recent.add(label(pkg), null, "Call not announced: Do Not Disturb", false);
             else call(sbn, n, pkg);
             return;
@@ -154,17 +154,17 @@ public class ReadoutListener extends NotificationListenerService {
         prefs.noteSeen(pkg);
         String app = label(pkg), who = said.items.isEmpty() ? null : said.items.get(0)[0];
         if (!prefs.readMessages()) {
-            Recent.add(app, who, "Not read: Messages are off", false);
+            Recent.add(app, who, "Not read: Messages are off", false, pkg, "messages");
             return;
         }
         if (!prefs.appOn(pkg)) {
-            Recent.add(app, who, "Not read: " + app + " isn't in your apps (Messages › Apps)", false);
+            Recent.add(app, who, "Not read: " + app + " isn't in your apps. Tap to add it", false, pkg, "app");
             return;
         }
         String why = prefs.whyNotNow(this);
         if (why != null) {
             for (String[] it : said.items) Digest.add(sbn.getKey(), it[0], app, it[1]);   // for "catch me up" later
-            Recent.add(app, who, "Kept for catch-up: " + why, false);
+            Recent.add(app, who, "Kept for catch-up: " + why, false, pkg, "when");
             return;
         }
         Announcer.get(this).say(said.speech, pkg, false, null);
@@ -229,7 +229,7 @@ public class ReadoutListener extends NotificationListenerService {
         } else if (AssistantPrefs.EMAIL_APPS.contains(pkg) || Notification.CATEGORY_EMAIL.equals(n.category)) {
             if (title == null) return true;
             if (!prefs.email()) {
-                Recent.add(app, title, "Not read: Email is off", false);
+                Recent.add(app, title, "Not read: Email is off. Tap to turn it on", false, pkg, "email");
                 return true;
             }
             sp = Readout.email(title, text);
@@ -245,7 +245,7 @@ public class ReadoutListener extends NotificationListenerService {
             Recent.add(app, title, "Read out", true);
         } else if (!announce) {
             Digest.add(sbn.getKey(), title != null ? title : app, app, text != null ? text : "");
-            Recent.add(app, title, "Kept for catch-up: " + why, false);
+            Recent.add(app, title, "Kept for catch-up: " + why, false, pkg, "when");
         } else {
             Recent.add(app, title, "Not read: " + why, false);
         }

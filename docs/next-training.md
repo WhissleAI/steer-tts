@@ -58,6 +58,21 @@ Kept up to date as the app is built. Newest first within each section.
     titles (Dr., Mrs.), °F/°C, currency with K/M/B, versions, Roman numerals after "Chapter", fractions, chat
     abbreviations, emoji. *Train:* include these in training text so the acoustic model has seen their prosody
     (lists of digits, times), not just their words.
+15. **The engine's own normalisation is narrow, so the app now writes everything out (verified 2026-10-25).** Heard
+    by the user: "CHAPTER I" read as the letter I, accented names garbled, a calendar time misread. Measured with the
+    C front end: "CHAPTER I." and "II." stay letters (the Roman rule is case-sensitive and needs a keyword), "1990s" →
+    "nineteen ninetys", "'80s" → "'eightys", "₹500" → "₹five hundred", "#12345" → "#twelve thousand…", "221B" →
+    "two hundred twenty oneB", "Q3" → "Qthree", "Café/Zoë/Dvořák" passed through with accents (the G2P sees no
+    letters for é, ë, ř), URLs and emails read character soup, "Mon, Oct 5" stays abbreviated, non-Latin scripts
+    reach the G2P. `Spoken.java` (app) now writes all of these as words before the engine (81 unit cases, four
+    Gutenberg books checked for false positives, Whisper round-trip on the edge model). *Train:* (a) move this
+    normalisation into the shared front end (Python + C, with golden tests) so every client gets it; (b) train on
+    normalised text for these classes (times "ten to eleven pee em", digit strings read in groups, ordinals,
+    regnal numbers "Henry the eighth") so prosody fits: digit groups need short pauses, times a falling end;
+    (c) accented and foreign names: a G2P that reads Latin letters with diacritics (São Paulo, Dvořák, Zoë) instead
+    of the app stripping accents; (d) multilingual: Hindi/Hinglish, Devanagari and Cyrillic text is currently dropped
+    (silence) — a voice for at least Hinglish messages is a real gap for the assistant.
+
 12. **Long sentences (to measure).** Documents are split at 240 characters at a comma or semicolon for first-sound
     latency. Measure quality and prosody on 200–400 character inputs; if good, the split can be longer.
 

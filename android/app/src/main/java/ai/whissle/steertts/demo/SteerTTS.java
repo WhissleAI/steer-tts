@@ -40,22 +40,25 @@ public final class SteerTTS implements AutoCloseable {
     /** Worker threads in use. */
     public int threads() { return nativeThreads(h); }
 
+    // Every text is said through Spoken first: numbers, times, dates, amounts, Roman numerals, links and accented
+    // letters in words, which the engine's own front end reads only in part.
+
     /**
      * Streams text sentence by sentence (inline markup parsed: *word*, [pause 300ms], <whisper>..</whisper>). voice,
      * tag and ctrl ("rate=1,loud=-0.5") may be null.
      */
     public void stream(String text, String voice, String tag, String ctrl, float pace, Sink sink) {
-        nativeStream(h, text, voice, tag, ctrl, pace, sink);
+        nativeStream(h, Spoken.say(text, true), voice, tag, ctrl, pace, sink);
     }
 
     /** One render of plain text (no markup); null if cancel() was called before it started. */
     public float[] synthesize(String text, String voice, String ctrl, float pace) {
-        return nativeSynthesize(h, text, voice, null, ctrl, pace, false);
+        return nativeSynthesize(h, Spoken.say(text), voice, null, ctrl, pace, false);
     }
 
     /** One render with a style tag (may be null); markup: parse *word* and [pause 300ms] in text. */
     public float[] synthesize(String text, String voice, String tag, String ctrl, float pace, boolean markup) {
-        return nativeSynthesize(h, text, voice, tag, ctrl, pace, markup);
+        return nativeSynthesize(h, Spoken.say(text, markup), voice, tag, ctrl, pace, markup);
     }
 
     /** Forget an earlier cancel(): call at the start of a new request (a cancel during the last one stays set otherwise). */
