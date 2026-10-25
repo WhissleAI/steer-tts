@@ -1,0 +1,63 @@
+// SteerTTS on Android: the C library (../../c) is compiled into the app's JNI library and the edge model is bundled
+// as assets. The model is not in git: by default it is copied from ../c/models/steer-tts-edge (c/tools/get_models.sh),
+// or pass -PsteerttsModel=/path/to/steer-tts-edge.
+plugins {
+    id "com.android.application"
+}
+
+def modelDir = file(project.findProperty("steerttsModel") ?: "../../c/models/steer-tts-edge")
+def modelAssets = layout.buildDirectory.dir("generated/steertts-model")
+
+tasks.register("copySteerttsModel", Copy) {
+    doFirst {
+        if (!new File(modelDir, "config.json").exists())
+            throw new GradleException("no SteerTTS edge model in ${modelDir}: run c/tools/get_models.sh or pass -PsteerttsModel=DIR")
+    }
+    from(modelDir) {
+        include "config.json", "acoustic.safetensors", "vocoder.safetensors", "voices.json", "voices.safetensors",
+                "native/front/**"
+    }
+    into modelAssets.map { it.dir("model") }
+}
+
+android {
+    namespace "ai.whissle.steertts.demo"
+    compileSdk 34
+    ndkVersion "27.1.12297006"
+
+    defaultConfig {
+        applicationId "ai.whissle.steertts.demo"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.2.0"
+        ndk { abiFilters "arm64-v8a" }
+        externalNativeBuild {
+            cmake { arguments "-DANDROID_STL=none" }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug   // a demo: installable without a release key
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+    sourceSets {
+        main { assets.srcDirs += modelAssets }
+    }
+    androidResources {
+        noCompress += ["safetensors", "bin", "json", "tsv", "txt"]   // copied once at first start, faster uncompressed
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+tasks.named("preBuild") { dependsOn "copySteerttsModel" }
