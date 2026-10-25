@@ -99,7 +99,7 @@ final class Announcer {
             for (String sentence : SteerTtsService.sentences(text)) {
                 while (player.pendingSamples() > AHEAD && gen.get() == g) SystemClock.sleep(50);
                 if (gen.get() != g) break;
-                float[] y = tts.synthesize(sentence, voice, s.ctrl(), 1f);
+                float[] y = tts.synthesize(sentence, voice, s.ctrl(), s.pace);
                 if (y == null || gen.get() != g) break;
                 player.write(y);
             }
@@ -112,8 +112,21 @@ final class Announcer {
     }
 
     /** Tells the app's screen what is being said and in what style (SteerTtsService does the same). */
+    /**
+     * The app's screen, when it is open (same process): told directly, on the main thread. A broadcast can wait
+     * seconds in the queue while the system is busy with the very notification being read out.
+     */
+    static volatile java.util.function.Consumer<Intent> screen;
+    private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
+
+    private void tell(Intent i) {
+        java.util.function.Consumer<Intent> s = screen;
+        if (s != null) MAIN.post(() -> s.accept(i));
+        else app.sendBroadcast(i);
+    }
+
     private void show(Style s, String voice, String text, String caller) {
-        app.sendBroadcast(new Intent(SteerTtsService.ACTION_STYLE).setPackage(app.getPackageName())
+        tell(new Intent(SteerTtsService.ACTION_STYLE).setPackage(app.getPackageName())
                 .putExtra("speaking", true).putExtra("source", "assistant").putExtra("style", s.toJson().toString())
                 .putExtra("voice", voice).putExtra("text", text).putExtra("caller", caller));
     }
@@ -123,7 +136,7 @@ final class Announcer {
             if (!waiting.remove(done)) return;   // already run by stop()
             if (waiting.isEmpty()) {
                 am.abandonAudioFocusRequest(focus);
-                app.sendBroadcast(new Intent(SteerTtsService.ACTION_STYLE).setPackage(app.getPackageName())
+                tell(new Intent(SteerTtsService.ACTION_STYLE).setPackage(app.getPackageName())
                         .putExtra("speaking", false));
             }
         }

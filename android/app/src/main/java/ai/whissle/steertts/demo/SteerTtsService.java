@@ -37,6 +37,11 @@ public class SteerTtsService extends TextToSpeechService {
         super.onDestroy();
     }
 
+    @Override public void onCreate() {
+        super.onCreate();
+        Player.initTap(this);
+    }
+
     private SteerTTS engine() throws Exception {
         if (tts == null) tts = new SteerTTS(SteerTTS.installModel(this).getPath(), 0);
         return tts;
@@ -116,8 +121,8 @@ public class SteerTtsService extends TextToSpeechService {
             Style base = Style.load(this);
             Style s = ContextStyler.decide(this, base, text, caller);
             String voice = resolveVoice(e, req.getVoiceName(), base.voice);
-            // speech rate 100 = normal (screen readers go up to several times that); pitch 100 = normal
-            float pace = Math.max(0.25f, Math.min(4f, req.getSpeechRate() / 100f));
+            // pitch 100 = normal; the system speech rate (100 = normal; screen readers go far higher) scales the user's speed
+            float pace = Math.max(0.25f, Math.min(4f, s.pace * req.getSpeechRate() / 100f));
             float pitch = req.getPitch() / 100f;
             if (pitch > 0 && Math.abs(pitch - 1f) > 0.01f)   // semitones / the pooled sd of f0_med (2.09 st)
                 s.add("f0_med", (float) (12 * Math.log(pitch) / Math.log(2) / 2.09));
@@ -125,13 +130,17 @@ public class SteerTtsService extends TextToSpeechService {
             if (cb.start(SteerTTS.SAMPLE_RATE, AudioFormat.ENCODING_PCM_16BIT, 1) != TextToSpeech.SUCCESS) return;
             double first = -1;
             long samples = 0;
+            Player.initTap(this);   // the tap directory may have been created after this process started
+            java.io.OutputStream tap = Player.newTap();   // demo recordings only (see Player.tapDir)
             for (String sentence : sentences(text)) {
                 float[] y = e.synthesize(sentence, voice, s.ctrl(), pace);
                 if (y == null) break;   // stopped
                 if (first < 0) first = (System.nanoTime() - t0) / 1e6;
                 samples += y.length;
+                Player.writeTap(tap, y);
                 if (!send(cb, y)) break;
             }
+            Player.closeTap(tap);
             cb.done();
             Log.i(TAG, String.format(Locale.US, "service %s for %s: %.2f s audio, first audio %.0f ms, %d threads [%s]",
                     voice, caller, samples / (double) SteerTTS.SAMPLE_RATE, first, e.threads(), s.reason));

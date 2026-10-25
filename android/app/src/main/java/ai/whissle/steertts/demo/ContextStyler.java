@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 /**
  * Adjusts the user's base style to what is being said and the phone's state: alerts faster, louder and brighter;
  * questions rising at the end; good news livelier; navigation and screen-reader speech brisk and clear; late at night,
- * or with the ringer off, softer and slower (not for alerts). Adjustments add to the base controls (z-scores), so the
+ * or with the ringer off, softer (not for alerts; never slower: the default voice is already a slow speaker). Adjustments add to the base controls (z-scores), so the
  * user's own settings stay the starting point. The rules lean on loud, f0_med, rate, tilt and h1h2: the controls the
  * model follows reliably (docs/request.md).
  */
@@ -68,14 +68,13 @@ final class ContextStyler {
             note(why, "screen reader: brisk");
         }
         if (!alert) {
-            int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+            int hour = hour(ctx);
             AudioManager am = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
             boolean quietRinger = am != null && am.getRingerMode() != AudioManager.RINGER_MODE_NORMAL;
             if (hour >= 22 || hour < 7) {
                 s.add("loud", -1.2f);
-                s.add("rate", -0.4f);
                 s.add("h1h2", 0.6f);
-                note(why, "night: softer, slower");
+                note(why, "night: softer");
             } else if (quietRinger) {
                 s.add("loud", -0.8f);
                 note(why, "ringer off: softer");
@@ -87,6 +86,32 @@ final class ContextStyler {
         }
         s.reason = why.length() > 0 ? why.toString() : "neutral: your settings";
         return s;
+    }
+
+    /** The hour context styling uses: the real one, or (debug builds only) a demo override from setDemoHour. */
+    static int hour(Context ctx) {
+        if ((ctx.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            java.io.File f = new java.io.File(ctx.getFilesDir(), "demo_hour");
+            try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
+                int h = Integer.parseInt(new String(in.readAllBytes()).trim());
+                if (h >= 0 && h < 24) return h;
+            } catch (Exception ignored) {   // no override
+            }
+        }
+        return Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+    }
+
+    /** Demo recordings: act as if it were `hour` o'clock (a file, so the TTS service process sees it too); -1 clears. */
+    static void setDemoHour(Context ctx, int hour) {
+        java.io.File f = new java.io.File(ctx.getFilesDir(), "demo_hour");
+        if (hour < 0) {
+            f.delete();
+            return;
+        }
+        try (java.io.FileOutputStream out = new java.io.FileOutputStream(f)) {
+            out.write(String.valueOf(hour).getBytes());
+        } catch (java.io.IOException ignored) {
+        }
     }
 
     private static boolean lowBattery(Context ctx) {

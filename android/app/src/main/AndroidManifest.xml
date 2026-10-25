@@ -48,6 +48,15 @@
                 android:resource="@xml/tts_engine" />
         </service>
         <activity
+            android:name=".GetSampleText"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.speech.tts.engine.GET_SAMPLE_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".CheckVoiceData"
             android:exported="true"
             android:theme="@android:style/Theme.NoDisplay">

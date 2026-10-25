@@ -7,3 +7,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "steertts-android"
 include ":app"
+include ":demochat"

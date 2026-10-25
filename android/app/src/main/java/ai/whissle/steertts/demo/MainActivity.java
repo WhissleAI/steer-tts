@@ -52,6 +52,9 @@ import java.util.Locale;
  *   --ei readout_when 0|1|2         when messages are read (AssistantPrefs: headphones / + screen off / any time)
  *   --es readout_allow PACKAGE      read that app's messages too (e.g. com.android.shell for `cmd notification post`)
  *   --ei meetings_check MINUTES     announce now every event starting within MINUTES
+ *   --ei demo_hour H                debug builds: context styling acts as if it were H o'clock (-1 = the real time)
+ *   --es input "Text"               put text in the box;  --ez reset_card true   clear the now-speaking card
+ *   --es say_as Happy               speak the box in a "Say it" delivery (Calm, Happy, Excited, Sad, Whisper)
  */
 public class MainActivity extends Activity {
     static final String TAG = "SteerTTS";
@@ -105,6 +108,7 @@ public class MainActivity extends Activity {
         IntentFilter f = new IntentFilter(SteerTtsService.ACTION_STYLE);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(styleReceiver, f, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(styleReceiver, f);
+        Announcer.screen = i -> styleReceiver.onReceive(this, i);   // the assistant, in this process: no queue
         worker.start();
         engineThread = new Handler(worker.getLooper());
         engineThread.post(() -> {
@@ -142,6 +146,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         unregisterReceiver(styleReceiver);
+        Announcer.screen = null;
         if (systemTts != null) systemTts.shutdown();
         if (tts != null) tts.cancel();
         engineThread.post(() -> {
@@ -166,6 +171,16 @@ public class MainActivity extends Activity {
         if (i == null) return;
         if (i.hasExtra("threads")) threadsSel = i.getIntExtra("threads", 0);
         AssistantPrefs ap = new AssistantPrefs(this);
+        if (i.hasExtra("demo_hour")) ContextStyler.setDemoHour(this, i.getIntExtra("demo_hour", -1));
+        if (i.getStringExtra("input") != null) {
+            String t = i.getStringExtra("input");
+            runOnUiThread(() -> input.setText(t));
+        }
+        if (i.getBooleanExtra("reset_card", false)) runOnUiThread(this::resetCard);
+        if (i.getStringExtra("say_as") != null) {
+            String p = i.getStringExtra("say_as");
+            runOnUiThread(() -> speakAs(p));
+        }
         if (i.hasExtra("readout_when")) ap.setWhen(i.getIntExtra("readout_when", AssistantPrefs.PRIVATE));
         if (i.hasExtra("readout_allow")) {
             java.util.Set<String> on = ap.appsOn();
@@ -189,15 +204,19 @@ public class MainActivity extends Activity {
     }
 
     private void speak(String text, Style baseStyle) {
+        speakStyled(text, ContextStyler.decide(this, baseStyle, text, getPackageName()), null);
+    }
+
+    /** Speaks with exactly this style; label names a "Say it" delivery for the now-speaking card. */
+    private void speakStyled(String text, Style s, String label) {
         SteerTTS e = engine();
-        Style s = ContextStyler.decide(this, baseStyle, text, getPackageName());
         String voice = resolveVoice(e, s.voice);
-        runOnUiThread(() -> showApplied(s, "SteerTTS", text.replaceAll("<[^>]+>|\\[[^]]*]|\\*", "")));
+        runOnUiThread(() -> showApplied(s, label != null ? "SteerTTS · " + label : "SteerTTS", text.replaceAll("<[^>]+>|\\[[^]]*]|\\*", "")));
         final long t0 = System.nanoTime();
         final double[] first = {-1};
         final long[] samples = {0};
         try {
-            e.stream(text, voice, s.tagOrNull(), s.ctrl(), 1.0f, (audio, index, synthMs, seg) -> {
+            e.stream(text, voice, s.tagOrNull(), s.ctrl(), s.pace, (audio, index, synthMs, seg) -> {
                 if (first[0] < 0) first[0] = ms(t0);
                 samples[0] += audio.length;
                 player.write(audio);
@@ -339,6 +358,16 @@ public class MainActivity extends Activity {
         showStyle(s, true);
     }
 
+    private void resetCard() {
+        ui.removeCallbacksAndMessages(null);
+        showingApplied = false;
+        nowLabel.setText("Idle");
+        nowLabel.setTextColor(Ui.MUTED);
+        nowText.setText("Messages, callers, meetings and other apps' speech appear here as SteerTTS says them.");
+        nowWhy.setVisibility(View.GONE);
+        showStyle(base, false);
+    }
+
     private void returnToBase(long delayMs) {
         ui.postDelayed(() -> {
             showingApplied = false;
@@ -438,6 +467,14 @@ public class MainActivity extends Activity {
         engineThread.post(() -> speak(text, s));
     }
 
+    /** The input text once, in one of the "Say it" deliveries (the saved style is not changed). */
+    private void speakAs(String preset) {
+        String text = input.getText().toString();
+        Style s = base.preset(preset);
+        say("Speaking…");
+        engineThread.post(() -> speakStyled(text, s, preset));
+    }
+
     private void stopAll() {
         if (tts != null) tts.cancel();
         player.flush();
@@ -472,17 +509,24 @@ public class MainActivity extends Activity {
         input.setPadding(u.dp(12), u.dp(10), u.dp(12), u.dp(10));
         tryCard.addView(input, Ui.matchWrap());
 
-        HorizontalScrollView sampleScroll = new HorizontalScrollView(this);
-        sampleScroll.setHorizontalScrollBarEnabled(false);
+        // two rows of equal-width chips that always fit the card (no scrolling, nothing cut off)
         LinearLayout samples = u.row();
         samples.setPadding(0, u.dp(10), 0, u.dp(4));
         for (String[] smp : SAMPLES)
-            samples.addView(u.chip(smp[0], v -> {
+            samples.addView(fit(u.chip(smp[0], v -> {
                 input.setText(smp[1]);
                 speakInput();
-            }));
-        sampleScroll.addView(samples);
-        tryCard.addView(sampleScroll);
+            })));
+        tryCard.addView(samples, Ui.matchWrap());
+        TextView sayIt = u.text("SAY IT", 11, Ui.MUTED, true);
+        sayIt.setLetterSpacing(0.08f);
+        sayIt.setPadding(0, u.dp(6), 0, u.dp(4));
+        tryCard.addView(sayIt);
+        LinearLayout styles = u.row();
+        styles.setPadding(0, 0, 0, u.dp(4));
+        for (String p : Style.PRESETS)
+            styles.addView(fit(u.chip(p, v -> speakAs(p))));
+        tryCard.addView(styles, Ui.matchWrap());
 
         LinearLayout actions = u.row();
         actions.setPadding(0, u.dp(8), 0, 0);
@@ -549,6 +593,16 @@ public class MainActivity extends Activity {
         return sv;
     }
 
+    /** A chip that shares its row's width equally with the others. */
+    private TextView fit(TextView chip) {
+        LinearLayout.LayoutParams lp = Ui.weight(1);
+        lp.rightMargin = u.dp(6);
+        chip.setLayoutParams(lp);
+        chip.setPadding(u.dp(4), u.dp(7), u.dp(4), u.dp(7));
+        chip.setSingleLine(true);
+        return chip;
+    }
+
     private void fillVoiceSelection() {
         int vi = voiceIds.indexOf(base.voice == null ? "female" : base.voice);
         if (vi >= 0 && voicePick.getAdapter() != null) voicePick.setSelection(vi);
@@ -580,6 +634,25 @@ public class MainActivity extends Activity {
             saveBase();
         }));
         voiceCard.addView(labeled("Style", tagPick));
+        SeekBar speed = new SeekBar(this);
+        TextView speedVal = u.text("", 13, Ui.MUTED, false);
+        speedVal.setMinWidth(u.dp(40));
+        speedVal.setGravity(Gravity.END);
+        int speedSteps = Math.round((Style.MAX_PACE - Style.MIN_PACE) * 20);
+        speed.setMax(speedSteps);
+        speed.setProgress(Math.round((base.pace - Style.MIN_PACE) * 20));
+        speedVal.setText(String.format(Locale.US, "%.2f×", base.pace));
+        speed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                base.pace = Style.MIN_PACE + p / 20f;
+                speedVal.setText(String.format(Locale.US, "%.2f×", base.pace));
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) { }
+            @Override public void onStopTrackingTouch(SeekBar s) { saveBase(); }
+        });
+        LinearLayout speedRow = labeled("Speed", speed);
+        speedRow.addView(speedVal);
+        voiceCard.addView(speedRow);
         contextual = u.toggle(base.contextual);
         contextual.setOnCheckedChangeListener((v, on) -> {
             base.contextual = on;

@@ -83,32 +83,45 @@ final class Player {
 
     private void openTap() {
         closeTap();
+        tap = newTap();
+    }
+
+
+    private void writeTap(float[] a) { writeTap(tap, a); }
+
+    private void closeTap() {
+        closeTap(tap);
+        tap = null;
+    }
+
+    /** A new utterance file in tapDir, or null when tapping is off. Also used by SteerTtsService. */
+    static java.io.OutputStream newTap() {
         java.io.File d = tapDir;
-        if (d == null) return;
+        if (d == null) return null;
         try {
-            tap = new java.io.BufferedOutputStream(new java.io.FileOutputStream(
+            return new java.io.BufferedOutputStream(new java.io.FileOutputStream(
                     new java.io.File(d, System.currentTimeMillis() + ".f32")));
-        } catch (java.io.IOException ignored) {
+        } catch (java.io.IOException e) {
+            return null;
         }
     }
 
-    private void writeTap(float[] a) {
-        if (tap == null) return;
+    static void writeTap(java.io.OutputStream o, float[] a) {
+        if (o == null) return;
         java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(a.length * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN);
         b.asFloatBuffer().put(a);
         try {
-            tap.write(b.array());
+            o.write(b.array());
         } catch (java.io.IOException ignored) {
         }
     }
 
-    private void closeTap() {
-        if (tap == null) return;
+    static void closeTap(java.io.OutputStream o) {
+        if (o == null) return;
         try {
-            tap.close();
+            o.close();
         } catch (java.io.IOException ignored) {
         }
-        tap = null;
     }
 
     private void run() {
