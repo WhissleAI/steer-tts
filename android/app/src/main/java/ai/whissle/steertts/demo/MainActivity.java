@@ -119,6 +119,7 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
         });
         String t = getIntent().getStringExtra("tab");
         selectTab(t != null ? t : "listen");
+        if (b == null && getIntent().getBooleanExtra("setup_screen", false) && assistant != null) assistant.setupScreen();
         handleIntent(getIntent());
     }
 
@@ -140,6 +141,7 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
     @Override protected void onResume() {
         super.onResume();
         base = Style.load(this);
+        Smooth.on = base.smooth;
         if (listen != null) listen.refresh();
         if (assistant != null) assistant.refresh();
         if (voices != null) voices.refresh();
@@ -163,6 +165,7 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
         super.onNewIntent(i);
         setIntent(i);
         if (i.getStringExtra("tab") != null) selectTab(i.getStringExtra("tab"));
+        if (i.getBooleanExtra("setup_screen", false) && assistant != null) assistant.setupScreen();
         handleIntent(i);
     }
 
@@ -389,6 +392,16 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
                 for (String p : r.paragraphs) Log.i(TAG, "pdf para [" + p.replace(String.valueOf(Narration.HEAD), "# ") + "]");
             } catch (Exception e) {
                 Log.e(TAG, "pdf_layout", e);
+            }
+        }
+        if (i.hasExtra("screen_read_in") && ScreenReader.instance != null) ScreenReader.instance.readIn(i.getIntExtra("screen_read_in", 4000));
+        if (i.getBooleanExtra("perform", false) && Narrator.get(this).doc() != null) {   // how the current book is performed
+            Doc d = Narrator.get(this).doc();
+            Cast c = d.cast();
+            for (int k = 0; k < Math.min(d.sentences.size(), 400); ++k) {
+                Cast.Line l = c.lines[d.paraOf[k]];
+                for (Narration.Seg sg : Narration.segments(d.sentences.get(k), l))
+                    if (sg.dialogue) Log.i(TAG, "perform " + (l.speaker == null ? "-" : l.speaker) + " [" + sg.mood.name + "] " + sg.text.substring(0, Math.min(60, sg.text.length())));
             }
         }
         if (i.getBooleanExtra("catchup", false)) ReadoutListener.catchUp(this, true);

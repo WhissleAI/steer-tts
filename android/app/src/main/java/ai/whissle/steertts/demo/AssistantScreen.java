@@ -31,7 +31,7 @@ import java.util.TreeSet;
 final class AssistantScreen {
     static final int REQ_CALENDAR = 1, REQ_HEALTH = 3;
     private static final int MESSAGES = 0, CALLS = 1, MEETINGS = 2, REMINDERS = 3, DELIVERIES = 4, EMAIL = 5, BATTERY = 6,
-            BRIEFING = 7, CATCHUP = 8, VOICES = 9, N = 10;
+            BRIEFING = 7, CATCHUP = 8, VOICES = 9, SCREEN = 10, N = 11;
 
     private final Activity a;
     private final Ui u;
@@ -41,7 +41,7 @@ final class AssistantScreen {
     private TextView catchUpLabel;
     private LinearLayout access;
     private int pending = -1;   // the feature waiting for a permission screen to come back
-    private boolean askedListener, retryListener;
+    private boolean askedListener, retryListener, askedScreen;
     private int calendarFor = -1;   // who asked for calendar access: MEETINGS, BRIEFING (its sheet) or PLAY_BRIEFING
     private static final int PLAY_BRIEFING = 100;
 
@@ -93,12 +93,12 @@ final class AssistantScreen {
         root.addView(u.section("What it does"));
         int[] icons = {R.drawable.ic_message, R.drawable.ic_call, R.drawable.ic_calendar, R.drawable.ic_alarm, R.drawable.ic_delivery,
                 R.drawable.ic_email, R.drawable.ic_battery, R.drawable.ic_sun, R.drawable.ic_inbox,
-                R.drawable.ic_people};
+                R.drawable.ic_people, R.drawable.ic_speaker};
         String[] names = TITLES;
         for (int i = 0; i < N; i += 2) {
             LinearLayout r = u.row();
             r.setGravity(android.view.Gravity.TOP);
-            for (int k = i; k < i + 2; ++k) {
+            for (int k = i; k < Math.min(N, i + 2); ++k) {
                 final int f = k;
                 tiles[k] = new Ui.Tile(u, icons[k], names[k]);
                 tiles[k].root.setOnClickListener(v -> sheet(f));
@@ -142,6 +142,7 @@ final class AssistantScreen {
             case DELIVERIES: return prefs.deliveries() && listenerOn(a);
             case EMAIL: return prefs.email() && listenerOn(a);
             case BATTERY: return prefs.battery() && listenerOn(a);
+            case SCREEN: return screenReaderOn(a);
             case CALLS: return prefs.announceCalls() && listenerOn(a);
             case MEETINGS: return prefs.announceMeetings() && MeetingAnnouncer.allowed(a);
             case BRIEFING: return Briefing.daily(a);
@@ -160,6 +161,7 @@ final class AssistantScreen {
             case DELIVERIES: return on ? "Rides, food and parcels, as they move" : "“Your driver is arriving”, read out";
             case EMAIL: return on ? "Who it's from and the subject" : "Hear who emailed and what about";
             case BATTERY: return on ? "When it's low, and when it's full" : "A heads-up before the battery runs out";
+            case SCREEN: return on ? "Tap “Read this screen” in Quick Settings, in any app" : "Any app's page, read aloud, with a tiny control";
             case MEETINGS: {
                 int m = prefs.leadMinutes();
                 return on ? m + (m == 1 ? " minute" : " minutes") + " before each event" : "A heads-up before each meeting";
@@ -189,6 +191,9 @@ final class AssistantScreen {
             } else if (Build.VERSION.SDK_INT >= 33 && !fromStore()) {
                 restrictedHelp(f);   // most likely Android's "restricted setting" for apps installed from a file
             }
+        } else if (askedScreen) {   // back from the accessibility settings
+            askedScreen = false;
+            if (!screenReaderOn(a) && Build.VERSION.SDK_INT >= 33 && !fromStore()) restrictedHelp(SCREEN);
         } else if (retryListener) {   // back from App info after allowing restricted settings: straight to the switch
             retryListener = false;
             if (!listenerOn(a)) {
@@ -221,8 +226,15 @@ final class AssistantScreen {
     /** The user's own tap: on (asking for the permission first if needed) or off. */
     private void toggle(int f) {
         boolean on = on(f);
+        if (on && f == SCREEN) {   // only Android's settings can switch an accessibility service off
+            a.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            return;
+        }
         if (on) {
             set(f, false);
+        } else if (f == SCREEN) {
+            askScreenAccess();
+            return;
         } else if (needsListener(f) && !listenerOn(a)) {
             askListenerAccess(f);
             return;
@@ -236,7 +248,37 @@ final class AssistantScreen {
     }
 
     /** Features that work from notifications (or, for the battery, from the notification listener's connection). */
-    private static boolean needsListener(int f) { return f != MEETINGS && f != BRIEFING && f != VOICES; }
+    private static boolean needsListener(int f) { return f != MEETINGS && f != BRIEFING && f != VOICES && f != SCREEN; }
+
+    /** "Read this screen" is switched on in Android's accessibility settings. */
+    static boolean screenReaderOn(Context c) {
+        String s = Settings.Secure.getString(c.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        return s != null && s.contains(new ComponentName(c, ScreenReader.class).flattenToString());
+    }
+
+    /** From the "Read this screen" tile before setup: show the sheet. */
+    void setupScreen() { sheet(SCREEN); }
+
+    private void askScreenAccess() {
+        new AlertDialog.Builder(a)
+                .setTitle("Let SteerTTS read your screen?")
+                .setMessage("To read any app's page aloud, SteerTTS uses Android's accessibility access. It reads the "
+                        + "visible text of the app in front of you only when you start it (the Quick Settings tile or the "
+                        + "accessibility button), can scroll that page to keep reading, and never stores or sends what it reads.\n\n"
+                        + "Next, Android shows its accessibility settings: open “SteerTTS: read this screen” and switch it on.")
+                .setPositiveButton("Continue", (d, w) -> {
+                    askedScreen = true;
+                    Intent i = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
+                            .putExtra(Intent.EXTRA_COMPONENT_NAME, new ComponentName(a, ScreenReader.class).flattenToString());
+                    try {
+                        a.startActivity(i);
+                    } catch (Exception e) {
+                        a.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                    }
+                })
+                .setNegativeButton("Not now", null)
+                .show();
+    }
 
     void onPermission(int req, boolean granted) {
         if (req == REQ_CALENDAR) {
@@ -248,7 +290,7 @@ final class AssistantScreen {
     }
 
     private static final String[] TITLES = {"Messages", "Calls", "Meetings", "Reminders & timers", "Deliveries & rides",
-            "Email", "Battery", "Morning briefing", "Catch me up", "A voice for each person"};
+            "Email", "Battery", "Morning briefing", "Catch me up", "A voice for each person", "Read any screen"};
 
     // ---------------------------------------------------------------- the sheet behind a tile
     private void sheet(int f) {
@@ -271,7 +313,10 @@ final class AssistantScreen {
                 "Messages that arrived while SteerTTS couldn't read them out wait here. When you put headphones in, "
                         + "it tells you who wrote and what they said. Nothing is stored on the phone.",
                 "Each person's messages are read in a voice of their own, always the same one, so you know who wrote "
-                        + "without hearing the name. The assistant's own voice says who it's from."};
+                        + "without hearing the name. The assistant's own voice says who it's from.",
+                "Any app's page read aloud: an article, a recipe, a long message. Open it, then tap “Read this screen” in "
+                        + "Quick Settings (or the accessibility button). A small control floats on top to pause, skip and "
+                        + "keep going: with auto-continue on, SteerTTS scrolls the page and keeps reading."};
         LinearLayout box = u.column();
         box.setPadding(u.dp(24), u.dp(8), u.dp(24), 0);
         TextView t = u.text(about[f], 15, Ui.MUTED, false);
@@ -383,14 +428,13 @@ final class AssistantScreen {
      */
     private void restrictedHelp(int f) {
         new AlertDialog.Builder(a)
-                .setTitle("Android blocked notification access")
-                .setMessage("SteerTTS was installed from a file, so Android asks you to confirm before it can read "
-                        + "notifications.\n\n1. Tap Open app info.\n2. Tap the ⋮ menu at the top right, then “Allow "
-                        + "restricted settings”, and confirm.\n3. Come back: SteerTTS opens the notification access "
-                        + "switch again. Turn it on.")
+                .setTitle(f == SCREEN ? "Android blocked screen reading" : "Android blocked notification access")
+                .setMessage("SteerTTS was installed from a file, so Android asks you to confirm before it can "
+                        + (f == SCREEN ? "read the screen." : "read notifications.") + "\n\n1. Tap Open app info.\n2. Tap the ⋮ menu at the top right, then “Allow "
+                        + "restricted settings”, and confirm.\n3. Come back and turn SteerTTS on again.")
                 .setPositiveButton("Open app info", (d, w) -> {
                     pending = f;
-                    retryListener = true;
+                    retryListener = f != SCREEN;
                     a.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                             android.net.Uri.fromParts("package", a.getPackageName(), null)));
                 })

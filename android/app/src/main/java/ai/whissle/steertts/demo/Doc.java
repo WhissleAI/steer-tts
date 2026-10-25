@@ -23,10 +23,20 @@ final class Doc {
     final List<String> sentences;
     final List<List<PdfLayout.Span>> spans;   // PDFs: where each paragraph's lines are on the pages (null otherwise)
     final List<List<float[]>> regions;        // PDFs: per sentence, boxes {page, l, t, r, b} as page fractions
+    final int[] paraOf;                       // the paragraph each sentence is in
+    private volatile Cast cast;
+
+    /** Who speaks where, and how (Cast.analyze on first use: call off the main thread for a long book). */
+    Cast cast() {
+        Cast c = cast;
+        if (c == null) cast = c = Cast.analyze(paragraphs);
+        return c;
+    }
     final long added;
     int pos;            // the sentence to read next
     long opened;
     boolean done;       // heard to the end (pos is back at 0)
+    boolean transient_;  // read once and not kept (a screen being read): never saved, no position file
 
     private Doc(String id, String title, String kind, String source, List<String> paragraphs, List<List<PdfLayout.Span>> spans,
                 long added, int pos, long opened) {
@@ -38,13 +48,17 @@ final class Doc {
         this.spans = spans != null && spans.size() == paragraphs.size() ? spans : null;
         this.sentences = new ArrayList<>();
         this.regions = this.spans != null ? new ArrayList<>() : null;
+        List<Integer> para = new ArrayList<>();
         for (int k = 0; k < paragraphs.size(); ++k) {
             String p = paragraphs.get(k);
             for (int[] sp : TextClean.spans(p)) {
                 sentences.add(p.substring(sp[0], sp[1]));
+                para.add(k);
                 if (regions != null) regions.add(boxes(this.spans.get(k), sp[0], sp[1]));
             }
         }
+        this.paraOf = new int[para.size()];
+        for (int i = 0; i < paraOf.length; ++i) paraOf[i] = para.get(i);
         this.added = added;
         this.pos = Math.max(0, Math.min(pos, Math.max(0, sentences.size() - 1)));
         this.opened = opened;
@@ -53,6 +67,14 @@ final class Doc {
     static Doc create(String title, String kind, String source, List<String> paragraphs) {
         long now = System.currentTimeMillis();
         return new Doc(UUID.randomUUID().toString(), title, kind, source, paragraphs, null, now, 0, now);
+    }
+
+    /** Something to read now and not keep (the text of a screen). */
+    static Doc createTransient(String title, List<String> paragraphs) {
+        long now = System.currentTimeMillis();
+        Doc d = new Doc("screen-" + now, title, "screen", "", paragraphs, null, now, 0, now);
+        d.transient_ = true;
+        return d;
     }
 
     static Doc createPdf(String id, String title, String source, List<String> paragraphs, List<List<PdfLayout.Span>> spans) {
@@ -219,6 +241,7 @@ final class Doc {
 
     /** Just the position (cheap, called as reading moves on). */
     void savePos(Context c) {
+        if (transient_) return;
         File meta = new File(dir(c), id + ".pos");
         try (FileOutputStream out = new FileOutputStream(meta)) {
             out.write((pos + " " + opened + " " + (done ? 1 : 0)).getBytes());

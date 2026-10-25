@@ -11,6 +11,8 @@ import android.os.Process;
 import android.os.SystemClock;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,7 +40,9 @@ final class Narrator {
 
     private final Context app;
     private final Handler engineThread;
-    private final Player player = new Player(AudioAttributes.USAGE_MEDIA);
+    // played as assistant audio, like every other voice in the app: Pixels add processing to media audio that makes
+    // this voice sound metallic. Audio focus and the media session still say "media", so it pauses and resumes like one.
+    private final Player player = new Player(AudioAttributes.USAGE_ASSISTANT);
     private final AudioManager am;
     private final AudioFocusRequest focus;
     private final SharedPreferences prefs;
@@ -77,8 +81,37 @@ final class Narrator {
     private void changed() { for (Listener l : listeners) l.changed(); }
 
     // ---------------------------------------------------------------- controls (main thread)
+    private Runnable onEnd;   // a transient document's own ending (the screen reader scrolls on), instead of auto-next
+
+    /** Read a document that is not in the library (a screen); onEnd runs on the main thread when it has been heard. */
+    void openTransient(Doc d, Runnable end) {
+        open(d);
+        onEnd = end;
+    }
+
+    /**
+     * The next part of a transient reading (the screen after a scroll), straight on: still playing, still holding focus,
+     * the player never leaving the foreground in between.
+     */
+    void continueTransient(Doc d, Runnable end) {
+        if (!(playing || suspended || onEnd != null)) {
+            openTransient(d, end);
+            play();
+            return;
+        }
+        doc = d;
+        heard = 0;
+        onEnd = end;
+        if (!playing && am.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return;
+        playing = true;
+        suspended = false;
+        renderFrom(0);
+        changed();
+    }
+
     void open(Doc d) {
         if (doc != null && doc.id.equals(d.id)) return;
+        onEnd = null;
         stop(false);
         doc = d;
         heard = d.pos;
@@ -241,6 +274,7 @@ final class Narrator {
         player.flush();   // after the bump: a render still in flight sees the new generation and writes nothing more
         Doc d = doc;
         Style base = Style.load(app).copy();
+        Smooth.on = base.smooth;
         base.contextual = false;          // the document's own moods apply below, not the phone's situation
         float pace = pace() * base.pace;
         boolean second = dialogueVoice();
@@ -251,6 +285,9 @@ final class Narrator {
                 if (tts == null) tts = new SteerTTS(SteerTTS.installModel(app).getPath(), 0);
                 String voice = voiceFor(tts, base.voice);
                 String other = second ? dialogueVoiceFor(app, voice) : voice;
+                Cast cast = second ? d.cast() : null;   // characters' own voices come with the dialogue voice setting
+                List<String> female = new ArrayList<>(), male = new ArrayList<>();
+                for (Voices.Voice v : Voices.get(app).all()) ("male".equals(v.gender) ? male : female).add(v.id);
                 if (say != null) {
                     float[] y = tts.synthesize(Expression.bmp(say), voice, null, base.ctrl(), pace, false);
                     if (y == null || gen.get() != g) return;
@@ -262,9 +299,11 @@ final class Narrator {
                     if (gen.get() != g) return;
                     final int idx = i;
                     player.mark(() -> heardSentence(g, idx));
-                    for (Narration.Seg seg : Narration.segments(d.sentences.get(i))) {
+                    Cast.Line line = cast != null && i < d.paraOf.length ? cast.lines[d.paraOf[i]] : null;
+                    String speaking = line != null && line.speaker != null ? cast.voiceFor(line.speaker, voice, female, male) : other;
+                    for (Narration.Seg seg : Narration.segments(d.sentences.get(i), line)) {
                         Style st = Announcer.moodStyle(base, seg.mood);
-                        float[] y = tts.synthesize(Expression.bmp(seg.text), seg.dialogue ? other : voice, st.tagOrNull(),
+                        float[] y = tts.synthesize(Expression.bmp(seg.text), seg.dialogue ? speaking : voice, st.tagOrNull(),
                                 st.ctrl(), pace, true);
                         if (y == null || gen.get() != g) return;
                         player.write(y);
@@ -300,6 +339,15 @@ final class Narrator {
         // the last sentence's audio is still playing out: stop once it has
         main.postDelayed(() -> {
             if (gen.get() != g || doc == null) return;
+            if (onEnd != null) {   // a screen: its reader decides what comes next (scroll on, or stop)
+                Runnable end = onEnd;
+                playing = false;
+                suspended = true;   // waiting for the next part: keep focus and the foreground until it says stop
+                heard = doc.sentences.size();
+                changed();
+                end.run();
+                return;
+            }
             doc.pos = 0;            // finished: next time starts from the top
             doc.done = true;
             doc.savePos(app);

@@ -65,12 +65,21 @@ final class Player {
 
     private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
 
+    private Smooth smooth;   // writer's thread
+
     void write(float[] audio) {
+        if (Smooth.on) {
+            if (smooth == null) smooth = new Smooth();
+            smooth.process(audio);
+        }
         pending.addAndGet(audio.length);
         q.add(audio);
     }
 
-    void end() { q.add(END); }
+    void end() {
+        if (smooth != null) smooth.reset();
+        q.add(END);
+    }
 
     /** end(), then done on the player thread once everything written has played (dropped by flush()). */
     void end(Runnable done) {

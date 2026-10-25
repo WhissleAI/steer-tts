@@ -71,6 +71,13 @@ upload. Target SDK 36 (Android 16), min SDK 26 (Android 8), arm64 only.
 - No `USE_EXACT_ALARM` (reserved for alarm and calendar apps).
 - adb test hooks only work in debuggable builds; the store build ignores them. `tools/device_test.sh` drives every
   flow through them on a phone (readouts and their moods, calls, catch-up, briefing, reader, process death).
-- Quick Settings tiles ("Read copied text", "Catch me up") need no permission; the clipboard is read only by an
+- **Accessibility API declaration** (Play Console → App content → Accessibility API): "SteerTTS: read this screen"
+  (`ScreenReader`) reads the visible text of the app in front of the user **only when the user starts it** (Quick
+  Settings tile, accessibility button, or the app), can scroll that page to keep reading (node scroll actions, or a
+  swipe gesture), and shows a floating control and an outline while reading. It is not an always-on monitor: it
+  watches no events, stores and sends nothing. It is preceded by an in-app disclosure. `isAccessibilityTool` is not
+  set (the app is not primarily for disability access), so the declaration form and a short video are required.
+- Free books: downloaded from Project Gutenberg (public domain) at the user's request.
+- Quick Settings tiles ("Read copied text", "Catch me up", "Read this screen") need no permission; the clipboard is read only by an
   activity that holds focus, as Android requires.
 - Model licence: the bundled edge model's weights are Whissle's own; the app is free.

@@ -32,32 +32,51 @@ final class Narration {
         }
     }
 
-    private static final Pattern QUOTE = Pattern.compile("“([^”]+)”|\"([^\"]+)\"");
+    static List<Seg> segments(String sentence) { return segments(sentence, null); }
 
-    static List<Seg> segments(String sentence) {
+    /**
+     * line: the paragraph's reading from Cast (who speaks, how, the scene), or null. Dialogue gets the speaker's
+     * delivery (whispered, shouted…) or, without one, the mood of its own words; narration gets the scene's mood.
+     */
+    static List<Seg> segments(String sentence, Cast.Line line) {
         List<Seg> out = new ArrayList<>();
         if (sentence.isEmpty()) return out;
         if (sentence.charAt(0) == HEAD) {
             out.add(new Seg(markup(sentence.substring(1)), false, true, HEADING, 650));
             return out;
         }
-        Matcher m = QUOTE.matcher(sentence);
+        Matcher m = Cast.QUOTE.matcher(sentence);
+        Expression.Mood scene = line != null ? line.scene : Expression.NEUTRAL;
         int at = 0;
         while (m.find()) {
-            String inner = m.group(1) != null ? m.group(1) : m.group(2);
+            String inner = Cast.inner(m);
             if (!isDialogue(inner)) continue;
-            narration(out, sentence.substring(at, m.start()));
-            out.add(new Seg(markup(inner), true, false, Expression.of(display(inner)), 120));
+            narration(out, sentence.substring(at, m.start()), scene);
+            Expression.Mood own = Expression.of(display(inner));
+            Expression.Mood mood = line == null || line.delivery == null ? own
+                    : line.delivery.tag == null ? (own.neutral() ? line.delivery : own.plus(line.delivery.why, flat(line.delivery)))
+                    : line.delivery;
+            out.add(new Seg(markup(inner), true, false, mood, 120));
             at = m.end();
         }
-        narration(out, sentence.substring(at));
+        narration(out, sentence.substring(at), scene);
         return out;
     }
 
-    private static void narration(List<Seg> out, String s) {
+    private static Object[] flat(Expression.Mood m) {
+        Object[] kv = new Object[m.ctrl.size() * 2];
+        int i = 0;
+        for (java.util.Map.Entry<String, Float> e : m.ctrl.entrySet()) {
+            kv[i++] = e.getKey();
+            kv[i++] = e.getValue();
+        }
+        return kv;
+    }
+
+    private static void narration(List<Seg> out, String s, Expression.Mood scene) {
         String t = s.trim();
         if (t.replaceAll("[\\p{Punct}\\s“”‘’—–]", "").isEmpty()) return;   // only a comma or a dash between quotes
-        out.add(new Seg(markup(t), false, false, Expression.NEUTRAL, 120));
+        out.add(new Seg(markup(t), false, false, scene, 120));
     }
 
     /** Spoken words, not a scare quote or a title: three words or more, or a line ending in punctuation. */

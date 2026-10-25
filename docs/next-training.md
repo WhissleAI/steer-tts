@@ -24,8 +24,13 @@ Kept up to date as the app is built. Newest first within each section.
    neutral voice, then the message in a mood and another voice) and concatenated with a pause. Boundaries may sound
    stitched. *Train:* segment-level style and speaker changes within one request with natural transitions (style
    spans already exist in markup; speaker spans do not).
-5. **Dialogue voices (to measure).** Books read dialogue in a second voice by rendering quotes as separate requests
-   (`Narration.java`). *Train:* an inline speaker switch, and consistent character voices across a chapter.
+5. **Character voices and delivery (product done with workarounds; quality to measure).** Books are now performed
+   (`Cast.java`): the speaker of each paragraph is found from "said X" / pronouns / turn-taking (96% of Alice's dialogue
+   paragraphs get a speaker), each character gets a catalogue voice, and speech verbs pick a delivery (whispered ->
+   `whisper`, shouted -> `loud` + controls, sobbed -> sadness...). Each quote is a separate request in another voice,
+   so the seams between narrator and character may be audible. *Train:* inline speaker switches with natural
+   transitions; voices chosen for distinctness (the catalogue has 200, but which pairs are clearly different to a
+   listener is unknown); verb-style deliveries (whisper, shout, sob, laugh, mutter) as tags that work without controls.
 6. **Nonverbals for chat (to measure).** "haha", "lol", 😂 are currently dropped and only the mood (amusement) is
    applied. The `[laugh]` event token exists; measure its quality before the app inserts it for laughter.
 
@@ -33,8 +38,14 @@ Kept up to date as the app is built. Newest first within each section.
 
 7. **The default voice is a slow speaker (verified).** The app ships `DEFAULT_PACE = 1.1` (`Style.java`) so the
    default voice does not drag. *Train:* normalise speaking rate across voices, or pick defaults by rate.
-8. **"Metallic" sound on the phone (heard, earlier testing).** Reported when listening on a Pixel; audit the
-   vocoder in the int8/edge build against the float model on phone speakers.
+8. **Metallic sound on the phone (heard twice by the user, 2026-10-25; cause not yet proven).** Measured on the
+   rendered audio (the same C engine and model the app ships): no clipping (peaks ~0.4), no frame-rate buzz (the
+   envelope's modulation peaks at the voice's own pitch). The edge build quantizes **both** the acoustic model and a
+   small Vocos-style vocoder (6.2M params) to **int4**; docs/models.md shows the gap: UTMOS 4.08–4.11 against 4.24–4.27
+   for v1 (13.5M fp32 Vocos). The app had made it worse by playing as media audio (Pixel processing), now fixed.
+   *Next:* A/B the edge vocoder at int4 vs int8/fp16 (same weights) and against v1 Vocos on phone speakers; if int4 is
+   the cause, ship the vocoder at int8 (a few MB more), or train a larger edge vocoder. Listen for buzz on sustained
+   vowels and sibilants.
 9. **Voice metadata is thin (verified).** voices.json has gender, pitch register and pace only; the app invents names
    and descriptions. *Train/export:* richer, listener-validated descriptors (warmth, age range, accent) per voice.
 

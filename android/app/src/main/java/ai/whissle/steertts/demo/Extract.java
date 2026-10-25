@@ -104,7 +104,7 @@ final class Extract {
     }
 
     // ---------------------------------------------------------------- EPUB
-    private static Doc epub(byte[] data, String fallbackTitle, String source) throws IOException {
+    static Doc epub(byte[] data, String fallbackTitle, String source) throws IOException {
         Map<String, byte[]> files = unzip(data);
         String container = str(files.get("META-INF/container.xml"));
         String opfPath = first(container, "full-path=\"([^\"]+)\"");
@@ -126,6 +126,7 @@ final class Extract {
             byte[] x = files.get(resolve(base, Uri.decode(href)));
             if (x != null) paras.addAll(TextClean.clean(htmlToText(str(x))));
         }
+        paras = TextClean.bookBody(paras);
         if (paras.isEmpty()) throw new Unsupported("This EPUB has no text to read.");
         String title = clean(first(opf, "<dc:title[^>]*>([\\s\\S]*?)</dc:title>"));
         String author = clean(first(opf, "<dc:creator[^>]*>([\\s\\S]*?)</dc:creator>"));

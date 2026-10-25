@@ -153,6 +153,37 @@ final class TextClean {
         return s;
     }
 
+    /**
+     * A book's story without its wrapping: Project Gutenberg's licence header and footer (between its "*** START OF"
+     * and "*** END OF" lines) and a table of contents (a "Contents" heading followed by short lines, up to the next
+     * heading or long paragraph).
+     */
+    static List<String> bookBody(List<String> paras) {
+        int from = 0, to = paras.size();
+        for (int i = 0; i < paras.size(); ++i) {
+            String p = paras.get(i).toUpperCase(Locale.ROOT);
+            if (p.contains("*** START OF THE PROJECT GUTENBERG") || p.contains("*** START OF THIS PROJECT GUTENBERG")) from = i + 1;
+            if ((p.contains("*** END OF THE PROJECT GUTENBERG") || p.contains("*** END OF THIS PROJECT GUTENBERG")) && i >= from) {
+                to = i;
+                break;
+            }
+        }
+        List<String> out = new ArrayList<>();
+        for (int i = from; i < to; ++i) {
+            String p = paras.get(i), plain = Narration.display(p).trim();
+            if (plain.matches("(?i)(table of )?contents\\.?")) {   // skip the table of contents
+                int j = i + 1;
+                // contents entries are short lines; the story starts at the first real heading or a paragraph
+                while (j < to && !paras.get(j).startsWith(String.valueOf(Narration.HEAD))
+                        && Narration.display(paras.get(j)).length() < 80 && j - i < 200) j++;
+                i = j - 1;
+                continue;
+            }
+            out.add(p);
+        }
+        return out;
+    }
+
     // ---------------------------------------------------------------- sentences
     private static final Set<String> ABBREV = new java.util.HashSet<>(java.util.Arrays.asList(
             "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "mt", "vs", "etc", "e.g", "i.e", "fig", "figs", "no", "nos",
@@ -218,14 +249,18 @@ final class TextClean {
 
     /** Whether a quotation opened in p[from, to) is still open at to (curly quotes counted, straight ones paired). */
     private static boolean insideQuote(String p, int from, int to) {
-        int curly = 0, straight = 0;
+        int curly = 0, straight = 0, single = 0;
         for (int i = from; i < to; ++i) {
             char c = p.charAt(i);
-            if (c == '“') curly++;
-            else if (c == '”') curly = Math.max(0, curly - 1);
+            boolean letterBefore = i > 0 && Character.isLetter(p.charAt(i - 1));
+            boolean letterAfter = i + 1 < p.length() && Character.isLetter(p.charAt(i + 1));
+            if (c == '“' || (c == '‘' && !letterBefore)) curly++;
+            else if (c == '”' || (c == '’' && curly > 0 && !letterAfter)) curly--;   // "don’t" is an apostrophe
             else if (c == '"') straight++;
+            else if (c == '\'' && !letterBefore && letterAfter) single++;                // 'Now, my dears,'
+            else if (c == '\'' && single > 0 && !letterAfter) single--;
         }
-        return curly > 0 || straight % 2 == 1;
+        return curly > 0 || straight % 2 == 1 || single > 0;   // (single quotes: ‘…’ opened and not yet closed count too)
     }
 
     /** A sentence longer than MAX, split again at a pause (; : — ,), as character ranges of p. */

@@ -115,7 +115,9 @@ final class Announcer {
         engineThread.removeCallbacks(closeIdle);
         try {
             if (tts == null) tts = new SteerTTS(SteerTTS.installModel(app).getPath(), 0);
-            Style base = ContextStyler.decide(app, Style.load(app), sp.text(), caller, false);
+            Style mine = Style.load(app);
+            Smooth.on = mine.smooth;
+            Style base = ContextStyler.decide(app, mine, sp.text(), caller, false);
             if (gen.get() == g) show(base, sp, caller);
             for (Speech.Part part : sp.parts) {
                 Style s = moodStyle(base, part.mood);

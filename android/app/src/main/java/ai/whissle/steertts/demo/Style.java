@@ -25,6 +25,7 @@ final class Style {
     float pace = DEFAULT_PACE;       // speaking speed (1 = the voice's own; the default voice is a slow speaker)
     String preset = "Natural";       // the Voices screen's style chip (the tag and controls hold the delivery itself)
     static final float DEFAULT_PACE = 1.1f, MIN_PACE = 0.7f, MAX_PACE = 1.6f;
+    boolean smooth;                  // "Smoother sound": the Smooth filter on every voice
     String reason = "";              // why a context style looks the way it does (shown in the app)
 
     Style copy() {
@@ -35,6 +36,7 @@ final class Style {
         s.contextual = contextual;
         s.pace = pace;
         s.preset = preset;
+        s.smooth = smooth;
         s.reason = reason;
         return s;
     }
@@ -106,6 +108,7 @@ final class Style {
             o.put("contextual", contextual);
             o.put("pace", (double) pace);
             o.put("preset", preset);
+            o.put("smooth", smooth);
             o.put("reason", reason);
             return o;
         } catch (Exception e) {
@@ -122,6 +125,7 @@ final class Style {
         s.contextual = o.optBoolean("contextual", true);
         s.pace = Math.max(MIN_PACE, Math.min(MAX_PACE, (float) o.optDouble("pace", DEFAULT_PACE)));
         s.preset = o.optString("preset", "Natural");
+        s.smooth = o.optBoolean("smooth", false);
         s.reason = o.optString("reason", "");
         return s;
     }

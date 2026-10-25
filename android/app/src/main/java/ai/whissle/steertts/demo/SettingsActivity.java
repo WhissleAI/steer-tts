@@ -79,6 +79,33 @@ public class SettingsActivity extends Activity implements SettingsScreen.Host {
         });
     }
 
+    @Override public void compareSmooth() {
+        engineThread.post(() -> {
+            try (SteerTTS tts = new SteerTTS(SteerTTS.installModel(this).getPath(), 0)) {
+                Style s = Style.load(this);
+                String voice = s.voice == null || s.voice.equals("female") ? tts.genderVoice("female")
+                        : s.voice.equals("male") ? tts.genderVoice("male") : s.voice;
+                float[] raw = tts.synthesize("This is how I sound as I am. And this is how I sound, smoothed.", voice, s.tagOrNull(),
+                        s.ctrl(), s.pace, false);
+                if (raw == null) return;
+                float[] smooth = raw.clone();
+                new Smooth().process(smooth);
+                boolean was = Smooth.on;
+                Smooth.on = false;   // this player plays the two versions exactly as given
+                Player p = new Player();
+                p.write(raw);
+                p.write(new float[SteerTTS.SAMPLE_RATE * 6 / 10]);
+                p.write(smooth);
+                p.end(() -> {
+                    p.release();
+                    Smooth.on = was;
+                });
+            } catch (Exception e) {
+                Log.e(MainActivity.TAG, "compare", e);
+            }
+        });
+    }
+
     @Override public void testSystemVoice() {
         String text = "This is SteerTTS speaking through Android's text to speech.";
         Runnable go = () -> systemTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "u" + System.nanoTime());

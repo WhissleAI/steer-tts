@@ -80,6 +80,23 @@ final class ListenScreen implements Narrator.Listener {
         acts.addView(u.action(R.drawable.ic_text, "Type", v -> pasteText()), Ui.weight(1));
         root.addView(acts, Ui.matchWrap());
 
+        // free books: one clear way into 70,000 stories
+        LinearLayout books = u.card();
+        LinearLayout br = u.row();
+        br.addView(u.badge(R.drawable.ic_book, Ui.ACCENT_SOFT, Ui.ACCENT, 44));
+        LinearLayout bt = u.column();
+        bt.setPadding(u.dp(14), 0, u.dp(8), 0);
+        bt.addView(u.text("Free books", 16, Ui.INK, true));
+        bt.addView(u.text("Classics and children's stories, read with a voice for each character", 13, Ui.MUTED, false));
+        br.addView(bt, Ui.weight(1));
+        br.addView(u.chevron());
+        books.addView(br);
+        books.setOnClickListener(v -> a.startActivity(new Intent(a, FreeBooks.class)));
+        books.setContentDescription("Free books: classics and children's stories");
+        LinearLayout.LayoutParams bl = Ui.matchWrap();
+        bl.topMargin = u.dp(18);
+        root.addView(books, bl);
+
         nudge = u.column();
         root.addView(nudge, Ui.matchWrap());
 

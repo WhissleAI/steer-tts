@@ -212,6 +212,78 @@ public class SpeechLogicTest {
         assertEquals(2, st.size());
     }
 
+    // ---------------------------------------------------------------- screens: summaries of what reads badly
+    @Test public void summariesOfTablesAndLists() {
+        List<List<String>> info = Arrays.asList(Arrays.asList("Author", "Lewis Carroll"), Arrays.asList("Illustrator", "John Tenniel"),
+                Arrays.asList("Genre", "Children's fiction"), Arrays.asList("Publisher", "Macmillan"), Arrays.asList("Pages", "192"),
+                Arrays.asList("Followed by", "Through the Looking-Glass"));
+        assertEquals("Details: Author, Lewis Carroll. Illustrator, John Tenniel. Genre, Children's fiction. Publisher, Macmillan. And 2 more.",
+                Summary.phrase(info, 2));
+        List<List<String>> data = Arrays.asList(Arrays.asList("Region", "Q2", "Q3", "Change"), Arrays.asList("North", "$1.1M", "$1.3M", "+18%"),
+                Arrays.asList("South", "$0.9M", "$1.0M", "+11%"));
+        assertEquals("A table of 2 rows, with columns Region, Q2, Q3 and Change. The first row: North, $1.1M, $1.3M, +18%.", Summary.phrase(data, 4));
+        List<List<String>> links = new java.util.ArrayList<>();
+        for (String x : new String[] {"Alice", "Mad Hatter", "Cheshire Cat", "Queen of Hearts", "White Rabbit", "Dormouse", "Caterpillar"})
+            links.add(Collections.singletonList(x));
+        assertEquals("A list of 7 items, starting with Alice, Mad Hatter and Cheshire Cat.", Summary.phrase(links, 1));
+        List<List<String>> refs = Arrays.asList(Collections.singletonList("^ Smith (2001). Retrieved 3 May 2020."),
+                Collections.singletonList("^ Jones. doi:10.1/x"), Collections.singletonList("^ Brown, p. 12"));
+        assertEquals("A list of 3 references, skipped.", Summary.phrase(refs, 1));
+        assertNull(Summary.phrase(Arrays.asList(Collections.singletonList("Preheat the oven to 200 degrees and grease the tin well before you start."),
+                Collections.singletonList("Mix the flour, sugar and butter until it looks like breadcrumbs, then add the eggs.")), 1));   // read it
+    }
+
+    // ---------------------------------------------------------------- stories
+    @Test public void castFindsSpeakersAndDelivery() {
+        List<String> p = Arrays.asList(
+                "Alice walked into the garden.",
+                "“Who are you?” said the Caterpillar.",
+                "“I hardly know, sir,” Alice replied, rather shyly.",
+                "“Explain yourself!” he shouted.",
+                "“I can’t,” she whispered.",
+                "“Why not?”",
+                "“Because I’m not myself, you see.”");
+        Cast c = Cast.analyze(p);
+        assertNull(c.lines[0].speaker);
+        assertEquals("Caterpillar", c.lines[1].speaker);
+        assertEquals("asked", c.lines[1].delivery == null ? "asked" : c.lines[1].delivery.name);
+        assertEquals("Alice", c.lines[2].speaker);
+        assertEquals("female", c.lines[2].gender);
+        assertEquals("Caterpillar", c.lines[3].speaker);                     // "he": the last man (a caterpillar is "he")
+        assertEquals("shouted", c.lines[3].delivery.name);
+        assertEquals("Alice", c.lines[4].speaker);                           // "she"
+        assertEquals("whispered", c.lines[4].delivery.name);
+        assertEquals("Caterpillar", c.lines[5].speaker);                     // no names: they take turns
+        assertEquals("Alice", c.lines[6].speaker);
+    }
+
+    @Test public void quotesOfEveryKind() {
+        assertTrue(Cast.hasDialogue("‘Now, my dears,’ said old Mrs. Rabbit, ‘you may go.’"));
+        assertTrue(Cast.hasDialogue("'Now my dears,' said old Mrs. Rabbit."));
+        assertFalse(Cast.hasDialogue("Peter didn't go into Mr. McGregor's garden."));    // apostrophes, not quotes
+        assertEquals("Mrs. Rabbit", Cast.analyze(Arrays.asList("'Now my dears,' said old Mrs. Rabbit one morning.")).lines[0].speaker);
+        List<String> s = TextClean.sentences(Collections.singletonList("‘Run! They’re coming!’ she cried. Nobody moved."));
+        assertEquals(2, s.size());
+        Narration.Seg d = Narration.segments(s.get(0)).get(0);
+        assertTrue(d.dialogue);
+        assertEquals("Run! They’re coming!", d.text);
+    }
+
+    @Test public void aliasesAreOneCharacter() {
+        Cast c = Cast.analyze(Arrays.asList("“Oh dear!” said the White Rabbit.", "“Late!” said the Rabbit’s voice.", "“I’m late,” said the Rabbit."));
+        assertEquals("White Rabbit", c.lines[0].speaker);
+        assertEquals("White Rabbit", c.lines[2].speaker);
+        List<String> f = Arrays.asList("voice_f1", "voice_f2", "voice_f3"), m = Arrays.asList("voice_m1", "voice_m2", "voice_m3");
+        assertEquals(c.voiceFor("White Rabbit", "voice_f1", f, m), c.voiceFor("White Rabbit", "voice_f1", f, m));
+        assertNotEquals("voice_f1", c.voiceFor("White Rabbit", "voice_f1", f, m));    // never the narrator's voice
+    }
+
+    @Test public void sceneMoodIsLightAndNeedsTwoCues() {
+        assertEquals("neutral", Cast.scene("It was dark.").name);
+        assertEquals("tense", Cast.scene("In the darkness she heard footsteps, and a cold shiver ran down her back.").name);
+        assertEquals("sombre", Cast.scene("At the funeral there were tears; she felt so alone.").name);
+    }
+
     @Test public void htmlKeepsEmphasisAndHeadings() {
         String t = Extract.htmlToText("<h1>One</h1><p>It was <em>cold</em>.</p>");
         assertTrue(t.contains(Narration.HEAD + "One"));

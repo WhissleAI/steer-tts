@@ -43,6 +43,10 @@
             android:name=".OnboardingActivity"
             android:exported="false" />
         <activity
+            android:name=".FreeBooks"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
@@ -59,6 +63,29 @@
             android:exported="true"
             android:icon="@drawable/ic_paste"
             android:label="Read copied text"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <!-- "Read this screen" in any app (an accessibility service: reads window text only when asked) -->
+        <service
+            android:name=".ScreenReader"
+            android:exported="true"
+            android:label="SteerTTS: read this screen"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/screen_reader" />
+        </service>
+        <service
+            android:name=".Tiles$ReadScreen"
+            android:exported="true"
+            android:icon="@drawable/ic_speaker"
+            android:label="Read this screen"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

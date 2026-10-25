@@ -25,6 +25,12 @@ IT SPEAKS UP FOR YOU
 IT ADAPTS TO THE MOMENT
 Alerts come out faster and louder, questions rise at the end, and late at night it speaks softer. You can switch this off.
 
+READ ANY SCREEN
+Any app's page read aloud when you ask: tap "Read this screen" in Quick Settings. The paragraph being read is outlined, a tiny control floats on top to pause, skip and keep going, and auto-continue scrolls the page and reads on. Tables and lists of links are summed up in a sentence instead of read cell by cell.
+
+FREE BOOKS
+70,000 classics and children's stories from Project Gutenberg, free. Stories are performed: each character gets a voice of their own, whispered lines are whispered and shouted ones shouted, and the narration follows the mood of the scene.
+
 ONE TAP, ANYWHERE
 Quick Settings tiles read whatever you copied, or catch you up, without opening the app.
 

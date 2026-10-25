@@ -32,6 +32,33 @@ public final class Tiles {
         private void startActivityAndCollapseCompat(Intent i) { startActivityAndCollapse(i); }
     }
 
+    /** Reads the app underneath (ScreenReader); before it is switched on, opens the setup in the app. */
+    public static class ReadScreen extends TileService {
+        @Override public void onStartListening() {
+            Tile t = getQsTile();
+            if (t == null) return;
+            t.setState(Tile.STATE_INACTIVE);
+            if (Build.VERSION.SDK_INT >= 29) t.setSubtitle(ScreenReader.enabled() ? "Tap to listen" : "Set up");
+            t.updateTile();
+        }
+
+        @Override public void onClick() {
+            ScreenReader r = ScreenReader.instance;
+            if (r != null) {
+                r.readAfterShade();
+                return;
+            }
+            Intent i = new Intent(this, MainActivity.class).putExtra("tab", "assistant").putExtra("setup_screen", true)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            if (Build.VERSION.SDK_INT >= 34)
+                startActivityAndCollapse(PendingIntent.getActivity(this, 1, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+            else start(i);
+        }
+
+        @SuppressWarnings("deprecation")
+        private void start(Intent i) { startActivityAndCollapse(i); }
+    }
+
     public static class CatchUp extends TileService {
         @Override public void onStartListening() {
             Tile t = getQsTile();

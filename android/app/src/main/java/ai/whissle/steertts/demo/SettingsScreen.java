@@ -23,6 +23,7 @@ final class SettingsScreen {
         void benchmark(java.util.function.Consumer<String> result);
         void testSystemVoice();
         void showWelcome();
+        void compareSmooth();   // the same sentence, raw then smoothed
     }
 
     static final int[] THREADS = {0, 1, 2, 3, 4, 6, 8};
@@ -54,6 +55,22 @@ final class SettingsScreen {
     View build() {
         LinearLayout root = u.column();
         root.setPadding(u.dp(18), u.dp(6), u.dp(18), u.dp(28));
+
+        LinearLayout sound = u.card();
+        sound.addView(u.label("Sound"));
+        Style st = Style.load(a);
+        android.widget.Switch sm = u.toggle(st.smooth);
+        sm.setOnCheckedChangeListener((v, on) -> {
+            Style s2 = Style.load(a);
+            s2.smooth = on;
+            s2.save(a);
+            Smooth.on = on;
+        });
+        sound.addView(u.settingRow("Smoother sound", "Softens a metallic edge some phone speakers bring out", sm, null));
+        sound.addView(u.divider());
+        sound.addView(u.settingRow("Hear the difference", "The same sentence, first as it is, then smoothed", u.chevron(),
+                v -> host.compareSmooth()));
+        root.addView(sound);
 
         LinearLayout look = u.card();
         look.addView(u.label("Appearance"));
