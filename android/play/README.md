@@ -43,7 +43,7 @@ upload. Target SDK 36 (Android 16), min SDK 26 (Android 8), arm64 only.
      shares location: No; digital purchases: No.
    - *Target audience*: 13+ (not designed for children).
    - *News app*: No. *Government app*: No. *Financial features*: none.
-   - *Health apps declaration* (Health Connect): reads **Steps, Sleep, Heart rate, Resting heart rate**; read only,
+   - *Health apps declaration* (Health Connect): reads **Steps, Sleep, Resting heart rate**; read only,
      no writes. Purpose: a spoken personal daily briefing the user turns on ("Last night you slept 7 hours…").
      Data is read on the device when the briefing plays, spoken and discarded; never stored, transferred or sold.
      The rationale screen Health Connect links to is `PrivacyActivity` (VIEW_PERMISSION_USAGE / HEALTH_PERMISSIONS).

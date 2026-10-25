@@ -30,10 +30,16 @@ final class Readout {
             if (d != null && texts.size() == 1) onlyEmoji = d;
             else if (d == null) body.append(body.length() > 0 ? " " : "").append(sentence(t));
         }
+        if (person != null && Spoken.unspoken(person) != null) person = "Someone";   // a name the voice can't read
+        if (group != null && Spoken.unspoken(group) != null) group = null;
         String who = person == null ? app : group != null ? person + " in " + group : person;
         if (onlyEmoji != null) return sp.add(who + (person == null ? ": " : " sent ") + onlyEmoji + ".");
         String said = cap(body.toString());
         if (said.isEmpty()) return sp;
+        String lang = Spoken.unspoken(said);
+        if (lang != null)   // say that it came, instead of a framing followed by silence
+            return sp.add((person == null ? "A message on " + app : who + " sent a message on " + app)
+                    + (lang.equals("another language") ? ", in a language I can't read yet." : ", in " + lang + ". I can't read " + lang + " yet."));
         String framing = person == null ? app + "." : who + " on " + app + ".";
         sp.add(framing, null, null, 180);
         // the mood is read from the original words (emoji, "lol" and capitals carry it), the words spoken are cleaned

@@ -37,8 +37,7 @@ import java.util.concurrent.TimeUnit;
 public class Briefing extends BroadcastReceiver {
     static final String[] HEALTH_PERMISSIONS = Build.VERSION.SDK_INT >= 34 ? new String[] {
             android.health.connect.HealthPermissions.READ_STEPS, android.health.connect.HealthPermissions.READ_SLEEP,
-            android.health.connect.HealthPermissions.READ_RESTING_HEART_RATE,
-            android.health.connect.HealthPermissions.READ_HEART_RATE} : new String[0];
+            android.health.connect.HealthPermissions.READ_RESTING_HEART_RATE} : new String[0];
     private static final String TAG = "SteerTTS", ACTION = "ai.whissle.steertts.BRIEFING";
     private static final Executor HEALTH = Executors.newSingleThreadExecutor();   // Health Connect answers, shared
 
@@ -82,7 +81,13 @@ public class Briefing extends BroadcastReceiver {
         String cal = calendar(c);
         if (cal != null) sp.add(cal, cal.contains("clear") ? Expression.CALM : Expression.CONFIDENT, null, 250);
         AssistantPrefs prefs = new AssistantPrefs(c);
-        if (Digest.size() > 0) for (Speech.Part p : Digest.take(prefs.personVoices(), Style.load(c).voice).parts) sp.parts.add(p);
+        int waiting = Digest.size();
+        if (waiting > 0 && prefs.whyNotNow(c) == null) {   // heard privately (or the user allows out loud): the messages
+            for (Speech.Part p : Digest.take(prefs.personVoices(), Style.load(c).voice).parts) sp.parts.add(p);
+        } else if (waiting > 0) {   // the messages were kept private: out loud, only how many wait
+            sp.add((waiting == 1 ? "One message is" : waiting + " messages are") + " waiting for you. Put on headphones, or tap "
+                    + "Catch me up, to hear " + (waiting == 1 ? "it." : "them."), null, null, 250);
+        }
         if (sp.parts.size() == before)
             sp.add("There's nothing new to tell you. Connect Health Connect or your calendar on the Assistant tab to hear more.");
         return sp;

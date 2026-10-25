@@ -227,6 +227,7 @@ JNIEXPORT void JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeDestroy(JNIE
 JNIEXPORT jobjectArray JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeVoices(JNIEnv* env, jclass cls, jlong p,
                                                                                    jstring gender) {
   handle* h = (handle*)(intptr_t)p;
+  if (!h) return NULL;
   const char* g = gender ? (*env)->GetStringUTFChars(env, gender, NULL) : NULL;
   int n = 0, total = steertts_num_voices(h->e);
   for (int i = 0; i < total; ++i) {
@@ -247,6 +248,7 @@ JNIEXPORT jobjectArray JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeVoic
 
 JNIEXPORT jobjectArray JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeTags(JNIEnv* env, jclass cls, jlong p) {
   handle* h = (handle*)(intptr_t)p;
+  if (!h) return NULL;
   int n = steertts_num_tags(h->e);
   jobjectArray out = (*env)->NewObjectArray(env, n, (*env)->FindClass(env, "java/lang/String"), NULL);
   for (int i = 0; out && i < n; ++i) {
@@ -260,6 +262,7 @@ JNIEXPORT jobjectArray JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeTags
 JNIEXPORT jstring JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeVoiceGender(JNIEnv* env, jclass cls, jlong p,
                                                                                   jstring voice) {
   handle* h = (handle*)(intptr_t)p;
+  if (!h || !voice) return NULL;
   const char* v = (*env)->GetStringUTFChars(env, voice, NULL);
   const char* g = NULL;
   for (int i = 0; i < steertts_num_voices(h->e); ++i)
@@ -271,6 +274,7 @@ JNIEXPORT jstring JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeVoiceGend
 JNIEXPORT jstring JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeGenderVoice(JNIEnv* env, jclass cls, jlong p,
                                                                                   jstring gender) {
   handle* h = (handle*)(intptr_t)p;
+  if (!h || !gender) return NULL;
   const char* g = (*env)->GetStringUTFChars(env, gender, NULL);
   const char* v = steertts_gender_voice(h->e, g);
   (*env)->ReleaseStringUTFChars(env, gender, g);
@@ -312,7 +316,7 @@ static void options(const jstrs* s, jfloat pace, int markup, steertts_options* o
 /* Clears a cancel() that arrived while nothing (or a finished render) was running: the next request starts clean. */
 JNIEXPORT void JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeResetCancel(JNIEnv* env, jclass cls, jlong p) {
   handle* h = (handle*)(intptr_t)p;
-  atomic_store(&h->cancel, 0);
+  if (h) atomic_store(&h->cancel, 0);
 }
 
 /* Streams `text` with inline markup parsed to sink.onChunk(float[] audio, int index, double synthMs, String text),
@@ -321,6 +325,7 @@ JNIEXPORT void JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeStream(JNIEn
                                                                           jstring text, jstring voice, jstring tag,
                                                                           jstring ctrl, jfloat pace, jobject sink) {
   handle* h = (handle*)(intptr_t)p;
+  if (!h || !text || !sink) return;
   atomic_store(&h->cancel, 0);
   stream_ctx s = {env, sink, NULL, h};
   jclass sc = (*env)->GetObjectClass(env, sink);
@@ -345,6 +350,7 @@ JNIEXPORT jfloatArray JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeSynth
                                                                                      jstring tag, jstring ctrl,
                                                                                      jfloat pace, jboolean markup) {
   handle* h = (handle*)(intptr_t)p;
+  if (!h || !text) return NULL;
   if (atomic_exchange(&h->cancel, 0)) return NULL;
   begin_request(h);
   jstrs js;

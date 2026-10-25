@@ -26,7 +26,9 @@ public class PrivacyActivity extends Activity {
                 {"Health", "For the daily briefing, SteerTTS reads last night's sleep, your steps and resting heart rate "
                         + "from Health Connect. It speaks them and keeps nothing."},
                 {"Notifications", "For message readouts and caller announcements, it reads new notifications from the "
-                        + "apps you choose, speaks them and keeps nothing."},
+                        + "apps you choose and speaks them. Message text is never stored; a short history of what was read "
+                        + "or kept back (the app, who, and the outcome, never the words) stays on the phone for the "
+                        + "Recently list."},
                 {"Calendar", "For meeting reminders and the briefing, it reads the title, time and place of upcoming "
                         + "events."},
                 {"Documents and links", "Files you open are turned into text on the phone. A link you share is "

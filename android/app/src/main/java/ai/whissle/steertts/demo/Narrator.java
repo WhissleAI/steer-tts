@@ -128,7 +128,13 @@ final class Narrator {
             doc.done = false;
             doc.savePos(app);
         }
-        if (!suspended && am.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return;
+        if (!suspended) {
+            int got = am.requestAudioFocus(focus);
+            if (got != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                android.util.Log.w(MainActivity.TAG, "narrator: audio focus not granted (" + got + "), not playing");
+                return;
+            }
+        }
         suspended = false;
         playing = true;
         resumeSleep();

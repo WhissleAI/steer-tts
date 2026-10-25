@@ -9,7 +9,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-/** SteerTTS edge engine (the C library through JNI). Use one instance from one thread at a time; close() it. */
+/**
+ * SteerTTS edge engine (the C library through JNI). Calls are serialized on the instance, so a voice query from one
+ * thread waits for a render on another, and close() waits for a render in progress instead of freeing the engine
+ * under it; cancel() is the one call that does not wait (it is how a render is cut short). After close() every call
+ * returns null / nothing.
+ */
 public final class SteerTTS implements AutoCloseable {
     static { System.loadLibrary("steertts_jni"); }
 
@@ -24,7 +29,7 @@ public final class SteerTTS implements AutoCloseable {
     static boolean debug(Context c) {
         return (c.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
-    private long h;
+    private volatile long h;
 
     /** The 12 prosody controls, in the order Style uses (z-scores, about -3 .. 3 in practice). */
     public static final String[] CONTROLS = {"rate", "loud", "f0_med", "f0_iqr", "f0_end", "pause", "tilt", "voiced",
@@ -38,7 +43,7 @@ public final class SteerTTS implements AutoCloseable {
     public SteerTTS(String modelDir, int threads) { h = nativeCreate(modelDir, threads); }
 
     /** Worker threads in use. */
-    public int threads() { return nativeThreads(h); }
+    public synchronized int threads() { return h == 0 ? 0 : nativeThreads(h); }
 
     // Every text is said through Spoken first: numbers, times, dates, amounts, Roman numerals, links and accented
     // letters in words, which the engine's own front end reads only in part.
@@ -47,40 +52,47 @@ public final class SteerTTS implements AutoCloseable {
      * Streams text sentence by sentence (inline markup parsed: *word*, [pause 300ms], <whisper>..</whisper>). voice,
      * tag and ctrl ("rate=1,loud=-0.5") may be null.
      */
-    public void stream(String text, String voice, String tag, String ctrl, float pace, Sink sink) {
+    public synchronized void stream(String text, String voice, String tag, String ctrl, float pace, Sink sink) {
+        if (h == 0) return;
         nativeStream(h, Spoken.say(text, true), voice, tag, ctrl, pace, sink);
     }
 
     /** One render of plain text (no markup); null if cancel() was called before it started. */
-    public float[] synthesize(String text, String voice, String ctrl, float pace) {
+    public synchronized float[] synthesize(String text, String voice, String ctrl, float pace) {
+        if (h == 0) return null;
         return nativeSynthesize(h, Spoken.say(text), voice, null, ctrl, pace, false);
     }
 
     /** One render with a style tag (may be null); markup: parse *word* and [pause 300ms] in text. */
-    public float[] synthesize(String text, String voice, String tag, String ctrl, float pace, boolean markup) {
+    public synchronized float[] synthesize(String text, String voice, String tag, String ctrl, float pace, boolean markup) {
+        if (h == 0) return null;
         return nativeSynthesize(h, Spoken.say(text, markup), voice, tag, ctrl, pace, markup);
     }
 
     /** Forget an earlier cancel(): call at the start of a new request (a cancel during the last one stays set otherwise). */
-    public void resetCancel() { nativeResetCancel(h); }
+    public synchronized void resetCancel() { if (h != 0) nativeResetCancel(h); }
 
     /** Stops a running stream() from another thread (it returns after the current sentence). */
-    public void cancel() { nativeCancel(h); }
+    public void cancel() {
+        long k = h;   // not synchronized: it must reach a render in progress
+        if (k != 0) nativeCancel(k);
+    }
 
-    public String[] voices(String gender) { return nativeVoices(h, gender); }
+    public synchronized String[] voices(String gender) { return h == 0 ? new String[0] : nativeVoices(h, gender); }
 
     /** Style tags ("none", "happiness", "whisper", ...). */
-    public String[] tags() { return nativeTags(h); }
+    public synchronized String[] tags() { return h == 0 ? new String[0] : nativeTags(h); }
 
     /** "female", "male" or null. */
-    public String voiceGender(String voice) { return nativeVoiceGender(h, voice); }
+    public synchronized String voiceGender(String voice) { return h == 0 || voice == null ? null : nativeVoiceGender(h, voice); }
 
     /** The default voice of "female" / "male". */
-    public String genderVoice(String gender) { return nativeGenderVoice(h, gender); }
+    public synchronized String genderVoice(String gender) { return h == 0 || gender == null ? null : nativeGenderVoice(h, gender); }
 
-    @Override public void close() {
-        if (h != 0) nativeDestroy(h);
+    @Override public synchronized void close() {
+        long k = h;
         h = 0;
+        if (k != 0) nativeDestroy(k);
     }
 
     /**

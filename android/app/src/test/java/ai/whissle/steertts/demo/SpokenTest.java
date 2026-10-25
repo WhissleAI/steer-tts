@@ -118,4 +118,13 @@ public class SpokenTest {
         assertEquals("one million two thousand three", Spoken.cardinal(1002003));
         assertEquals(1994, Spoken.romanValue("MCMXCIV"));
     }
+
+    @Test public void languagesTheVoiceCantSpeak() {
+        assertEquals("Hindi", Spoken.unspoken("नमस्ते भाई, कैसे हो?"));
+        assertEquals("Russian", Spoken.unspoken("Добрый день"));
+        assertEquals("Japanese", Spoken.unspoken("こんにちは"));
+        assertEquals(null, Spoken.unspoken("Hi भाई"));
+        assertEquals(null, Spoken.unspoken("Café at 10:00"));
+        assertEquals(null, Spoken.unspoken("😂👍"));
+    }
 }

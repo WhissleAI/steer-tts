@@ -21,14 +21,14 @@ servers. Speech is generated on your phone.
 | **Documents you open** (PDF, EPUB, Word, web page, text) | When you open or share a file with the app | To read it aloud | The extracted text is kept on your phone in your reading list until you remove it |
 | **A link you share with the app** | Only when you share a link to "Read with SteerTTS" | To fetch that page and read its article aloud | The app downloads the page from the website you chose, like a browser would; nothing is sent to Whissle |
 
-Your settings (voice, style, speed, which apps may be read) are stored on your phone only.
+Your settings (voice, style, speed, which apps may be read) are stored on your phone only. A short history of the last few notifications (the app, the sender or title, and whether it was read out or why not, never the message text) is kept on the phone for the app's "Recently" list.
 
 ## Permissions
 
 - **Notification access** (optional): message readouts and caller announcements. You grant it in Android's settings
   and can revoke it there at any time.
 - **Calendar** (optional): meeting reminders and the briefing's look at your day.
-- **Health Connect: sleep, steps, heart rate, resting heart rate** (optional, read only): the daily briefing. You can
+- **Health Connect: sleep, steps, resting heart rate** (optional, read only): the daily briefing. You can
   change or revoke it in Health Connect at any time.
 - **Notifications**: the player notification with its play, pause and skip controls.
 - **Alarms & reminders** (optional): on-time meeting reminders; without it they may be a little late.

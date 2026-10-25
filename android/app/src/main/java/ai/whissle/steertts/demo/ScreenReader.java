@@ -54,6 +54,9 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
 
     static boolean enabled() { return instance != null; }
 
+    /** Reading a screen now (the tile shows it, and a second tap stops). */
+    boolean isReading() { return reading != null; }
+
     @Override protected void onServiceConnected() {
         instance = this;
         wm = getSystemService(WindowManager.class);
@@ -148,7 +151,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         }
         List<Item> items = new ArrayList<>();
         collect(root, items, 0);
-        items.sort((a, b) -> Math.abs(a.box.top - b.box.top) > 12 ? Integer.compare(a.box.top, b.box.top) : Integer.compare(a.box.left, b.box.left));
+        readingOrder(items);
         if (!more) {
             heard.clear();
             emptyTurns = 0;
@@ -188,6 +191,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         lastPara = -1;
         Narrator n = Narrator.get(this);
         n.addListener(this);
+        log((more ? "continue: " : "read: ") + paras.size() + " paragraphs");
         if (more) n.continueTransient(d, this::ended);
         else {
             n.openTransient(d, this::ended);
@@ -325,6 +329,24 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
                 }, main);
         log("auto-continue: swipe dispatched " + ok);
         if (!ok) next.run();
+    }
+
+    /**
+     * Top to bottom, and items on one line left to right (right to left in a right-to-left layout). Lines are found
+     * first (tops within 12 px of a line's first item), so the order is consistent: a single comparator mixing "same
+     * line" and "above" is not transitive, and sorting with it can throw on a busy screen.
+     */
+    private void readingOrder(List<Item> items) {
+        items.sort((a, b) -> Integer.compare(a.box.top, b.box.top));
+        boolean rtl = getResources().getConfiguration().getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+        int start = 0;
+        while (start < items.size()) {
+            int end = start + 1, top = items.get(start).box.top;
+            while (end < items.size() && items.get(end).box.top - top <= 12) end++;
+            items.subList(start, end).sort(rtl ? (a, b) -> Integer.compare(b.box.right, a.box.right)
+                    : (a, b) -> Integer.compare(a.box.left, b.box.left));
+            start = end;
+        }
     }
 
     /** What the reader decided (no page text): kept in store builds too, for "why did it stop?". */

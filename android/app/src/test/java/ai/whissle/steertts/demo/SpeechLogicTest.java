@@ -315,4 +315,11 @@ public class SpeechLogicTest {
         assertEquals("You have 3 new emails.", Readout.email("3 new messages", "x").parts.get(0).text);
         assertEquals(2, Readout.email("Sam", "Lunch?", "Lunch?").parts.size());
     }
+
+    @Test public void aMessageInHindiIsAnnouncedNotSilenced() {
+        Speech sp = Readout.message("Priya", null, "WhatsApp", Collections.singletonList("नमस्ते, कल मिलते हैं"), false, null);
+        assertEquals("Priya sent a message on WhatsApp, in Hindi. I can't read Hindi yet.", sp.text());
+        Speech who = Readout.message("प्रिया", null, "WhatsApp", Collections.singletonList("See you at 7"), false, null);
+        assertTrue(who.text(), who.text().startsWith("Someone on WhatsApp."));
+    }
 }

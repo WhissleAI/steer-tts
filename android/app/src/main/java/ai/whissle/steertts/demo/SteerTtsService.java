@@ -26,18 +26,22 @@ import java.util.Set;
  */
 public class SteerTtsService extends TextToSpeechService {
     static final String ACTION_STYLE = "ai.whissle.steertts.demo.STYLE";
-    static final String FEMALE = "steertts-female", MALE = "steertts-male";
+    // DEFAULT means "the voice chosen in the app", looked up on every request: apps such as TalkBack ask for the default
+    // voice name once, when they connect, and send that name for as long as they run
+    static final String FEMALE = "steertts-female", MALE = "steertts-male", DEFAULT = "steertts-default";
     private static final String TAG = "SteerTTS";
 
     private SteerTTS tts;   // used on the synthesis thread only (onSynthesizeText); cancel() from any thread
 
     @Override public void onDestroy() {
+        SteerTTS e;
         synchronized (this) {
-            if (tts != null) {
-                tts.cancel();
-                tts.close();
-                tts = null;
-            }
+            e = tts;
+            tts = null;
+        }
+        if (e != null) {   // cut the render short; close once it has returned (close waits for it), off the main thread
+            e.cancel();
+            new Thread(e::close, "steertts-close").start();
         }
         super.onDestroy();
     }
@@ -71,6 +75,7 @@ public class SteerTtsService extends TextToSpeechService {
     // ------------------------------------------------------------------ voices
     @Override public List<Voice> onGetVoices() {
         List<Voice> out = new ArrayList<>();
+        out.add(voice(DEFAULT, "default"));
         out.add(voice(FEMALE, "female"));
         out.add(voice(MALE, "male"));
         try {
@@ -90,14 +95,11 @@ public class SteerTtsService extends TextToSpeechService {
     }
 
     @Override public String onGetDefaultVoiceNameFor(String lang, String country, String variant) {
-        if (!isEnglish(lang)) return null;
-        Style base = Style.load(this);
-        return "male".equals(base.voice) ? MALE : base.voice != null && base.voice.startsWith("voice_") ? base.voice
-                : FEMALE;
+        return isEnglish(lang) ? DEFAULT : null;
     }
 
     @Override public int onIsValidVoiceName(String name) {
-        if (FEMALE.equals(name) || MALE.equals(name)) return TextToSpeech.SUCCESS;
+        if (DEFAULT.equals(name) || FEMALE.equals(name) || MALE.equals(name)) return TextToSpeech.SUCCESS;
         try {
             return engine().voiceGender(name) != null ? TextToSpeech.SUCCESS : TextToSpeech.ERROR;
         } catch (Exception e) {
@@ -161,11 +163,19 @@ public class SteerTtsService extends TextToSpeechService {
         }
     }
 
-    private static String resolveVoice(SteerTTS e, String requested, String saved) {
-        String v = requested != null ? requested : saved;
-        if (v == null || FEMALE.equals(v) || "female".equals(v)) return e.genderVoice("female");
-        if (MALE.equals(v) || "male".equals(v)) return e.genderVoice("male");
-        return e.voiceGender(v) != null ? v : e.genderVoice("female");
+    /**
+     * The voice for a request: the app's chosen voice for DEFAULT (or no name); for a gender alias, the chosen voice if it
+     * is of that gender, else that gender's default; otherwise the named voice.
+     */
+    static String resolveVoice(SteerTTS e, String requested, String saved) {
+        String mine = saved == null || "female".equals(saved) ? e.genderVoice("female") : "male".equals(saved) ? e.genderVoice("male")
+                : e.voiceGender(saved) != null ? saved : e.genderVoice("female");
+        if (requested == null || DEFAULT.equals(requested)) return mine;
+        if (FEMALE.equals(requested) || MALE.equals(requested)) {
+            String g = FEMALE.equals(requested) ? "female" : "male";
+            return g.equals(e.voiceGender(mine)) ? mine : e.genderVoice(g);
+        }
+        return e.voiceGender(requested) != null ? requested : mine;
     }
 
     private String callerPackage(SynthesisRequest req) {

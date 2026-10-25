@@ -55,6 +55,43 @@ final class Spoken {
         return s.trim();
     }
 
+    // ---------------------------------------------------------------- languages the voice can't speak
+    /**
+     * The language of text the voice cannot read (its letters are in a script other than Latin), as a name to say
+     * ("Hindi", "Arabic"), or null when there is something readable. "Hi भाई" is readable; "नमस्ते भाई" is Hindi.
+     */
+    static String unspoken(String s) {
+        if (s == null || s.trim().isEmpty() || !say(s).replaceAll("[^\\p{L}\\p{N}]", "").isEmpty()) return null;
+        java.util.Map<Character.UnicodeScript, Integer> n = new java.util.EnumMap<>(Character.UnicodeScript.class);
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            i += Character.charCount(cp);
+            if (Character.isLetter(cp)) n.merge(Character.UnicodeScript.of(cp), 1, Integer::sum);
+        }
+        if (n.isEmpty()) return null;   // only emoji or symbols: described elsewhere
+        Character.UnicodeScript top = java.util.Collections.max(n.entrySet(), java.util.Map.Entry.comparingByValue()).getKey();
+        switch (top) {
+            case DEVANAGARI: return "Hindi";
+            case BENGALI: return "Bengali";
+            case GURMUKHI: return "Punjabi";
+            case GUJARATI: return "Gujarati";
+            case TAMIL: return "Tamil";
+            case TELUGU: return "Telugu";
+            case KANNADA: return "Kannada";
+            case MALAYALAM: return "Malayalam";
+            case ORIYA: return "Odia";
+            case ARABIC: return "Arabic";
+            case HEBREW: return "Hebrew";
+            case CYRILLIC: return "Russian";
+            case GREEK: return "Greek";
+            case HAN: return "Chinese";
+            case HIRAGANA: case KATAKANA: return "Japanese";
+            case HANGUL: return "Korean";
+            case THAI: return "Thai";
+            default: return "another language";
+        }
+    }
+
     // ---------------------------------------------------------------- letters
     private static final String[][] BEFORE_FOLD = {
             {"™", ""}, {"®", ""}, {"©", " copyright "}, {"℠", ""}, {"²", "²"}, {"№", " number "}, {"§§", " sections "},

@@ -118,7 +118,9 @@ public class ReadoutListener extends NotificationListenerService {
      */
     static void catchUp(android.content.Context c, boolean asked) {
         AssistantPrefs prefs = new AssistantPrefs(c);
-        if (!asked && (!prefs.catchUp() || Digest.size() == 0 || !AssistantPrefs.mayAnnounceNow(c))) return;
+        // on its own (headphones connecting) only when the messages would be heard as privately as the user asked:
+        // a Bluetooth speaker in the living room is not headphones
+        if (!asked && (!prefs.catchUp() || Digest.size() == 0 || prefs.whyNotNow(c) != null)) return;
         Announcer.get(c).say(Digest.take(prefs.personVoices(), Style.load(c).voice), "catch-up", false, null);
     }
 
@@ -169,7 +171,9 @@ public class ReadoutListener extends NotificationListenerService {
             return;
         }
         Announcer.get(this).say(said.speech, pkg, false, null);
-        Recent.add(app, who, "Read out", true);
+        String lang = null;
+        for (String[] it : said.items) if (lang == null) lang = Spoken.unspoken(it[1]);
+        Recent.add(app, who, lang == null ? "Read out" : "Said a message came, in " + lang + " (not spoken yet)", lang == null);
     }
 
     /** A readout, and what the digest keeps if it cannot be spoken now ({person, words} per message). */
@@ -227,7 +231,8 @@ public class ReadoutListener extends NotificationListenerService {
                 return true;
             }
             sp = Readout.update(title, text, app);
-        } else if (AssistantPrefs.EMAIL_APPS.contains(pkg) || Notification.CATEGORY_EMAIL.equals(n.category)) {
+        } else if (AssistantPrefs.EMAIL_APPS.contains(pkg)
+                || (Notification.CATEGORY_EMAIL.equals(n.category) && prefs.appOn(pkg))) {   // only mail apps, or ones the user chose
             if (title == null) return true;
             if (!prefs.email()) {
                 Recent.add(app, title, "Not read: Email is off. Tap to turn it on", false, pkg, "email");

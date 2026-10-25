@@ -397,12 +397,13 @@ final class AssistantScreen {
                         + "call the dentist.” Works with the Clock, Google Tasks, Keep, Todoist and other reminder apps.",
                 "Updates from ride, food and delivery apps (Uber, Lyft, DoorDash, Instacart, Amazon, Swiggy, Zomato and "
                         + "more) are read out as they happen: “Your driver is arriving.”",
-                "New email is announced with who it's from and the subject, never the body. Off unless you turn it on.",
+                "New email from the apps in your list (Gmail, Outlook and other mail apps) is announced with who it's from, "
+                        + "the subject and its first sentence, only when you can hear it privately (or as “When” allows).",
                 "A spoken heads-up when the battery falls to 15 percent, and when it's fully charged.",
                 "Every morning, or whenever you ask: your day ahead, last night's sleep and your steps, and any messages "
                         + "that waited overnight. Each line sounds like what it says.",
                 "Messages that arrived while SteerTTS couldn't read them out wait here. When you put headphones in, "
-                        + "it tells you who wrote and what they said. Nothing is stored on the phone.",
+                        + "it tells you who wrote and what they said. They wait in memory only, never written to storage.",
                 "Each person's messages are read in a voice of their own, always the same one, so you know who wrote "
                         + "without hearing the name. The assistant's own voice says who it's from.",
                 "Any app's page read aloud: an article, a recipe, a long message. Open it, then tap “Read this screen” in "
@@ -489,7 +490,8 @@ final class AssistantScreen {
                 .setTitle("Let SteerTTS read notifications?")
                 .setMessage("To read new messages aloud and say who is calling, SteerTTS needs notification access.\n\n"
                         + "It reads the text of new notifications from the apps you choose and speaks it on this phone. "
-                        + "Nothing is stored, and nothing leaves your phone.\n\n"
+                        + "Message text is never stored and nothing leaves your phone. A short history (which app, who, and "
+                        + "whether it was read) is kept on the phone for the Recently list.\n\n"
                         + "Next, Android shows its notification access screen: switch SteerTTS on there.")
                 .setPositiveButton("Continue", (d, w) -> {
                     pending = f;

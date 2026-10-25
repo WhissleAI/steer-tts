@@ -8,7 +8,8 @@ import android.service.quicksettings.TileService;
 
 /**
  * Quick Settings tiles, for SteerTTS without opening the app: "Read copied text" (ClipReadActivity reads the clipboard
- * into the player) and "Catch me up" (the messages that waited, ReadoutListener.catchUp).
+ * into the player), "Read this screen" (ScreenReader) and "Catch me up" (the messages that waited, ReadoutListener.catchUp).
+ * Private content waits for the phone to be unlocked; a second tap on a tile stops what it started.
  */
 public final class Tiles {
     private Tiles() {}
@@ -37,15 +38,23 @@ public final class Tiles {
         @Override public void onStartListening() {
             Tile t = getQsTile();
             if (t == null) return;
-            t.setState(Tile.STATE_INACTIVE);
-            if (Build.VERSION.SDK_INT >= 29) t.setSubtitle(ScreenReader.enabled() ? "Tap to listen" : "Set up");
+            ScreenReader r = ScreenReader.instance;
+            boolean on = r != null && r.isReading();
+            t.setState(on ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+            if (Build.VERSION.SDK_INT >= 29) t.setSubtitle(!ScreenReader.enabled() ? "Set up" : on ? "Tap to stop" : "Tap to listen");
             t.updateTile();
         }
 
         @Override public void onClick() {
             ScreenReader r = ScreenReader.instance;
+            if (r != null && r.isReading()) {   // a second tap stops
+                r.stop();
+                onStartListening();
+                return;
+            }
             if (r != null) {
-                r.readAfterShade();
+                if (isLocked()) unlockAndRun(r::readAfterShade);   // the page to read is behind the lock screen
+                else r.readAfterShade();
                 return;
             }
             Intent i = new Intent(this, MainActivity.class).putExtra("tab", "assistant").putExtra("setup_screen", true)
@@ -70,8 +79,19 @@ public final class Tiles {
         }
 
         @Override public void onClick() {
-            ReadoutListener.catchUp(this, true);
-            onStartListening();
+            Announcer a = Announcer.get(this);
+            if (a.speaking()) {   // a second tap stops whatever the assistant is saying
+                a.stop();
+                onStartListening();
+                return;
+            }
+            // the messages are private: never read from the lock screen, unlock first
+            Runnable go = () -> {
+                ReadoutListener.catchUp(this, true);
+                onStartListening();
+            };
+            if (isLocked()) unlockAndRun(go);
+            else go.run();
         }
     }
 }

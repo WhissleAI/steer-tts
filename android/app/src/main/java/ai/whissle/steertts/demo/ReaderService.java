@@ -54,7 +54,10 @@ public class ReaderService extends Service implements Narrator.Listener {
         narrator = Narrator.get(this);
         session = new MediaSession(this, "SteerTTS");
         session.setCallback(new MediaSession.Callback() {
-            @Override public void onPlay() { narrator.play(); }
+            @Override public void onPlay() {
+                if (narrator.doc() == null) resumeLast();
+                narrator.play();
+            }
             @Override public void onPause() { narrator.pause(); }
             @Override public void onSkipToNext() { narrator.next(); }
             @Override public void onSkipToPrevious() { narrator.prev(); }
@@ -68,14 +71,16 @@ public class ReaderService extends Service implements Narrator.Listener {
     }
 
     @Override public int onStartCommand(Intent i, int flags, int startId) {
-        if (i != null && i.getBooleanExtra("fg", false) && narrator.doc() != null) {
-            // started with startForegroundService: always go foreground right away (even if paused since), or Android
-            // stops the app; changed() below steps back from the foreground if reading has stopped
-            foreground(notification(narrator.doc(), "", true));
+        String cmd = i == null ? null : i.getStringExtra("cmd");
+        if (narrator.doc() == null && ("toggle".equals(cmd) || "next".equals(cmd) || "prev".equals(cmd))) resumeLast();
+        if (i != null && i.getBooleanExtra("fg", false)) {
+            // started with startForegroundService: always go foreground right away (even if paused or closed since),
+            // or Android stops the app; changed() below steps back from the foreground if reading has stopped
+            foreground(narrator.doc() != null ? notification(narrator.doc(), "", true) : placeholder());
             lastState = null;
         }
-        if (i != null && i.getStringExtra("cmd") != null) {
-            switch (i.getStringExtra("cmd")) {
+        if (cmd != null) {
+            switch (cmd) {
                 case "toggle": narrator.toggle(); break;
                 case "next": narrator.next(); break;
                 case "prev": narrator.prev(); break;
@@ -135,9 +140,40 @@ public class ReaderService extends Service implements Narrator.Listener {
     }
 
     private void foreground(Notification note) {
-        if (Build.VERSION.SDK_INT >= 29) startForeground(ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        else startForeground(ID, note);
+        try {
+            if (Build.VERSION.SDK_INT >= 29) startForeground(ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            else startForeground(ID, note);
+        } catch (RuntimeException e) {
+            // Android 12+ may refuse to start a foreground service from the background (a headset or lock-screen
+            // play after the app was paused for long): keep playing with a plain notification instead of crashing
+            android.util.Log.w(MainActivity.TAG, "reader: foreground refused: " + e);
+            try {
+                getSystemService(NotificationManager.class).notify(ID, note);
+            } catch (SecurityException ignored) {
+            }
+        }
     }
+
+    /** A notification for the moment between a foreground start and stopping (nothing to read any more). */
+    private Notification placeholder() {
+        return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle("SteerTTS").setContentText("Reading aloud").build();
+    }
+
+    /**
+     * Play pressed on a notification, a headset or the lock screen after Android ended the app: the document read most
+     * recently and not finished opens again where it was left.
+     */
+    private void resumeLast() {
+        for (Doc.Meta m : Doc.list(this)) {
+            if (m.done) continue;
+            Doc d = Doc.load(this, m.id);
+            if (d != null) narrator.open(d);
+            return;
+        }
+    }
+
+    private android.graphics.drawable.Icon icon(int res) { return android.graphics.drawable.Icon.createWithResource(this, res); }
 
     private PendingIntent cmd(String c, int code) {
         return PendingIntent.getService(this, code, new Intent(this, ReaderService.class).putExtra("cmd", c),
@@ -153,9 +189,10 @@ public class ReaderService extends Service implements Narrator.Listener {
                 .setDeleteIntent(cmd("close", 4))
                 .setOngoing(playing)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .addAction(new Notification.Action.Builder(null, "Previous", cmd("prev", 1)).build())
-                .addAction(new Notification.Action.Builder(null, playing ? "Pause" : "Play", cmd("toggle", 2)).build())
-                .addAction(new Notification.Action.Builder(null, "Next", cmd("next", 3)).build())
+                .addAction(new Notification.Action.Builder(icon(R.drawable.ic_prev), "Previous", cmd("prev", 1)).build())
+                .addAction(new Notification.Action.Builder(icon(playing ? R.drawable.ic_pause : R.drawable.ic_play),
+                        playing ? "Pause" : "Play", cmd("toggle", 2)).build())
+                .addAction(new Notification.Action.Builder(icon(R.drawable.ic_next), "Next", cmd("next", 3)).build())
                 .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 2))
                 .build();
     }
