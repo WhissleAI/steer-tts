@@ -39,7 +39,7 @@ final class AssistantScreen {
     private final View.OnClickListener settings;
     private final Ui.Tile[] tiles = new Ui.Tile[N];
     private TextView catchUpLabel;
-    private LinearLayout access;
+    private LinearLayout access, recent;
     private int pending = -1;   // the feature waiting for a permission screen to come back
     private boolean askedListener, retryListener, askedScreen;
     private int calendarFor = -1;   // who asked for calendar access: MEETINGS, BRIEFING (its sheet) or PLAY_BRIEFING
@@ -90,25 +90,31 @@ final class AssistantScreen {
         access.addView(allow, al);
         root.addView(access);
 
-        root.addView(u.section("What it does"));
         int[] icons = {R.drawable.ic_message, R.drawable.ic_call, R.drawable.ic_calendar, R.drawable.ic_alarm, R.drawable.ic_delivery,
                 R.drawable.ic_email, R.drawable.ic_battery, R.drawable.ic_sun, R.drawable.ic_inbox,
                 R.drawable.ic_people, R.drawable.ic_speaker};
-        String[] names = TITLES;
-        for (int i = 0; i < N; i += 2) {
-            LinearLayout r = u.row();
-            r.setGravity(android.view.Gravity.TOP);
-            for (int k = i; k < Math.min(N, i + 2); ++k) {
-                final int f = k;
-                tiles[k] = new Ui.Tile(u, icons[k], names[k]);
-                tiles[k].root.setOnClickListener(v -> sheet(f));
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
-                if (k == i) lp.rightMargin = u.dp(6);
-                else lp.leftMargin = u.dp(6);
-                lp.topMargin = u.dp(12);
-                r.addView(tiles[k].root, lp);
+        // three short groups instead of one long grid
+        Object[][] groups = {{"Speaks up when", new int[] {MESSAGES, EMAIL, CALLS, MEETINGS, REMINDERS, DELIVERIES, BATTERY}},
+                {"Every day", new int[] {BRIEFING, CATCHUP}}, {"More", new int[] {SCREEN, VOICES}}};
+        for (Object[] g : groups) {
+            root.addView(u.section((String) g[0]));
+            int[] fs = (int[]) g[1];
+            for (int i = 0; i < fs.length; i += 2) {
+                LinearLayout r = u.row();
+                r.setGravity(android.view.Gravity.TOP);
+                for (int k = i; k < Math.min(fs.length, i + 2); ++k) {
+                    final int f = fs[k];
+                    tiles[f] = new Ui.Tile(u, icons[f], TITLES[f]);
+                    tiles[f].root.setOnClickListener(v -> sheet(f));
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
+                    if (k == i) lp.rightMargin = u.dp(6);
+                    else lp.leftMargin = u.dp(6);
+                    lp.topMargin = u.dp(12);
+                    r.addView(tiles[f].root, lp);
+                }
+                if (fs.length - i == 1) r.addView(new View(a), new LinearLayout.LayoutParams(0, 1, 1));   // keep the tile half width
+                root.addView(r, Ui.matchWrap());
             }
-            root.addView(r, Ui.matchWrap());
         }
 
         LinearLayout acts = u.row();
@@ -122,6 +128,12 @@ final class AssistantScreen {
         l2.leftMargin = u.dp(6);
         acts.addView(u.pill("Play briefing", false, v -> playBriefing()), l2);
         root.addView(acts, Ui.matchWrap());
+
+        // what happened with the last notifications, and why something was not read
+        root.addView(u.section("Recently"));
+        recent = u.card();
+        root.addView(recent);
+        Recent.onChange = this::showRecent;
 
         TextView tip = u.text("Read aloud anywhere: select text or tap Share in any app, then “Read with SteerTTS”. "
                 + "Add the “Read copied text” and “Catch me up” tiles to Quick Settings for one-tap access.", 13, Ui.MUTED, false);
@@ -187,7 +199,10 @@ final class AssistantScreen {
             int f = pending;
             pending = -1;
             if (listenerOn(a)) {
-                if (f >= 0 && needsListener(f)) set(f, true);
+                if (f >= 0 && needsListener(f)) {
+                    set(f, true);
+                    if (f == MESSAGES || f == EMAIL) askWhen();
+                }
             } else if (Build.VERSION.SDK_INT >= 33 && !fromStore()) {
                 restrictedHelp(f);   // most likely Android's "restricted setting" for apps installed from a file
             }
@@ -203,9 +218,49 @@ final class AssistantScreen {
         }
         for (int f = 0; f < N; ++f) tiles[f].set(on(f), status(f));
         access.setVisibility(listenerOn(a) ? View.GONE : View.VISIBLE);
+        showRecent();
         int n = Digest.size();
         catchUpLabel.setText(n > 0 ? "Catch me up · " + n : "Catch me up");
         MeetingAnnouncer.reschedule(a);
+    }
+
+    private void showRecent() {
+        if (recent == null) return;
+        recent.removeAllViews();
+        List<Recent.Event> ev = Recent.all();
+        if (ev.isEmpty()) {
+            recent.addView(u.text("Nothing yet. When a message, an email or a call comes in, you'll see here whether SteerTTS "
+                    + "read it out, and why if it didn't.", 13.5f, Ui.MUTED, false));
+            return;
+        }
+        java.text.DateFormat tf = android.text.format.DateFormat.getTimeFormat(a);
+        for (int i = 0; i < Math.min(5, ev.size()); ++i) {
+            Recent.Event e = ev.get(i);
+            if (i > 0) recent.addView(u.divider());
+            LinearLayout r = u.row();
+            r.setPadding(0, u.dp(8), 0, u.dp(8));
+            r.setGravity(android.view.Gravity.TOP);
+            r.addView(u.badge(e.spoken ? R.drawable.ic_check : R.drawable.ic_inbox, e.spoken ? Ui.ACCENT_SOFT : Ui.LINE, e.spoken ? Ui.ACCENT : Ui.MUTED, 30));
+            LinearLayout t = u.column();
+            t.setPadding(u.dp(12), 0, 0, 0);
+            t.addView(u.text(e.app + (e.who.isEmpty() ? "" : " · " + e.who) + "  ·  " + tf.format(new java.util.Date(e.time)), 14, Ui.INK, true));
+            t.addView(u.text(e.outcome, 13, e.spoken ? Ui.ACCENT : Ui.MUTED, false));
+            r.addView(t, Ui.weight(1));
+            recent.addView(r);
+        }
+    }
+
+    /** Right after Messages or Email is switched on: when may it speak? (A choice, not a hidden default.) */
+    private void askWhen() {
+        new AlertDialog.Builder(a)
+                .setTitle("When should SteerTTS read them out?")
+                .setSingleChoiceItems(AssistantPrefs.WHEN_LABELS, prefs.when(), (d, w) -> {
+                    prefs.setWhen(w);
+                    refresh();
+                    d.dismiss();
+                })
+                .setNegativeButton("Keep this", null)
+                .show();
     }
 
     private void set(int f, boolean v) {
@@ -243,6 +298,7 @@ final class AssistantScreen {
             return;
         } else {
             set(f, true);
+            if (f == MESSAGES || f == EMAIL) askWhen();
         }
         refresh();
     }

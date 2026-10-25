@@ -44,6 +44,9 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
     private boolean auto = true;
     private final Set<String> heard = new HashSet<>();   // paragraphs already read on this page (auto-continue skips them)
     private final List<Rect> boxes = new ArrayList<>();  // where each paragraph of the current reading is on screen
+    private final List<String> raw = new ArrayList<>();  // each paragraph's text as the screen has it (to find it again)
+    private boolean following;                           // a follow-along scroll is under way
+    private String readingPkg;                           // the app whose screen is being read
     private String reading;   // the transient document's id while this reader owns the narrator
     private int lastPara = -1;
     private int tries;   // auto-continue: looks after a scroll that found nothing new
@@ -66,7 +69,25 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         return super.onUnbind(i);
     }
 
-    @Override public void onAccessibilityEvent(AccessibilityEvent e) { }
+    private final Runnable relocate = this::settle;
+
+    /**
+     * Only while reading: the user scrolled the page (find the paragraphs again), or went to another app (stop: what is
+     * being read is no longer on screen).
+     */
+    @Override public void onAccessibilityEvent(AccessibilityEvent e) {
+        if (reading == null || e == null) return;
+        CharSequence pkg = e.getPackageName();
+        if (e.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != null && readingPkg != null
+                && !pkg.toString().equals(readingPkg) && !pkg.toString().equals(getPackageName())
+                && !pkg.toString().equals("com.android.systemui")) {
+            log("left the page for " + pkg + ": stop");
+            stop();
+        } else if (e.getEventType() == AccessibilityEvent.TYPE_VIEW_SCROLLED && !following) {
+            main.removeCallbacks(relocate);
+            main.postDelayed(relocate, 250);
+        }
+    }
 
     @Override public void onInterrupt() { stop(); }
 
@@ -105,12 +126,14 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         if (!more) heard.clear();
         List<String> paras = new ArrayList<>();
         boxes.clear();
+        raw.clear();
         Set<String> seen = new HashSet<>();
         for (Item it : items) {
             String t = it.text.replaceAll("\\s+", " ").trim();
             if (!seen.add(t) || heard.contains(t)) continue;
             paras.add(TextClean.speakable(t));
             boxes.add(it.box);
+            raw.add(t);
             heard.add(t);
         }
         if (paras.isEmpty()) {
@@ -130,6 +153,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         tries = 0;
         if (SteerTTS.debug(this)) for (String x : paras) android.util.Log.i(MainActivity.TAG, "screen para [" + x.substring(0, Math.min(150, x.length())) + "]");
         String app = label(pkg == null ? "" : pkg.toString());
+        readingPkg = pkg == null ? null : pkg.toString();
         Doc d = Doc.createTransient(app, paras);
         reading = d.id;
         lastPara = -1;
@@ -151,6 +175,11 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
     private void ended() {
         if (!auto || reading == null) {
             stop();
+            return;
+        }
+        if (hasNew()) {   // follow-along already brought new text into view: straight on, no page turn
+            log("auto-continue: new text on screen");
+            read(true);
             return;
         }
         String before = visibleSignature();
@@ -176,6 +205,60 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
                 }
             }, 900);
         }, 900));
+    }
+
+    /**
+     * Follow along: when the paragraph now being read sits low on the screen, scroll it gently up near the top while
+     * the voice goes on, so the text ahead comes into view and reading never stops for a page turn.
+     */
+    private void follow(int para) {
+        if (!auto || following || para < 0 || para >= boxes.size() || Build.VERSION.SDK_INT < 24) return;
+        Rect b = boxes.get(para);
+        int h = getResources().getDisplayMetrics().heightPixels;
+        if (b.isEmpty() || b.bottom < h * 0.78f || b.top < h * 0.22f) return;
+        int distance = (int) Math.min(b.top - h * 0.15f, h * 0.55f);
+        if (distance < h * 0.1f) return;
+        following = true;
+        android.graphics.Path path = new android.graphics.Path();
+        float x = getResources().getDisplayMetrics().widthPixels * 0.4f, y0 = h * 0.72f;
+        path.moveTo(x, y0);
+        path.lineTo(x, y0 - distance);
+        long ms = Math.max(450, (long) (distance / 0.9f));   // slow enough not to fling the page past
+        boolean ok = dispatchGesture(new android.accessibilityservice.GestureDescription.Builder()
+                .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, ms)).build(),
+                new GestureResultCallback() {
+                    @Override public void onCompleted(android.accessibilityservice.GestureDescription g) { settle(); }
+                    @Override public void onCancelled(android.accessibilityservice.GestureDescription g) { settle(); }
+                }, main);
+        log("follow: scroll " + distance + " px " + ok);
+        if (!ok) following = false;
+    }
+
+    /** After a scroll (ours or the user's): find the paragraphs again where they now are. */
+    private void settle() {
+        main.postDelayed(() -> {
+            following = false;
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root == null || reading == null) return;
+            List<Item> items = new ArrayList<>();
+            collect(root, items, 0);
+            for (int i = 0; i < raw.size(); ++i) {
+                Rect at = new Rect();
+                for (Item it : items) if (it.text.replaceAll("\\s+", " ").trim().equals(raw.get(i))) { at = it.box; break; }
+                boxes.set(i, at);   // empty: scrolled out of view
+            }
+            if (outline != null && lastPara >= 0 && lastPara < boxes.size()) outline.show(boxes.get(lastPara).isEmpty() ? null : boxes.get(lastPara));
+        }, 350);
+    }
+
+    /** Paragraphs on screen that have not been read yet. */
+    private boolean hasNew() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+        List<Item> items = new ArrayList<>();
+        collect(root, items, 0);
+        for (Item it : items) if (!heard.contains(it.text.replaceAll("\\s+", " ").trim())) return true;
+        return false;
     }
 
     /** The visible text, joined: compared before and after a scroll. */
@@ -388,6 +471,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         if (para != lastPara && outline != null) {
             lastPara = para;
             outline.show(para >= 0 && para < boxes.size() ? boxes.get(para) : null);
+            follow(para);
         }
     }
 
@@ -431,11 +515,23 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
             auto = !auto;
             showAuto();
         });
+        TextView speed = button(u, "", "", null);
+        speed.setTextSize(14);
+        showSpeed(speed);
+        speed.setOnClickListener(v -> {   // a tap: the next speed
+            float[] sp = ReaderActivity.SPEEDS;
+            float p = Narrator.get(this).pace();
+            int k = 0;
+            for (int i = 0; i < sp.length; ++i) if (Math.abs(sp[i] - p) < 0.01f) k = i;
+            Narrator.get(this).setPace(sp[(k + 1) % sp.length]);
+            showSpeed(speed);
+        });
         TextView close = button(u, "✕", "Stop reading", v -> stop());
         bar.addView(back);
         bar.addView(playBtn);
         bar.addView(next);
         bar.addView(autoBtn);
+        bar.addView(speed);
         bar.addView(close);
         showAuto();
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT,
@@ -447,6 +543,13 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         draggable(bar, lp);
         controls = bar;
         wm.addView(controls, lp);
+    }
+
+    private void showSpeed(TextView b) {
+        float p = Narrator.get(this).pace();
+        String t = String.valueOf(p).replaceAll("\\.?0+$", "") + "×";
+        b.setText(t);
+        b.setContentDescription("Speed " + t + ". Tap for the next speed.");
     }
 
     private void showAuto() {

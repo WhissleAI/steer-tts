@@ -46,7 +46,7 @@ final class AssistantPrefs {
     void setReminders(boolean on) { p.edit().putBoolean("reminders", on).apply(); }
     boolean deliveries() { return p.getBoolean("deliveries", true); }
     void setDeliveries(boolean on) { p.edit().putBoolean("deliveries", on).apply(); }
-    boolean email() { return p.getBoolean("email", false); }
+    boolean email() { return p.getBoolean("email", true); }
     void setEmail(boolean on) { p.edit().putBoolean("email", on).apply(); }
     boolean battery() { return p.getBoolean("battery", true); }
     void setBattery(boolean on) { p.edit().putBoolean("battery", on).apply(); }
@@ -141,6 +141,22 @@ final class AssistantPrefs {
     }
 
     /** May a message be read out now, by the user's "when" setting? Never during a call; out loud, not on silent. */
+    /** Why a message cannot be read out now (for the Recent panel), or null if it can. */
+    String whyNotNow(Context c) {
+        AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
+        if (doNotDisturb(c)) return "Do Not Disturb is on";
+        if (inCall(am) || am.getMode() == AudioManager.MODE_RINGTONE) return "you were on a call";
+        if (privateOutput(am)) return null;
+        boolean ringerOn = am.getRingerMode() == AudioManager.RINGER_MODE_NORMAL;
+        PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
+        switch (when()) {
+            case ANY_TIME: return ringerOn ? null : "the phone is on silent";
+            case PRIVATE_OR_SCREEN_OFF:
+                return !ringerOn ? "the phone is on silent" : pm.isInteractive() ? "the screen was on, and no headphones" : null;
+            default: return "no headphones (change “When” to hear it out loud)";
+        }
+    }
+
     boolean mayReadNow(Context c) {
         AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
         if (inCall(am) || am.getMode() == AudioManager.MODE_RINGTONE) return false;

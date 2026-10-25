@@ -138,11 +138,12 @@ public class ReadoutListener extends NotificationListenerService {
             Ranking cr = new Ranking();
             // in Do Not Disturb only a call that is allowed to ring (a starred contact, a repeat caller) is announced
             boolean rings = !AssistantPrefs.doNotDisturb(this) || (ranking != null && ranking.getRanking(sbn.getKey(), cr) && cr.matchesInterruptionFilter());
-            if (prefs.announceCalls() && rings) call(sbn, n, pkg);
+            if (!prefs.announceCalls()) Recent.add(label(pkg), null, "Call not announced: Calls are off", false);
+            else if (!rings) Recent.add(label(pkg), null, "Call not announced: Do Not Disturb", false);
+            else call(sbn, n, pkg);
             return;
         }
         if (other(sbn, n, pkg, prefs, ranking)) return;
-        if (!prefs.readMessages()) return;
         if ((n.flags & (Notification.FLAG_ONGOING_EVENT | Notification.FLAG_GROUP_SUMMARY
                 | Notification.FLAG_FOREGROUND_SERVICE)) != 0) return;
         Ranking r = new Ranking();
@@ -151,12 +152,23 @@ public class ReadoutListener extends NotificationListenerService {
         Said said = describe(sbn.getKey(), n, pkg, prefs);
         if (said == null || said.speech.isEmpty()) return;
         prefs.noteSeen(pkg);
-        if (!prefs.appOn(pkg)) return;
-        if (getCurrentInterruptionFilter() > INTERRUPTION_FILTER_ALL || !prefs.mayReadNow(this)) {
-            for (String[] it : said.items) Digest.add(sbn.getKey(), it[0], label(pkg), it[1]);   // for "catch me up" later
+        String app = label(pkg), who = said.items.isEmpty() ? null : said.items.get(0)[0];
+        if (!prefs.readMessages()) {
+            Recent.add(app, who, "Not read: Messages are off", false);
+            return;
+        }
+        if (!prefs.appOn(pkg)) {
+            Recent.add(app, who, "Not read: " + app + " isn't in your apps (Messages › Apps)", false);
+            return;
+        }
+        String why = prefs.whyNotNow(this);
+        if (why != null) {
+            for (String[] it : said.items) Digest.add(sbn.getKey(), it[0], app, it[1]);   // for "catch me up" later
+            Recent.add(app, who, "Kept for catch-up: " + why, false);
             return;
         }
         Announcer.get(this).say(said.speech, pkg, false, null);
+        Recent.add(app, who, "Read out", true);
     }
 
     /** A readout, and what the digest keeps if it cannot be spoken now ({person, words} per message). */
@@ -200,23 +212,43 @@ public class ReadoutListener extends NotificationListenerService {
         } else if (Notification.CATEGORY_ALARM.equals(n.category) || Notification.CATEGORY_REMINDER.equals(n.category)
                 || AssistantPrefs.REMINDER_APPS.contains(pkg)) {
             if (AssistantPrefs.CALENDAR_APPS.contains(pkg)) return true;   // meetings have their own reminders
-            if (!prefs.reminders() || (title == null && text == null)) return true;
+            if (title == null && text == null) return true;
+            if (!prefs.reminders()) {
+                Recent.add(app, title, "Not read: Reminders are off", false);
+                return true;
+            }
             sp = Readout.reminder(title, text, app);
             announce = true;
         } else if (AssistantPrefs.DELIVERY_APPS.contains(pkg)) {
-            if (!prefs.deliveries() || (title == null && text == null)) return true;
+            if (title == null && text == null) return true;
+            if (!prefs.deliveries()) {
+                Recent.add(app, title, "Not read: Deliveries are off", false);
+                return true;
+            }
             sp = Readout.update(title, text, app);
-        } else if (AssistantPrefs.EMAIL_APPS.contains(pkg)) {
-            if (!prefs.email() || title == null) return true;
+        } else if (AssistantPrefs.EMAIL_APPS.contains(pkg) || Notification.CATEGORY_EMAIL.equals(n.category)) {
+            if (title == null) return true;
+            if (!prefs.email()) {
+                Recent.add(app, title, "Not read: Email is off", false);
+                return true;
+            }
             sp = Readout.email(title, text);
         } else {
             return false;
         }
         if (said.equals(lastText.put(sbn.getKey(), said))) return true;   // the same words again (a progress update)
         prefs.noteSeen(pkg);
-        boolean now = !AssistantPrefs.doNotDisturb(this) && (announce ? AssistantPrefs.mayAnnounceNow(this) : prefs.mayReadNow(this));
-        if (now) Announcer.get(this).say(sp, pkg, false, null);
-        else if (!announce) Digest.add(sbn.getKey(), title != null ? title : app, app, text != null ? text : "");
+        String why = announce ? (AssistantPrefs.mayAnnounceNow(this) ? null : AssistantPrefs.doNotDisturb(this) ? "Do Not Disturb is on"
+                : "the phone is on silent") : prefs.whyNotNow(this);
+        if (why == null) {
+            Announcer.get(this).say(sp, pkg, false, null);
+            Recent.add(app, title, "Read out", true);
+        } else if (!announce) {
+            Digest.add(sbn.getKey(), title != null ? title : app, app, text != null ? text : "");
+            Recent.add(app, title, "Kept for catch-up: " + why, false);
+        } else {
+            Recent.add(app, title, "Not read: " + why, false);
+        }
         return true;
     }
 
@@ -248,8 +280,12 @@ public class ReadoutListener extends NotificationListenerService {
         String name = who != null && who.length() > 0 ? who.toString() : "an unknown caller";
         int count = Readout.ringCount(name, System.currentTimeMillis());
         AudioManager am = getSystemService(AudioManager.class);
-        if (AssistantPrefs.inCall(am) || !(AssistantPrefs.privateOutput(am) || am.getRingerMode() == AudioManager.RINGER_MODE_NORMAL)) return;
+        if (AssistantPrefs.inCall(am) || !(AssistantPrefs.privateOutput(am) || am.getRingerMode() == AudioManager.RINGER_MODE_NORMAL)) {
+            Recent.add(label(pkg), name, "Call not announced: " + (AssistantPrefs.inCall(am) ? "already on a call" : "the phone is on silent"), false);
+            return;
+        }
         Announcer.get(this).say(Readout.call(name, DIALERS.contains(pkg) ? null : label(pkg), count), pkg, true, null);
+        Recent.add(label(pkg), name, count >= 3 ? "Announced: third call, may be urgent" : "Call announced", true);
     }
 
     /** What to say for a new notification, or null if there is nothing new. */
