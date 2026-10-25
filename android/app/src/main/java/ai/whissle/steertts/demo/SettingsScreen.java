@@ -137,6 +137,8 @@ final class SettingsScreen {
         LinearLayout dev = u.card();
         TextView dh = u.text("Developer  ▾", 14, Ui.ACCENT, true);
         dh.setMinHeight(u.dp(44));
+        dh.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        dev.setPadding(dev.getPaddingLeft(), u.dp(6), dev.getPaddingRight(), u.dp(6));
         LinearLayout box = u.column();
         box.setVisibility(View.GONE);
         dh.setOnClickListener(v -> {

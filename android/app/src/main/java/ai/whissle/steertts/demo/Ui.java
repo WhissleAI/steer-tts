@@ -73,6 +73,7 @@ final class Ui {
     LinearLayout row() {
         LinearLayout l = new LinearLayout(c);
         l.setGravity(Gravity.CENTER_VERTICAL);
+        l.setBaselineAligned(false);   // text baselines would push taller children down and clip their bottoms
         return l;
     }
 

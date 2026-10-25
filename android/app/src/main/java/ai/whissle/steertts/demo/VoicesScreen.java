@@ -87,11 +87,12 @@ final class VoicesScreen {
             });
             LinearLayout.LayoutParams lp = Ui.weight(1);
             lp.rightMargin = u.dp(6);
-            lp.topMargin = u.dp(6);
             ch.setLayoutParams(lp);
             styleChips.add(ch);
             (i < 4 ? r1 : r2).addView(ch);
         }
+        r1.setPadding(0, u.dp(8), 0, u.dp(2));
+        r2.setPadding(0, u.dp(6), 0, u.dp(2));
         style.addView(r1, Ui.matchWrap());
         style.addView(r2, Ui.matchWrap());
         root.addView(style);
@@ -153,6 +154,9 @@ final class VoicesScreen {
         fs.setHorizontalScrollBarEnabled(false);
         LinearLayout feat = u.row();
         for (Voices.Voice v : voices.featured()) feat.addView(featuredCard(v));
+        feat.setGravity(android.view.Gravity.TOP);
+        feat.setPadding(0, 0, 0, u.dp(10));
+        fs.setClipToPadding(false);
         fs.addView(feat);
         root.addView(fs);
 
