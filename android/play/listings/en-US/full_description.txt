@@ -1,7 +1,8 @@
 SteerTTS gives your phone an expressive voice that runs entirely on the device. No account, no internet connection, nothing sent anywhere: every word is made right on your phone.
 
 LISTEN TO ANYTHING
-• PDFs, EPUB e-books, Word documents, web pages and plain text, read aloud with a real player: pause, skip by sentence, speed from 0.8× to 2×, and the sentence being read highlighted as it goes.
+• PDFs are read from the page itself: you see the real page, the line being read is highlighted where it is printed, and tapping a line reads from there. Two-column papers are read column by column; headers, footers and page numbers are skipped.
+• EPUB e-books, Word documents, web pages and plain text too, with a real player: pause, skip by sentence, speed from 0.8× to 2×.
 • Books are performed, not just read: dialogue in a second voice and in its own mood, italics stressed, a pause after each chapter heading.
 • Controls on the lock screen and in the notification, a sleep timer, and the next item in your list plays on its own. Your place in every document is remembered.
 • Share an article or a file to SteerTTS from any app, or select text and choose "Read with SteerTTS".
@@ -16,7 +17,8 @@ IT SPEAKS UP FOR YOU
 • Message readouts: new messages from the apps you choose, read aloud as they arrive, the way they were meant: a sorry sounds gentle, "HAPPY BIRTHDAY!!! 🎉" sounds excited, "haha" sounds amused. By default only with headphones or in the car, never during a call or in Do Not Disturb.
 • A voice for each person: every sender's messages in a voice of their own, so you know who wrote without hearing the name.
 • Catch me up: messages that arrived while SteerTTS couldn't read them out are summarised, person by person, when you put your headphones in.
-• Incoming calls: hear who is calling while the phone rings, and when someone calls a third time, that it may be urgent.
+• Incoming calls: hear who is calling while the phone rings, and when someone calls a third time, that it may be urgent. Missed calls too.
+• Reminders and timers, deliveries and rides ("Your driver is arriving"), email senders and subjects (if you turn it on), and a battery heads-up.
 • Meeting reminders: your next event announced a few minutes before it starts, including where it happens.
 • Daily briefing: every morning, or whenever you ask, your day ahead plus last night's sleep, your steps and resting heart rate from Health Connect.
 

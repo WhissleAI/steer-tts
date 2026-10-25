@@ -309,6 +309,12 @@ static void options(const jstrs* s, jfloat pace, int markup, steertts_options* o
   o->markup = markup;
 }
 
+/* Clears a cancel() that arrived while nothing (or a finished render) was running: the next request starts clean. */
+JNIEXPORT void JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeResetCancel(JNIEnv* env, jclass cls, jlong p) {
+  handle* h = (handle*)(intptr_t)p;
+  atomic_store(&h->cancel, 0);
+}
+
 /* Streams `text` with inline markup parsed to sink.onChunk(float[] audio, int index, double synthMs, String text),
  * which returns false to stop. Throws RuntimeException with the library's message on an invalid request. */
 JNIEXPORT void JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeStream(JNIEnv* env, jclass cls, jlong p,

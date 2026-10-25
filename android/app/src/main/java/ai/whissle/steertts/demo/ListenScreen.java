@@ -94,7 +94,10 @@ final class ListenScreen implements Narrator.Listener {
         return sv;
     }
 
+    private List<Doc.Meta> library = new ArrayList<>();   // metadata only (Doc.list): cheap to read on every refresh
+
     void refresh() {
+        library = Doc.list(a);
         changed();
         nudge();
         queue.removeAllViews();
@@ -102,13 +105,17 @@ final class ListenScreen implements Narrator.Listener {
         Narrator n = Narrator.get(a);
         String current = n.doc() != null ? n.doc().id : "";
         if (n.doc() == null)
-            for (Doc x : Doc.all(a))
+            for (Doc.Meta x : library)
                 if (!x.done && x.pos > 0) {   // the hero offers it (changed()): not listed twice
                     current = x.id;
                     break;
                 }
-        List<Doc> next = Doc.upNext(a, current), done = new ArrayList<>();
-        for (Doc d : Doc.all(a)) if (d.done && !d.id.equals(current)) done.add(d);
+        List<Doc.Meta> next = new ArrayList<>(), done = new ArrayList<>();
+        for (Doc.Meta d : library) {
+            if (d.id.equals(current)) continue;
+            (d.done ? done : next).add(d);
+        }
+        next.sort((x, y) -> Long.compare(x.added, y.added));
         if (!next.isEmpty()) {
             queue.addView(u.section("Up next"));
             LinearLayout card = u.card();
@@ -158,17 +165,17 @@ final class ListenScreen implements Narrator.Listener {
     @Override public void changed() {
         if (hero == null) return;
         Narrator n = Narrator.get(a);
-        Doc d = n.doc();
+        Doc.Meta d = n.doc() != null ? metaOf(n.doc()) : null;
         boolean resume = false;
         if (d == null) {   // after a restart: offer the document opened most recently and not finished
-            for (Doc x : Doc.all(a))
+            for (Doc.Meta x : library)
                 if (!x.done && x.pos > 0) {
                     d = x;
                     resume = true;
                     break;
                 }
         }
-        final Doc doc = d;
+        final Doc.Meta doc = d;
         final boolean loaded = !resume;
         hero.removeAllViews();
         LinearLayout c = u.card();
@@ -199,7 +206,11 @@ final class ListenScreen implements Narrator.Listener {
                 + (sleep != null ? " · sleep in " + sleep.toLowerCase() : ""), 13.5f, Ui.MUTED, false));
         r.addView(t, Ui.weight(1));
         r.addView(u.icon(n.playing() ? R.drawable.ic_pause : R.drawable.ic_play, n.playing() ? "Pause" : "Play", 60, true, v -> {
-            if (!loaded) n.open(doc);
+            if (!loaded) {
+                Doc full = Doc.load(a, doc.id);
+                if (full == null) return;
+                n.open(full);
+            }
             n.toggle();
         }));
         c.addView(r);
@@ -240,7 +251,17 @@ final class ListenScreen implements Narrator.Listener {
         nudge.addView(c, lp);
     }
 
-    private View docRow(Doc d) {
+    /** The playing document's metadata, kept while it plays (its position changes every sentence). */
+    private Doc.Meta metaOf(Doc d) {
+        if (playingMeta == null || !playingMeta.id.equals(d.id)) playingMeta = d.meta();
+        playingMeta.pos = d.pos;
+        playingMeta.done = d.done;
+        return playingMeta;
+    }
+
+    private Doc.Meta playingMeta;
+
+    private View docRow(Doc.Meta d) {
         LinearLayout r = u.row();
         r.setPadding(u.dp(10), u.dp(12), u.dp(6), u.dp(12));
         r.addView(u.badge(d.kind.equals("web") ? R.drawable.ic_link : d.kind.equals("text") ? R.drawable.ic_text : R.drawable.ic_file,
@@ -334,6 +355,8 @@ final class ListenScreen implements Narrator.Listener {
 
     interface Source { Doc get() throws Exception; }
 
+    private static boolean gone(Activity a) { return a.isDestroyed() || a.isFinishing(); }
+
     /** Extracts off the main thread (with a progress note), saves to the list and opens the player, playing. */
     static void prepare(Activity a, Source s) {
         @SuppressWarnings("deprecation")
@@ -344,14 +367,17 @@ final class ListenScreen implements Narrator.Listener {
                 if (d.sentences.isEmpty()) throw new Extract.Unsupported("There's no text to read in this one.");
                 d.save(a);
                 a.runOnUiThread(() -> {
+                    if (gone(a)) return;   // rotated or closed meanwhile: the document is saved, the list shows it
                     pd.dismiss();
                     a.startActivity(ReaderActivity.open(a, d.id, true));
                 });
-            } catch (Exception ex) {
+            } catch (Exception | OutOfMemoryError ex) {
                 a.runOnUiThread(() -> {
+                    if (gone(a)) return;
                     pd.dismiss();
                     new AlertDialog.Builder(a).setTitle("Couldn't read that")
-                            .setMessage(ex instanceof Extract.Unsupported ? ex.getMessage() : "Something went wrong opening it.")
+                            .setMessage(ex instanceof Extract.Unsupported ? ex.getMessage()
+                                    : ex instanceof OutOfMemoryError ? "This file is too large to open." : "Something went wrong opening it.")
                             .setPositiveButton("OK", null).show();
                 });
             }

@@ -3,6 +3,12 @@ package ai.whissle.steertts.demo;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.Person;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.media.AudioManager;
+import android.os.BatteryManager;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -43,6 +49,8 @@ public class ReadoutListener extends NotificationListenerService {
 
     @Override public void onListenerConnected() {
         MeetingAnnouncer.watchCalendar(this);
+        seed();
+        if (batteryWatch == null) watchBattery();
         android.media.AudioManager am = getSystemService(android.media.AudioManager.class);
         connectedAt = android.os.SystemClock.elapsedRealtime();
         headphones = new android.media.AudioDeviceCallback() {
@@ -58,7 +66,41 @@ public class ReadoutListener extends NotificationListenerService {
         am.registerAudioDeviceCallback(headphones, new android.os.Handler(android.os.Looper.getMainLooper()));
     }
 
+    /**
+     * After a restart (an app update, the process killed) the notifications already showing were read before:
+     * remember them, so the next repost of a conversation reads only what is new, not its recent history again.
+     */
+    private void seed() {
+        try {
+            for (StatusBarNotification sbn : getActiveNotifications()) {
+                Bundle x = sbn.getNotification().extras;
+                Parcelable[] msgs = x.getParcelableArray(Notification.EXTRA_MESSAGES);
+                if (msgs != null) {
+                    long newest = 0;
+                    Set<String> read = readMessages.computeIfAbsent(sbn.getKey(), k -> new HashSet<>());
+                    for (Parcelable p : msgs)
+                        if (p instanceof Bundle) {
+                            Bundle m = (Bundle) p;
+                            newest = Math.max(newest, m.getLong("time"));
+                            read.add(senderOf(m) + "\n" + m.getCharSequence("text"));
+                        }
+                    lastMessage.put(sbn.getKey(), newest);
+                } else {
+                    CharSequence t = x.getCharSequence(Notification.EXTRA_TITLE), b = x.getCharSequence(Notification.EXTRA_BIG_TEXT);
+                    if (b == null) b = x.getCharSequence(Notification.EXTRA_TEXT);
+                    lastText.put(sbn.getKey(), (t != null ? t : "") + "\n" + (b != null ? b : ""));
+                }
+                if (Notification.CATEGORY_CALL.equals(sbn.getNotification().category)) callsAnnounced.add(sbn.getKey());
+            }
+        } catch (RuntimeException ignored) {   // the listener may be unbound again already
+        }
+    }
+
     @Override public void onListenerDisconnected() {
+        if (batteryWatch != null) {
+            try { unregisterReceiver(batteryWatch); } catch (RuntimeException ignored) { }
+            batteryWatch = null;
+        }
         if (headphones != null) getSystemService(android.media.AudioManager.class).unregisterAudioDeviceCallback(headphones);
         headphones = null;
     }
@@ -93,9 +135,13 @@ public class ReadoutListener extends NotificationListenerService {
         Notification n = sbn.getNotification();
         AssistantPrefs prefs = new AssistantPrefs(this);
         if (Notification.CATEGORY_CALL.equals(n.category)) {
-            if (prefs.announceCalls()) call(sbn, n, pkg);
+            Ranking cr = new Ranking();
+            // in Do Not Disturb only a call that is allowed to ring (a starred contact, a repeat caller) is announced
+            boolean rings = !AssistantPrefs.doNotDisturb(this) || (ranking != null && ranking.getRanking(sbn.getKey(), cr) && cr.matchesInterruptionFilter());
+            if (prefs.announceCalls() && rings) call(sbn, n, pkg);
             return;
         }
+        if (other(sbn, n, pkg, prefs, ranking)) return;
         if (!prefs.readMessages()) return;
         if ((n.flags & (Notification.FLAG_ONGOING_EVENT | Notification.FLAG_GROUP_SUMMARY
                 | Notification.FLAG_FOREGROUND_SERVICE)) != 0) return;
@@ -107,22 +153,92 @@ public class ReadoutListener extends NotificationListenerService {
         prefs.noteSeen(pkg);
         if (!prefs.appOn(pkg)) return;
         if (getCurrentInterruptionFilter() > INTERRUPTION_FILTER_ALL || !prefs.mayReadNow(this)) {
-            Digest.add(sbn.getKey(), said.person, label(pkg), said.words);   // for "catch me up" later
+            for (String[] it : said.items) Digest.add(sbn.getKey(), it[0], label(pkg), it[1]);   // for "catch me up" later
             return;
         }
         Announcer.get(this).say(said.speech, pkg, false, null);
     }
 
-    /** A readout, and what the digest keeps if it cannot be spoken now. */
+    /** A readout, and what the digest keeps if it cannot be spoken now ({person, words} per message). */
     private static final class Said {
         final Speech speech;
-        final String person, words;
+        final List<String[]> items;
 
-        Said(Speech speech, String person, String words) {
+        Said(Speech speech, List<String[]> items) {
             this.speech = speech;
-            this.person = person;
-            this.words = words;
+            this.items = items;
         }
+    }
+
+    /**
+     * Things worth hearing besides messages: missed calls, alarms / timers / reminders, deliveries and rides, email
+     * subjects. Returns true when the notification was one of these (spoken, kept for catch-up, or deliberately not read).
+     */
+    private boolean other(StatusBarNotification sbn, Notification n, String pkg, AssistantPrefs prefs, RankingMap ranking) {
+        Bundle x = n.extras;
+        boolean alarmLike = Notification.CATEGORY_ALARM.equals(n.category) || Notification.CATEGORY_REMINDER.equals(n.category)
+                || Notification.CATEGORY_MISSED_CALL.equals(n.category);
+        if (!alarmLike) {   // matched by app: its quiet or ongoing notices ("Upcoming alarm", "Your order", progress) are not news
+            Ranking r = new Ranking();
+            boolean quiet = ranking != null && ranking.getRanking(sbn.getKey(), r) && r.getImportance() < NotificationManager.IMPORTANCE_DEFAULT;
+            boolean listed = AssistantPrefs.REMINDER_APPS.contains(pkg) || AssistantPrefs.DELIVERY_APPS.contains(pkg)
+                    || AssistantPrefs.EMAIL_APPS.contains(pkg);
+            if (listed && (quiet || (n.flags & (Notification.FLAG_ONGOING_EVENT | Notification.FLAG_FOREGROUND_SERVICE)) != 0)) return true;
+        }
+        CharSequence ct = x.getCharSequence(Notification.EXTRA_TITLE), cb = x.getCharSequence(Notification.EXTRA_TEXT);
+        String title = ct == null ? null : ct.toString(), text = cb == null ? null : cb.toString(), app = label(pkg);
+        if ((n.flags & Notification.FLAG_GROUP_SUMMARY) != 0) return false;
+        String said = title + "\n" + text;
+        Speech sp = null;
+        boolean announce = false;   // reminders and missed calls follow the announcement rule, the rest the readout rule
+        if (Notification.CATEGORY_MISSED_CALL.equals(n.category) || (DIALERS.contains(pkg) && title != null
+                && title.toLowerCase(java.util.Locale.ROOT).startsWith("missed call"))) {
+            if (!prefs.announceCalls()) return true;
+            String who = DIALERS.contains(pkg) && title != null && title.toLowerCase(java.util.Locale.ROOT).startsWith("missed call") ? text : title;
+            sp = Readout.missedCall(who);
+            announce = true;
+        } else if (Notification.CATEGORY_ALARM.equals(n.category) || Notification.CATEGORY_REMINDER.equals(n.category)
+                || AssistantPrefs.REMINDER_APPS.contains(pkg)) {
+            if (AssistantPrefs.CALENDAR_APPS.contains(pkg)) return true;   // meetings have their own reminders
+            if (!prefs.reminders() || (title == null && text == null)) return true;
+            sp = Readout.reminder(title, text, app);
+            announce = true;
+        } else if (AssistantPrefs.DELIVERY_APPS.contains(pkg)) {
+            if (!prefs.deliveries() || (title == null && text == null)) return true;
+            sp = Readout.update(title, text, app);
+        } else if (AssistantPrefs.EMAIL_APPS.contains(pkg)) {
+            if (!prefs.email() || title == null) return true;
+            sp = Readout.email(title, text);
+        } else {
+            return false;
+        }
+        if (said.equals(lastText.put(sbn.getKey(), said))) return true;   // the same words again (a progress update)
+        prefs.noteSeen(pkg);
+        boolean now = !AssistantPrefs.doNotDisturb(this) && (announce ? AssistantPrefs.mayAnnounceNow(this) : prefs.mayReadNow(this));
+        if (now) Announcer.get(this).say(sp, pkg, false, null);
+        else if (!announce) Digest.add(sbn.getKey(), title != null ? title : app, app, text != null ? text : "");
+        return true;
+    }
+
+    // ---------------------------------------------------------------- battery
+    private BroadcastReceiver batteryWatch;
+    private int lastLevel = -1;
+
+    private void watchBattery() {
+        batteryWatch = new BroadcastReceiver() {
+            @Override public void onReceive(Context c, Intent i) {
+                int level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1), scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+                if (level < 0 || scale <= 0) return;
+                int pct = Math.round(100f * level / scale);
+                boolean charging = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
+                int before = lastLevel;
+                lastLevel = pct;
+                if (before < 0 || !new AssistantPrefs(c).battery() || !AssistantPrefs.mayAnnounceNow(c)) return;
+                if (!charging && before > 15 && pct <= 15) Announcer.get(c).say(Readout.battery(pct, false), "battery", false, null);
+                else if (charging && before < 100 && pct >= 100) Announcer.get(c).say(Readout.battery(100, true), "battery", false, null);
+            }
+        };
+        registerReceiver(batteryWatch, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
     }
 
     /** "Incoming call from Mom" while a call rings (the notification with a full-screen intent), once per call. */
@@ -131,7 +247,8 @@ public class ReadoutListener extends NotificationListenerService {
         CharSequence who = n.extras.getCharSequence(Notification.EXTRA_TITLE);
         String name = who != null && who.length() > 0 ? who.toString() : "an unknown caller";
         int count = Readout.ringCount(name, System.currentTimeMillis());
-        if (!AssistantPrefs.mayAnnounceNow(this)) return;
+        AudioManager am = getSystemService(AudioManager.class);
+        if (AssistantPrefs.inCall(am) || !(AssistantPrefs.privateOutput(am) || am.getRingerMode() == AudioManager.RINGER_MODE_NORMAL)) return;
         Announcer.get(this).say(Readout.call(name, DIALERS.contains(pkg) ? null : label(pkg), count), pkg, true, null);
     }
 
@@ -142,9 +259,8 @@ public class ReadoutListener extends NotificationListenerService {
         Parcelable[] msgs = x.getParcelableArray(Notification.EXTRA_MESSAGES);
         if (msgs != null && msgs.length > 0) {
             long last = lastMessage.getOrDefault(key, 0L), newest = last;
-            List<String> texts = new ArrayList<>();
+            List<String[]> fresh = new ArrayList<>();
             Set<String> read = readMessages.computeIfAbsent(key, k -> new HashSet<>());
-            String sender = null;
             for (Parcelable p : msgs) {
                 if (!(p instanceof Bundle)) continue;
                 Bundle m = (Bundle) p;
@@ -154,18 +270,17 @@ public class ReadoutListener extends NotificationListenerService {
                 if (t <= last || body == null) continue;
                 newest = Math.max(newest, t);
                 if (from == null || !read.add(from + "\n" + body)) continue;   // the user's own, or read already
-                sender = from.toString();
-                texts.add(body.toString());
+                fresh.add(new String[] {from.toString(), body.toString()});
             }
             lastMessage.put(key, newest);
-            if (texts.isEmpty()) return null;
-            if (texts.size() > MAX_MESSAGES) texts = texts.subList(texts.size() - MAX_MESSAGES, texts.size());
+            if (fresh.isEmpty()) return null;
+            if (fresh.size() > MAX_MESSAGES) fresh = fresh.subList(fresh.size() - MAX_MESSAGES, fresh.size());
             CharSequence conv = x.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
             boolean group = Build.VERSION.SDK_INT >= 28 ? x.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION)
                     : conv != null;
-            Speech sp = Readout.message(sender, group && conv != null ? conv.toString() : null, app, texts,
+            Speech sp = Readout.conversation(fresh, group && conv != null ? conv.toString() : null, app,
                     prefs.personVoices(), Style.load(this).voice);
-            return new Said(sp, sender, String.join(" ", texts));
+            return new Said(sp, fresh);
         }
         CharSequence title = x.getCharSequence(Notification.EXTRA_TITLE);
         CharSequence body = x.getCharSequence(Notification.EXTRA_BIG_TEXT);
@@ -174,7 +289,9 @@ public class ReadoutListener extends NotificationListenerService {
         String said = (title != null ? title : "") + "\n" + (body != null ? body : "");
         if (said.equals(lastText.put(key, said))) return null;   // an update with the same words
         String t = title == null ? null : title.toString(), b = body == null ? null : body.toString();
-        return new Said(Readout.notice(t, b, app), t != null ? t : app, b != null ? b : t);
+        List<String[]> one = new ArrayList<>();
+        one.add(new String[] {t != null ? t : app, b != null ? b : t});
+        return new Said(Readout.notice(t, b, app), one);
     }
 
     private static CharSequence senderOf(Bundle m) {

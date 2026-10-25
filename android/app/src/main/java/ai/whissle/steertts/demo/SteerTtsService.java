@@ -33,7 +33,13 @@ public class SteerTtsService extends TextToSpeechService {
     private SteerTTS tts;   // used on the synthesis thread only (onSynthesizeText); cancel() from any thread
 
     @Override public void onDestroy() {
-        if (tts != null) tts.close();
+        synchronized (this) {
+            if (tts != null) {
+                tts.cancel();
+                tts.close();
+                tts = null;
+            }
+        }
         super.onDestroy();
     }
 
@@ -42,7 +48,8 @@ public class SteerTtsService extends TextToSpeechService {
         Player.initTap(this);
     }
 
-    private SteerTTS engine() throws Exception {
+    /** One engine for the binder threads (voice queries) and the synthesis thread alike. */
+    private synchronized SteerTTS engine() throws Exception {
         if (tts == null) tts = new SteerTTS(SteerTTS.installModel(this).getPath(), 0);
         return tts;
     }
@@ -117,6 +124,7 @@ public class SteerTtsService extends TextToSpeechService {
         long t0 = System.nanoTime();
         try {
             SteerTTS e = engine();
+            e.resetCancel();   // a stop that came in during the previous request must not silence this one
             String caller = callerPackage(req);
             Style base = Style.load(this);
             Style s = ContextStyler.decide(this, base, text, caller);

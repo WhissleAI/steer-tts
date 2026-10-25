@@ -80,7 +80,8 @@ echo "== notifications from the shell (needs notification access)"
 adb shell cmd notification allow_listener $P/ai.whissle.steertts.demo.ReadoutListener
 hook --es readout_allow com.android.shell --ei readout_when 2 --ez messages_on true
 sleep 2; fresh
-adb shell "cmd notification post -S messaging --conversation 'Priya' --message 'Priya:Congrats on the new job!! 🎉' -t 'Priya' st_test1 x" >/dev/null
+n=$RANDOM   # a new message each run: the same words again are (rightly) not read twice
+adb shell "cmd notification post -S messaging --conversation 'Priya' --message 'Priya:Congrats on the new job!! 🎉 ($n)' -t 'Priya' st_test$n x" >/dev/null
 expect "real notification read with its mood" "announce \[com.android.shell\] Priya on Shell\..*\{excited" 20
 
 echo "== sample and briefing"
@@ -100,6 +101,24 @@ fresh
 adb shell am start -a android.intent.action.VIEW -d "file:///data/user/0/$P/files/st_story.html" -t text/html -n $P/ai.whissle.steertts.demo.ReadAloudActivity >/dev/null
 expect "story opens and finishes" "narrator finished" 40
 crashfree
+
+echo "== PDF read from the page (layout: columns, headers, headings)"
+T=$(mktemp -d)
+if python3 "$(dirname "$0")/make_test_pdfs.py" "$T" >/dev/null 2>&1; then
+  for f in paper resume report; do
+    adb push "$T/$f.pdf" /data/local/tmp/st_$f.pdf >/dev/null
+    adb shell "cat /data/local/tmp/st_$f.pdf | run-as $P sh -c 'cat > files/st_$f.pdf'"
+  done
+  fresh; hook --es pdf_layout st_paper.pdf
+  expect "two-column paper: section heading found" "pdf para \[# 2 Method\]" 15
+  if adb logcat -d -s SteerTTS:I | grep "pdf para" | grep -q "Preprint, October"; then bad "running header dropped"; else ok "running header dropped"; fi
+  fresh; hook --es pdf_layout st_resume.pdf
+  expect "resume: role and dates on one line" "pdf para \[Senior Designer, Acme Corp.*2022" 15
+  fresh; hook --es pdf_layout st_report.pdf
+  expect "one-page report: small header dropped, heading kept" "pdf para \[# Quarterly Report\]" 15
+else
+  echo "  skip  PDF layout (python3 with reportlab not found)"
+fi
 
 echo "== process death"
 adb shell am kill $P; sleep 1

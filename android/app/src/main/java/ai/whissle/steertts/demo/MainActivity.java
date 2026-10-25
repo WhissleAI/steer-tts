@@ -40,6 +40,7 @@ import java.util.Map;
  *   --es call "Mom|3"                                a call announcement, the 3rd ring from Mom
  *   --es digest_add "Sam|WhatsApp|message"           a message waiting for catch-up;  --ez catchup true   catch up now
  *   --ez sample true                                 the Assistant tab's sample;      --ez briefing true   the briefing
+ *   --es pdf_layout FILE   (in files/) log the paragraphs a PDF is read as
  *   --ez auto_next false (the reader stops at the end)   --ez messages_on true (readouts and calls on)   --ei readout_when 0|1|2   --es readout_allow PACKAGE   --ei meetings_check MINUTES   --ei demo_hour H
  *   --es tab listen|assistant|voices   --ez skip_welcome true   --ez settings true
  */
@@ -119,6 +120,21 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
         String t = getIntent().getStringExtra("tab");
         selectTab(t != null ? t : "listen");
         handleIntent(getIntent());
+    }
+
+    private boolean started;
+
+    /** The Listen tab follows the narrator only while the app is on screen (it would rebuild every sentence otherwise). */
+    @Override protected void onStart() {
+        super.onStart();
+        started = true;
+        if (listen != null) Narrator.get(this).addListener(listen);
+    }
+
+    @Override protected void onStop() {
+        started = false;
+        if (listen != null) Narrator.get(this).removeListener(listen);
+        super.onStop();
     }
 
     @Override protected void onResume() {
@@ -257,7 +273,7 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
             default:
                 listen = new ListenScreen(this, u, gear);
                 View lv = listen.build();
-                Narrator.get(this).addListener(listen);
+                if (started) Narrator.get(this).addListener(listen);
                 return lv;
         }
     }
@@ -366,6 +382,14 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
         if (i.getStringExtra("digest_add") != null) {
             String[] p = i.getStringExtra("digest_add").split("\\|", 3);
             Digest.add("test:" + System.nanoTime(), p[0], p[1], p[2]);
+        }
+        if (i.getStringExtra("pdf_layout") != null && Build.VERSION.SDK_INT >= 35) {   // what PdfText + PdfLayout read
+            try {
+                PdfText.Result r = PdfText.read(new File(getFilesDir(), i.getStringExtra("pdf_layout")));
+                for (String p : r.paragraphs) Log.i(TAG, "pdf para [" + p.replace(String.valueOf(Narration.HEAD), "# ") + "]");
+            } catch (Exception e) {
+                Log.e(TAG, "pdf_layout", e);
+            }
         }
         if (i.getBooleanExtra("catchup", false)) ReadoutListener.catchUp(this, true);
         if (i.getBooleanExtra("sample", false)) AssistantScreen.sample(this);

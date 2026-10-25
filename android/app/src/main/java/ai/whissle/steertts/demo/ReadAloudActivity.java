@@ -14,6 +14,9 @@ import android.widget.Toast;
 public class ReadAloudActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        // a see-through window that does not take touches: the app underneath stays usable while the text is prepared
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+        if (b != null) return;   // recreated (rotation): the work started the first time
         Intent i = getIntent();
         String action = i.getAction();
         CharSequence text = Intent.ACTION_PROCESS_TEXT.equals(action)
@@ -41,10 +44,11 @@ public class ReadAloudActivity extends Activity {
                 }
                 if (d.sentences.isEmpty()) throw new Extract.Unsupported("There's no text to read in this one.");
                 d.save(app);
-                runOnUiThread(() -> startActivity(ReaderActivity.open(this, d.id, true)));
+                // the player in SteerTTS's own task, not inside the app that shared
+                runOnUiThread(() -> startActivity(ReaderActivity.open(this, d.id, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
             } catch (Extract.Unsupported e) {
                 error = e.getMessage();
-            } catch (Exception e) {
+            } catch (Exception | OutOfMemoryError e) {
                 android.util.Log.e(MainActivity.TAG, "read aloud", e);
                 error = "Couldn't open that one.";
             }

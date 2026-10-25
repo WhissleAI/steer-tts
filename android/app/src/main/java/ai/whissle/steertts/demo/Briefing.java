@@ -40,6 +40,7 @@ public class Briefing extends BroadcastReceiver {
             android.health.connect.HealthPermissions.READ_RESTING_HEART_RATE,
             android.health.connect.HealthPermissions.READ_HEART_RATE} : new String[0];
     private static final String TAG = "SteerTTS", ACTION = "ai.whissle.steertts.BRIEFING";
+    private static final Executor HEALTH = Executors.newSingleThreadExecutor();   // Health Connect answers, shared
 
     // ---------------------------------------------------------------- settings
     static SharedPreferences prefs(Context c) { return c.getSharedPreferences("briefing", Context.MODE_PRIVATE); }
@@ -134,7 +135,7 @@ public class Briefing extends BroadcastReceiver {
                 .addAggregationType(type).build();
         final Object[] out = {null};
         CountDownLatch done = new CountDownLatch(1);
-        Executor ex = Executors.newSingleThreadExecutor();
+        Executor ex = HEALTH;
         hc.aggregate(req, ex, new OutcomeReceiver<android.health.connect.AggregateRecordsResponse<T>, android.health.connect.HealthConnectException>() {
             @Override public void onResult(android.health.connect.AggregateRecordsResponse<T> r) {
                 out[0] = r.get(type);
@@ -146,7 +147,7 @@ public class Briefing extends BroadcastReceiver {
             }
         });
         try {
-            done.await(4, TimeUnit.SECONDS);
+            done.await(2500, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ignored) {
         }
         @SuppressWarnings("unchecked") T t = (T) out[0];
@@ -199,7 +200,7 @@ public class Briefing extends BroadcastReceiver {
                 if (ACTION.equals(i.getAction()) && daily(app) && AssistantPrefs.mayAnnounceNow(app)) {
                     CountDownLatch spoken = new CountDownLatch(1);
                     Announcer.get(app).say(compose(app), "briefing", false, spoken::countDown);
-                    spoken.await(40, TimeUnit.SECONDS);
+                    spoken.await(25, TimeUnit.SECONDS);   // stay alive while it speaks, within the broadcast's limits
                 }
             } catch (InterruptedException ignored) {
             } finally {

@@ -44,6 +44,30 @@ final class Readout {
         return sp;
     }
 
+    /**
+     * New messages of one conversation, oldest first, as {sender, text} pairs: each run from one person gets its own
+     * framing and voice ("Sam in Family on WhatsApp. …  Then Mom. …"), so nobody's words are read as someone else's.
+     */
+    static Speech conversation(List<String[]> msgs, String group, String app, boolean personVoices, String ownVoice) {
+        Speech sp = new Speech();
+        int i = 0;
+        boolean first = true;
+        while (i < msgs.size()) {
+            String who = msgs.get(i)[0];
+            List<String> run = new java.util.ArrayList<>();
+            while (i < msgs.size() && msgs.get(i)[0].equals(who)) run.add(msgs.get(i++)[1]);
+            Speech part = message(who, group, app, run, personVoices, ownVoice);
+            if (!first && !part.parts.isEmpty()) {
+                Speech.Part f = part.parts.get(0);   // later senders: "Then Mom." instead of the full framing again
+                String framing = f.text.endsWith(" on " + app + ".") ? "Then " + who + "." : f.text;
+                part.parts.set(0, new Speech.Part(framing, f.mood, f.voice, f.pauseAfterMs));
+            }
+            for (Speech.Part p : part.parts) sp.parts.add(p);
+            first = false;
+        }
+        return sp;
+    }
+
     /** A notification that is not a conversation: its title (a subject, a headline) and text. */
     static Speech notice(String title, String text, String app) {
         Speech sp = new Speech();
@@ -68,6 +92,50 @@ final class Readout {
         int cut = s.lastIndexOf(' ', MAX_CHARS);
         return s.substring(0, cut > 0 ? cut : MAX_CHARS) + ", and more.";
     }
+
+    // ---------------------------------------------------------------- other things worth hearing
+    /** "You missed a call from Mom." */
+    static Speech missedCall(String who) {
+        return new Speech().add("You missed a call from " + (who == null || who.trim().isEmpty() ? "an unknown number" : who.trim()) + ".",
+                Expression.CONFIDENT);
+    }
+
+    /**
+     * An alarm, a timer or a reminder: "Reminder: call the dentist." / "Timer: time's up." The title says what it is,
+     * the text adds the detail; a clock's bare "Alarm 7:00 AM" is read as it is.
+     */
+    static Speech reminder(String title, String text, String app) {
+        String t = clean(title), b = clean(text);
+        String what = t.isEmpty() ? app : t;
+        String said = b.isEmpty() || b.equalsIgnoreCase(what) ? what : what + ": " + b;
+        String low = said.toLowerCase(java.util.Locale.ROOT);
+        String head = low.startsWith("reminder") || low.startsWith("timer") || low.startsWith("alarm") ? "" : "Reminder: ";
+        return new Speech().add(sentence(head + said), Expression.CONFIDENT.plus("a reminder: clear", "rate", -0.1));
+    }
+
+    /** A delivery or ride update: "Uber: Your driver is arriving." */
+    static Speech update(String title, String text, String app) {
+        String t = clean(title), b = clean(text);
+        Speech sp = new Speech().add(app + ".", null, null, 150);
+        String said = t.isEmpty() ? b : b.isEmpty() || b.startsWith(t) ? t : t + ". " + b;
+        return sp.add(cap(sentence(said)), Expression.of(said));
+    }
+
+    /** "Email from Priya: Contract signed." (the subject only, never the body). */
+    static Speech email(String sender, String subject) {
+        String who = clean(sender), sub = clean(subject);
+        if (who.isEmpty()) who = "someone";
+        Speech sp = new Speech().add("Email from " + who + ".", null, null, 150);
+        return sub.isEmpty() ? sp : sp.add(cap(sentence(sub)), Expression.of(sub));
+    }
+
+    /** "Battery at 15 percent. Time to charge." / "Fully charged." */
+    static Speech battery(int level, boolean charging) {
+        if (charging && level >= 100) return new Speech().add("Your phone is fully charged.", Expression.HAPPY);
+        return new Speech().add("Battery at " + level + " percent. Time to charge.", Expression.CONFIDENT.plus("low battery: clear", "loud", 0.3));
+    }
+
+    private static String clean(String s) { return s == null ? "" : Expression.speakable(s).trim(); }
 
     // ---------------------------------------------------------------- calls
     private static final long REPEAT_WINDOW = 15 * 60_000L;

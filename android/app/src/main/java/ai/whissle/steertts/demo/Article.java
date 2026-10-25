@@ -31,22 +31,35 @@ final class Article {
         return m.find() && s.length() - m.group().length() < 100;
     }
 
-    static Article resolve(String shared) {
+    /** The article behind a shared link; throws (with a message for the user) when it cannot be opened. */
+    static Article resolve(String shared) throws java.io.IOException {
         if (!isLink(shared)) return new Article(null, shared);
         Matcher m = URL_RE.matcher(shared);
         m.find();
+        String url = m.group().replaceFirst("^http://", "https://");   // plain http is blocked on Android; most sites serve both
         try {
-            return extract(fetch(m.group()));
+            return extract(fetch(url));
         } catch (Exception e) {
-            return new Article(null, "Sorry, I couldn't open that link.");
+            throw new Extract.Unsupported("Couldn't open that link. Check the connection, or share the article's text instead.");
         }
     }
 
+    /** GET with redirects followed (also https -> http -> https hops the platform will not follow itself). */
     private static String fetch(String url) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setConnectTimeout(8000);
-        c.setReadTimeout(8000);
-        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 16) SteerTTS");
+        HttpURLConnection c = null;
+        for (int hop = 0; hop < 5; ++hop) {
+            c = (HttpURLConnection) new URL(url).openConnection();
+            c.setInstanceFollowRedirects(false);
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(8000);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 16) SteerTTS");
+            int code = c.getResponseCode();
+            String loc = c.getHeaderField("Location");
+            if (code / 100 != 3 || loc == null) break;
+            c.disconnect();
+            url = new URL(new URL(url), loc).toString().replaceFirst("^http://", "https://");
+        }
+        if (c.getResponseCode() >= 400) throw new java.io.IOException("HTTP " + c.getResponseCode());
         try (InputStream in = c.getInputStream()) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buf = new byte[1 << 16];

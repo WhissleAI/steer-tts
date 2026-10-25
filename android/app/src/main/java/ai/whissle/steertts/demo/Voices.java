@@ -79,9 +79,9 @@ final class Voices {
     private Voices(Context c) {
         prefs = c.getSharedPreferences("voices", Context.MODE_PRIVATE);
         try {
-            File f = new File(SteerTTS.installModel(c), "voices.json");
+            // the bundled copy: reading it needs no model install (which may be copying on another thread)
             JSONArray a;
-            try (FileInputStream in = new FileInputStream(f)) {
+            try (java.io.InputStream in = c.getAssets().open("model/voices.json")) {
                 a = new JSONObject(new String(in.readAllBytes())).getJSONArray("voices");
             }
             int nf = 0, nm = 0;

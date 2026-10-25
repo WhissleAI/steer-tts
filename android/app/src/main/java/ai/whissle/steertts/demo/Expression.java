@@ -62,24 +62,25 @@ final class Expression {
     static final Mood CONFIDENT = new Mood("confident", "confidence", "clear", "f0_med", -0.3, "loud", 0.3);
 
     /** Cues per mood, strongest first in tie breaks: words (one point) and emoji (two). */
+    // phrases rather than single words: "great" alone is often sarcastic, "died" is often a phone, "right now" is not urgent
     private static final Object[][] CUES = {
-            {URGENT, "\\b(urgent(ly)?|asap|emergency|immediately|right now|help me|call me now|911)\\b", "🚨|🆘"},
-            {SAD, "\\b(passed away|died|funeral|heartbroken|devastated|so sad|crying|bad news|rip)\\b", "😢|😭|💔|😞|😔|☹️|😿"},
-            {SORRY, "\\b(sorry|apologi[sz]e|apologies|my bad|forgive me|unfortunately|(got |been |is |was )?cancell?ed)\\b", "🥺"},
+            {URGENT, "\\b(urgent(ly)?|asap|emergency|911|help me|call me (right )?now|it'?s urgent|please call( me)? back now)\\b", "🚨|🆘"},
+            {SAD, "\\b(passed away|funeral|heartbroken|devastated|so sad|bad news|lost (her|his|my|our) (mom|dad|mother|father|grand\\w*|wife|husband|dog|cat))\\b", "😢|😭|💔|😞|😔|☹️|😿"},
+            {SORRY, "\\b(so sorry|i'?m sorry|sorry (about|for|to)|apologi[sz]e|apologies|my bad|forgive me|unfortunately|(got |been |was )cancell?ed)\\b", "🥺"},
             {WORRIED, "\\b(worried|scared|nervous|afraid|anxious|are you ok(ay)?|is everything ok(ay)?|hope you'?re ok(ay)?)\\b", "😟|😰|😨|😧"},
-            {ANNOYED, "\\b(ugh+|annoy(ed|ing)|angry|furious|mad at|wtf|ridiculous|seriously\\?|so done)\\b", "😡|😠|🤬|🙄|😤"},
-            {EXCITED, "\\b(congrats|congratulations|amazing|awesome|incredible|can'?t wait|woo+hoo+|yay+|omg|so excited|we won|"
-                    + "got the job|happy birthday|let'?s go+|finally)\\b", "🎉|🥳|🎊|🔥|🤩|🎂|🚀|💯"},
-            {AMUSED, "\\b(ha(ha)+h?|he(he)+|lol+|lmao+|rofl|too funny|hilarious)\\b", "😂|🤣|😆|😹|😜|😝"},
-            {LOVING, "\\b(love you|love u|luv u|miss you|miss u|xoxo|xx)\\b", "❤️|❤|😍|🥰|😘|💕|💖|💗|💞"},
-            {GRATEFUL, "\\b(thank you|thanks|thx|ty|appreciate (it|you))\\b", "🙏"},
-            {HAPPY, "\\b(great|good news|glad|nice one|well done|perfect|wonderful|good morning|sounds good)\\b", "😊|🙂|😄|😁|😃|☺️|😀|👍|✨"},
-            {SECRET, "\\b(don'?t tell|secret|between us|keep it quiet)\\b", "🤫"},
+            {ANNOYED, "\\b(ugh+|so annoy(ed|ing)|so angry|furious|wtf|ridiculous|so done with)\\b|\\bseriously\\?+", "😡|😠|🤬|🙄|😤"},
+            {EXCITED, "\\b(congrats|congratulations|amazing news|so excited|can'?t wait|woo+hoo+|yay+|we won|got the job|got in|happy birthday|let'?s go+|we did it)\\b", "🎉|🥳|🎊|🤩|🎂|🚀"},
+            {AMUSED, "\\b(ha(ha)+h?|he(he)+|lol+|lmao+|rofl|too funny|hilarious|so funny)\\b", "😂|🤣|😆|😹|😜|😝"},
+            {LOVING, "\\b(love you|love u|luv u|miss you|miss u|xoxo)\\b", "❤️|❤|😍|🥰|😘|💕|💖|💗|💞"},
+            {GRATEFUL, "\\b(thank you|thanks so much|thanks a lot|many thanks|appreciate (it|you))\\b", "🙏"},
+            {HAPPY, "\\b(good news|so glad|so happy|well done|wonderful|nice one|great news|good morning)\\b", "😊|🙂|😄|😁|😃|☺️|😀|✨"},
+            {SECRET, "\\b(don'?t tell (anyone|anybody)|it'?s a secret|between us|keep it quiet)\\b", "🤫"},
     };
+    private static final String NOT = "(?<!\\bnot )(?<!n't )(?<!\\bno )";   // "not great news", "isn't amazing news"
     private static final Pattern[][] PATTERNS = new Pattern[CUES.length][];
     static {
         for (int i = 0; i < CUES.length; ++i)
-            PATTERNS[i] = new Pattern[] {Pattern.compile((String) CUES[i][1], Pattern.CASE_INSENSITIVE), Pattern.compile((String) CUES[i][2])};
+            PATTERNS[i] = new Pattern[] {Pattern.compile(NOT + "(?:" + CUES[i][1] + ")", Pattern.CASE_INSENSITIVE), Pattern.compile((String) CUES[i][2])};
     }
 
     /** The mood of a message or a line of dialogue. */

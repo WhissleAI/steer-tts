@@ -18,12 +18,12 @@ import java.util.regex.Pattern;
  * model follows reliably (docs/request.md).
  */
 final class ContextStyler {
+    // other apps' words (system voice): only clear alerts and clear good news; ordinary UI words ("done", "error",
+    // "timer", "security") are left alone, they are labels a screen reader reads all day
     private static final Pattern ALERT = Pattern.compile(
-            "\\b(urgent|warning|alert|emergency|alarm|critical|danger|immediately|failed|failure|error|"
-                    + "low battery|battery (is )?low|security|fraud|missed call|incoming call|wake up|timer)\\b");
+            "\\b(urgent|warning|emergency|alarm|critical|danger|fraud alert|low battery|battery (is )?low|wake up|incoming call)\\b");
     private static final Pattern GOOD = Pattern.compile(
-            "\\b(congratulations|congrats|great news|success(ful(ly)?)?|completed|done|arrived|approved|delivered|"
-                    + "welcome|happy birthday|well done)\\b");
+            "\\b(congratulations|congrats|great news|happy birthday|well done)\\b");
 
     static final String MAPS = "com.google.android.apps.maps", WAZE = "com.waze",
             TALKBACK = "com.google.android.marvin.talkback";
@@ -32,7 +32,9 @@ final class ContextStyler {
     private ContextStyler() {}
 
     /** The style for one utterance. caller: the requesting app's package (null if unknown). */
-    static Style decide(Context ctx, Style base, String text, String caller) { return decide(ctx, base, text, caller, true); }
+    static Style decide(Context ctx, Style base, String text, String caller) {
+        return decide(ctx, base, text, caller, !TALKBACK.equals(caller));   // a screen reader's labels carry no mood
+    }
 
     /**
      * textCues false: only the situation (the requesting app, time of day, ringer, battery); the words are left to the

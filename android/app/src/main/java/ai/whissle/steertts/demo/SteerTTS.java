@@ -19,6 +19,11 @@ public final class SteerTTS implements AutoCloseable {
     }
 
     public static final int SAMPLE_RATE = 24000;
+
+    /** Debug builds only: lines with private content (messages, names, titles) never reach a store build's log. */
+    static boolean debug(Context c) {
+        return (c.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    }
     private long h;
 
     /** The 12 prosody controls, in the order Style uses (z-scores, about -3 .. 3 in practice). */
@@ -52,6 +57,9 @@ public final class SteerTTS implements AutoCloseable {
     public float[] synthesize(String text, String voice, String tag, String ctrl, float pace, boolean markup) {
         return nativeSynthesize(h, text, voice, tag, ctrl, pace, markup);
     }
+
+    /** Forget an earlier cancel(): call at the start of a new request (a cancel during the last one stays set otherwise). */
+    public void resetCancel() { nativeResetCancel(h); }
 
     /** Stops a running stream() from another thread (it returns after the current sentence). */
     public void cancel() { nativeCancel(h); }
@@ -137,6 +145,7 @@ public final class SteerTTS implements AutoCloseable {
     private static native String nativeVoiceGender(long h, String voice);
     private static native String[] nativeTags(long h);
     private static native void nativeCancel(long h);
+    private static native void nativeResetCancel(long h);
     private static native String[] nativeVoices(long h, String gender);
     private static native String nativeGenderVoice(long h, String gender);
 }

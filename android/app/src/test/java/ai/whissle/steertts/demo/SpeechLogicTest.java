@@ -28,6 +28,26 @@ public class SpeechLogicTest {
         assertEquals("neutral", Expression.of("The meeting moved to room 4").name);
     }
 
+    @Test public void ordinaryMessagesStayNeutral() {
+        for (String t : new String[] {"Can't talk right now", "My phone died, will call later", "Great, another delay",
+                "Finally home, exhausted", "Ships immediately", "That is not great news", "The meeting moved to room 4",
+                "Done with the report", "Sorry I'm late, parking", "Perfect"})
+            assertTrue(t + " -> " + Expression.of(t).name, Expression.of(t).tag == null || Expression.of(t).name.equals("sorry") && t.startsWith("Sorry I'm"));
+        assertEquals("annoyed", Expression.of("seriously? again").name);
+    }
+
+    @Test public void groupMessagesKeepTheirSenders() {
+        List<String[]> msgs = Arrays.asList(new String[] {"Sam", "On my way"}, new String[] {"Sam", "10 minutes"},
+                new String[] {"Mom", "Drive safe ❤️"});
+        Speech sp = Readout.conversation(msgs, "Family", "WhatsApp", true, null);
+        assertEquals("Sam in Family on WhatsApp.", sp.parts.get(0).text);
+        assertEquals("On my way. 10 minutes.", sp.parts.get(1).text);
+        assertEquals("Then Mom.", sp.parts.get(2).text);
+        assertEquals("Drive safe.", sp.parts.get(3).text);
+        assertEquals("loving", sp.parts.get(3).mood.name);
+        assertNotEquals(sp.parts.get(1).voice, sp.parts.get(3).voice);     // Mom is not read in Sam's voice
+    }
+
     @Test public void moodsFromEmojiPunctuationAndCapitals() {
         assertEquals("amused", Expression.of("did you see that 😂😂").name);
         assertEquals("sad", Expression.of("missed the bus 😭").name);
@@ -116,6 +136,17 @@ public class SpeechLogicTest {
         assertTrue(third.text().contains("third time") && third.text().contains("urgent"));
         assertEquals("urgent", third.mainMood().name);
         assertEquals("Incoming WhatsApp call from Dana.", Readout.call("Dana", "WhatsApp", 1).text());
+    }
+
+    @Test public void moreThingsWorthHearing() {
+        assertEquals("You missed a call from Mom.", Readout.missedCall("Mom").text());
+        assertEquals("Reminder: Call the dentist.", Readout.reminder("Call the dentist", null, "Tasks").text());
+        assertEquals("Timer: Time's up.", Readout.reminder("Timer", "Time's up", "Clock").text());
+        assertEquals("Uber. Your driver is arriving. Toyota Camry, ABC 123.",
+                Readout.update("Your driver is arriving", "Toyota Camry, ABC 123", "Uber").text());
+        assertEquals("Email from Priya. Contract signed.", Readout.email("Priya", "Contract signed").text());
+        assertEquals("Battery at 15 percent. Time to charge.", Readout.battery(15, false).text());
+        assertEquals("Your phone is fully charged.", Readout.battery(100, true).text());
     }
 
     // ---------------------------------------------------------------- catch-up

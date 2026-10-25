@@ -125,6 +125,10 @@ public class OnboardingActivity extends Activity {
 
     private void finishTour(String tab) {
         getSharedPreferences("ui", MODE_PRIVATE).edit().putBoolean("onboarded", true).apply();
+        if (tab == null) {   // skipped: back to whatever is underneath (it may be a document opened from another app)
+            finish();
+            return;
+        }
         Intent i = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         if (tab != null) i.putExtra("tab", tab);
         startActivity(i);

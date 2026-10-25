@@ -56,7 +56,9 @@ final class Announcer {
                 .setAudioAttributes(new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ASSISTANT)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                .setOnAudioFocusChangeListener(change -> { })
+                .setOnAudioFocusChangeListener(change -> {
+                    if (change == AudioManager.AUDIOFOCUS_LOSS) stop();   // a call placed, another app took over
+                })
                 .build();
     }
 
@@ -82,7 +84,7 @@ final class Announcer {
             waiting.add(d);
         }
         String text = sp.text();
-        Log.i(TAG, "announce [" + caller + "] " + text.substring(0, Math.min(text.length(), 160)) + describe(sp));
+        if (SteerTTS.debug(app)) Log.i(TAG, "announce [" + caller + "] " + text.substring(0, Math.min(text.length(), 160)) + describe(sp));
         engineThread.post(() -> render(sp, caller, g, d));
     }
 

@@ -30,15 +30,19 @@ import java.util.TreeSet;
  */
 final class AssistantScreen {
     static final int REQ_CALENDAR = 1, REQ_HEALTH = 3;
-    private static final int MESSAGES = 0, CALLS = 1, MEETINGS = 2, BRIEFING = 3, CATCHUP = 4, VOICES = 5;
+    private static final int MESSAGES = 0, CALLS = 1, MEETINGS = 2, REMINDERS = 3, DELIVERIES = 4, EMAIL = 5, BATTERY = 6,
+            BRIEFING = 7, CATCHUP = 8, VOICES = 9, N = 10;
 
     private final Activity a;
     private final Ui u;
     private final AssistantPrefs prefs;
     private final View.OnClickListener settings;
-    private final Ui.Tile[] tiles = new Ui.Tile[6];
+    private final Ui.Tile[] tiles = new Ui.Tile[N];
     private TextView catchUpLabel;
+    private LinearLayout access;
     private int pending = -1;   // the feature waiting for a permission screen to come back
+    private int calendarFor = -1;   // who asked for calendar access: MEETINGS, BRIEFING (its sheet) or PLAY_BRIEFING
+    private static final int PLAY_BRIEFING = 100;
 
     AssistantScreen(Activity a, Ui u, View.OnClickListener settings) {
         this.a = a;
@@ -67,11 +71,30 @@ final class AssistantScreen {
         demo.addView(dr);
         root.addView(demo);
 
+        // without notification access most tiles cannot work: one clear way to fix that, instead of a wall of "Off"
+        access = u.card();
+        access.setPadding(u.dp(20), u.dp(16), u.dp(20), u.dp(16));
+        LinearLayout ar = u.row();
+        ar.addView(u.badge(R.drawable.ic_message, Ui.ACCENT, Ui.ON_ACCENT, 44));
+        LinearLayout at = u.column();
+        at.setPadding(u.dp(14), 0, u.dp(8), 0);
+        at.addView(u.text("One step to turn it on", 16, Ui.INK, true));
+        at.addView(u.text("Allow notification access so SteerTTS can read messages, calls, reminders and deliveries to you.",
+                13.5f, Ui.MUTED, false));
+        ar.addView(at, Ui.weight(1));
+        access.addView(ar);
+        TextView allow = u.pill("Allow", true, v -> askListenerAccess(-1));
+        LinearLayout.LayoutParams al = Ui.matchWrap();
+        al.topMargin = u.dp(12);
+        access.addView(allow, al);
+        root.addView(access);
+
         root.addView(u.section("What it does"));
-        int[] icons = {R.drawable.ic_message, R.drawable.ic_call, R.drawable.ic_calendar, R.drawable.ic_sun, R.drawable.ic_inbox,
+        int[] icons = {R.drawable.ic_message, R.drawable.ic_call, R.drawable.ic_calendar, R.drawable.ic_alarm, R.drawable.ic_delivery,
+                R.drawable.ic_email, R.drawable.ic_battery, R.drawable.ic_sun, R.drawable.ic_inbox,
                 R.drawable.ic_people};
-        String[] names = {"Messages", "Calls", "Meetings", "Morning briefing", "Catch me up", "A voice for each person"};
-        for (int i = 0; i < 6; i += 2) {
+        String[] names = TITLES;
+        for (int i = 0; i < N; i += 2) {
             LinearLayout r = u.row();
             r.setGravity(android.view.Gravity.TOP);
             for (int k = i; k < i + 2; ++k) {
@@ -114,6 +137,10 @@ final class AssistantScreen {
     boolean on(int f) {
         switch (f) {
             case MESSAGES: return prefs.readMessages() && listenerOn(a);
+            case REMINDERS: return prefs.reminders() && listenerOn(a);
+            case DELIVERIES: return prefs.deliveries() && listenerOn(a);
+            case EMAIL: return prefs.email() && listenerOn(a);
+            case BATTERY: return prefs.battery() && listenerOn(a);
             case CALLS: return prefs.announceCalls() && listenerOn(a);
             case MEETINGS: return prefs.announceMeetings() && MeetingAnnouncer.allowed(a);
             case BRIEFING: return Briefing.daily(a);
@@ -127,7 +154,11 @@ final class AssistantScreen {
         switch (f) {
             case MESSAGES:
                 return on ? AssistantPrefs.WHEN_SHORT[prefs.when()] + " · " + appsOnCount() + " apps" : "New messages read out as they arrive";
-            case CALLS: return on ? "Says who is calling, and when it's urgent" : "Hear who's calling without looking";
+            case CALLS: return on ? "Who is calling, missed calls, and when it's urgent" : "Hear who's calling without looking";
+            case REMINDERS: return on ? "Alarms, timers and to-do reminders, read out" : "Hear what an alarm or reminder is for";
+            case DELIVERIES: return on ? "Rides, food and parcels, as they move" : "“Your driver is arriving”, read out";
+            case EMAIL: return on ? "Who it's from and the subject" : "Hear who emailed and what about";
+            case BATTERY: return on ? "When it's low, and when it's full" : "A heads-up before the battery runs out";
             case MEETINGS: {
                 int m = prefs.leadMinutes();
                 return on ? m + (m == 1 ? " minute" : " minutes") + " before each event" : "A heads-up before each meeting";
@@ -151,9 +182,10 @@ final class AssistantScreen {
         if (pending >= 0) {   // back from a permission screen: switch the feature on if it was granted
             int f = pending;
             pending = -1;
-            if ((f == MESSAGES || f == CALLS || f == CATCHUP) && listenerOn(a)) set(f, true);
+            if (f >= 0 && needsListener(f) && listenerOn(a)) set(f, true);
         }
-        for (int f = 0; f < 6; ++f) tiles[f].set(on(f), status(f));
+        for (int f = 0; f < N; ++f) tiles[f].set(on(f), status(f));
+        access.setVisibility(listenerOn(a) ? View.GONE : View.VISIBLE);
         int n = Digest.size();
         catchUpLabel.setText(n > 0 ? "Catch me up · " + n : "Catch me up");
         MeetingAnnouncer.reschedule(a);
@@ -162,6 +194,10 @@ final class AssistantScreen {
     private void set(int f, boolean v) {
         switch (f) {
             case MESSAGES: prefs.setReadMessages(v); break;
+            case REMINDERS: prefs.setReminders(v); break;
+            case DELIVERIES: prefs.setDeliveries(v); break;
+            case EMAIL: prefs.setEmail(v); break;
+            case BATTERY: prefs.setBattery(v); break;
             case CALLS: prefs.setAnnounceCalls(v); break;
             case MEETINGS: prefs.setAnnounceMeetings(v); MeetingAnnouncer.reschedule(a); break;
             case BRIEFING: Briefing.setDaily(a, v, Briefing.minuteOfDay(a)); break;
@@ -175,11 +211,11 @@ final class AssistantScreen {
         boolean on = on(f);
         if (on) {
             set(f, false);
-        } else if ((f == MESSAGES || f == CALLS || f == CATCHUP) && !listenerOn(a)) {
+        } else if (needsListener(f) && !listenerOn(a)) {
             askListenerAccess(f);
             return;
         } else if (f == MEETINGS && !MeetingAnnouncer.allowed(a)) {
-            askCalendarAccess();
+            askCalendarAccess(MEETINGS);
             return;
         } else {
             set(f, true);
@@ -187,14 +223,24 @@ final class AssistantScreen {
         refresh();
     }
 
+    /** Features that work from notifications (or, for the battery, from the notification listener's connection). */
+    private static boolean needsListener(int f) { return f != MEETINGS && f != BRIEFING && f != VOICES; }
+
     void onPermission(int req, boolean granted) {
-        if (req == REQ_CALENDAR && granted) set(MEETINGS, true);
+        if (req == REQ_CALENDAR) {
+            if (granted && calendarFor == MEETINGS) set(MEETINGS, true);   // only the feature that asked is switched on
+            if (calendarFor == PLAY_BRIEFING) Briefing.play(a);           // with the calendar if allowed, without if not
+            calendarFor = -1;
+        }
         refresh();
     }
 
+    private static final String[] TITLES = {"Messages", "Calls", "Meetings", "Reminders & timers", "Deliveries & rides",
+            "Email", "Battery", "Morning briefing", "Catch me up", "A voice for each person"};
+
     // ---------------------------------------------------------------- the sheet behind a tile
     private void sheet(int f) {
-        String[] titles = {"Messages", "Calls", "Meetings", "Morning briefing", "Catch me up", "A voice for each person"};
+        String[] titles = TITLES;
         String[] about = {
                 "New messages from the apps you choose are read aloud as they arrive, in the mood they were written: a "
                         + "sorry sounds gentle, good news sounds bright. By default only with headphones or in the car, "
@@ -202,6 +248,12 @@ final class AssistantScreen {
                 "While the phone rings, SteerTTS says who is calling. If the same person calls again within a few "
                         + "minutes, it says so, and on the third call it tells you it may be urgent.",
                 "A spoken heads-up a few minutes before each event on your calendar, with where it happens.",
+                "When an alarm rings, a timer ends or a to-do app reminds you, SteerTTS says what it is for: “Reminder: "
+                        + "call the dentist.” Works with the Clock, Google Tasks, Keep, Todoist and other reminder apps.",
+                "Updates from ride, food and delivery apps (Uber, Lyft, DoorDash, Instacart, Amazon, Swiggy, Zomato and "
+                        + "more) are read out as they happen: “Your driver is arriving.”",
+                "New email is announced with who it's from and the subject, never the body. Off unless you turn it on.",
+                "A spoken heads-up when the battery falls to 15 percent, and when it's fully charged.",
                 "Every morning, or whenever you ask: your day ahead, last night's sleep and your steps, and any messages "
                         + "that waited overnight. Each line sounds like what it says.",
                 "Messages that arrived while SteerTTS couldn't read them out wait here. When you put headphones in, "
@@ -232,7 +284,7 @@ final class AssistantScreen {
                 options.add(u.settingRow("Sleep, steps and heart rate", !Briefing.healthAvailable() ? "Needs Android 14 or later"
                         : Briefing.healthGranted(a) ? "✓ From Health Connect" : "Connect Health Connect", u.chevron(), v -> askHealthAccess()));
                 options.add(u.settingRow("Calendar", MeetingAnnouncer.allowed(a) ? "✓ Today's events" : "Allow calendar access",
-                        u.chevron(), v -> { if (!MeetingAnnouncer.allowed(a)) askCalendarAccess(); }));
+                        u.chevron(), v -> { if (!MeetingAnnouncer.allowed(a)) askCalendarAccess(BRIEFING); }));
                 options.add(u.settingRow("Play it now", "Hear today's briefing", u.chevron(), v -> playBriefing()));
                 break;
             }
@@ -277,7 +329,7 @@ final class AssistantScreen {
     private void playBriefing() {
         if (!MeetingAnnouncer.allowed(a) && !a.getSharedPreferences("briefing", Context.MODE_PRIVATE).getBoolean("asked_calendar", false)) {
             a.getSharedPreferences("briefing", Context.MODE_PRIVATE).edit().putBoolean("asked_calendar", true).apply();
-            askCalendarAccess();
+            askCalendarAccess(PLAY_BRIEFING);
             return;
         }
         Briefing.play(a);
@@ -299,13 +351,17 @@ final class AssistantScreen {
                 .show();
     }
 
-    private void askCalendarAccess() {
+    private void askCalendarAccess(int forWhat) {
+        calendarFor = forWhat;
         new AlertDialog.Builder(a)
                 .setTitle("Let SteerTTS see your calendar?")
                 .setMessage("To announce meetings before they start and tell you about your day, SteerTTS reads the "
                         + "title, time and place of your upcoming events. It stays on this phone and is never sent anywhere.")
                 .setPositiveButton("Continue", (d, w) -> a.requestPermissions(new String[] {Manifest.permission.READ_CALENDAR}, REQ_CALENDAR))
-                .setNegativeButton("Not now", null)
+                .setNegativeButton("Not now", (d, w) -> {
+                    if (calendarFor == PLAY_BRIEFING) Briefing.play(a);   // play it without the calendar
+                    calendarFor = -1;
+                })
                 .show();
     }
 

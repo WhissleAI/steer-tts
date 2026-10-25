@@ -44,9 +44,10 @@ public class ClipReadActivity extends Activity {
                         n.play();
                     });
                 }
-            } catch (Exception e) {
+            } catch (Exception | OutOfMemoryError e) {
                 android.util.Log.e(MainActivity.TAG, "read copied", e);
-                runOnUiThread(() -> Toast.makeText(app, "Couldn't read that", Toast.LENGTH_SHORT).show());
+                String msg = e instanceof Extract.Unsupported ? e.getMessage() : "Couldn't read that";
+                runOnUiThread(() -> Toast.makeText(app, msg, Toast.LENGTH_LONG).show());
             }
             runOnUiThread(this::finish);
         }, "steertts-clip").start();

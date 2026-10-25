@@ -47,7 +47,7 @@ final class Narrator {
     private SteerTTS tts;   // engine thread
     private Doc doc;
     private volatile boolean playing;
-    private boolean resumeOnFocus;
+    private boolean resumeOnFocus, suspended;
     private int heard;      // the sentence being heard (main thread)
 
     private Narrator(Context app) {
@@ -89,21 +89,25 @@ final class Narrator {
 
     void play() {
         if (doc == null || doc.sentences.isEmpty()) return;
+        if (playing) return;   // already reading (a second "play" from the media session would queue the audio twice)
         if (heard >= doc.sentences.size()) heard = 0;
         if (doc.done) {
             doc.done = false;
             doc.savePos(app);
         }
-        if (am.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return;
+        if (!suspended && am.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return;
+        suspended = false;
         playing = true;
+        resumeSleep();
         renderFrom(heard);
         ReaderService.update(app);
         changed();
     }
 
     void pause() {
-        if (!playing) return;
-        stop(true);
+        if (!playing && !suspended) return;
+        resumeOnFocus = false;
+        stop(false);
         changed();
     }
 
@@ -118,10 +122,7 @@ final class Narrator {
         heard = Math.max(0, Math.min(i, doc.sentences.size() - 1));
         doc.pos = heard;
         doc.savePos(app);
-        if (playing) {
-            player.flush();
-            renderFrom(heard);
-        }
+        if (playing) renderFrom(heard);   // renderFrom bumps the generation first, then flushes
         changed();
     }
 
@@ -134,21 +135,29 @@ final class Narrator {
         else changed();
     }
 
-    /** Stop reading; with keepFocus false also forget audio focus and the notification. */
-    private void stop(boolean keepNotification) {
+    /**
+     * Stop reading. keepFocus: a transient interruption (a readout, a call, a navigation prompt): audio focus is kept,
+     * so Android hands it back afterwards and reading resumes, and the player stays a foreground service meanwhile.
+     */
+    private void stop(boolean keepFocus) {
         gen.incrementAndGet();
         playing = false;
+        suspended = keepFocus;
         player.flush();
-        am.abandonAudioFocusRequest(focus);
+        pauseSleep();
+        if (!keepFocus) am.abandonAudioFocusRequest(focus);
         if (doc != null) {
             doc.pos = heard;
             doc.savePos(app);
         }
-        ReaderService.update(app);
     }
+
+    /** Interrupted for a moment and waiting to resume (still holding audio focus). */
+    boolean suspended() { return suspended; }
 
     void close() {
         stop(false);
+        suspended = false;
         doc = null;
         ReaderService.stop(app);
         changed();
@@ -158,12 +167,12 @@ final class Narrator {
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
             if (resumeOnFocus && !playing) play();
             resumeOnFocus = false;
-        } else if (change == AudioManager.AUDIOFOCUS_LOSS) {
-            resumeOnFocus = false;
+        } else if (change == AudioManager.AUDIOFOCUS_LOSS) {   // another player took over for good
             pause();
-        } else {   // transient loss (a readout, a call, a navigation prompt): pause, resume after
-            resumeOnFocus = playing;
-            pause();
+        } else if (playing) {   // transient: suspend, keep focus, resume when it comes back
+            resumeOnFocus = true;
+            stop(true);
+            changed();
         }
     }
 
@@ -182,26 +191,45 @@ final class Narrator {
     private boolean sleepAtEnd;         // pause when this document ends (no next one)
     private final Runnable sleepNow = () -> {
         sleepAt = -1;
+        sleepLeft = -1;
         pause();
     };
 
-    /** minutes > 0: pause after that long; 0: at the end of this document; -1: off. */
+    /** minutes > 0: pause after that long (of listening); 0: at the end of this document; -1: off. */
     void setSleep(int minutes) {
         main.removeCallbacks(sleepNow);
         sleepAt = -1;
+        sleepLeft = -1;
         sleepAtEnd = minutes == 0;
         if (minutes > 0) {
-            sleepAt = SystemClock.elapsedRealtime() + minutes * 60_000L;
-            main.postDelayed(sleepNow, minutes * 60_000L);
+            sleepLeft = minutes * 60_000L;
+            if (playing) resumeSleep();
         }
         changed();
+    }
+
+    private long sleepLeft = -1;   // the timer's remaining time while paused (it only counts while reading)
+
+    private void pauseSleep() {
+        if (sleepAt < 0) return;
+        main.removeCallbacks(sleepNow);
+        sleepLeft = Math.max(1000, sleepAt - SystemClock.elapsedRealtime());
+        sleepAt = -1;
+    }
+
+    private void resumeSleep() {
+        if (sleepLeft < 0) return;
+        sleepAt = SystemClock.elapsedRealtime() + sleepLeft;
+        main.postDelayed(sleepNow, sleepLeft);
+        sleepLeft = -1;
     }
 
     /** "12 min", "end of document" or null when no timer is set. */
     String sleepLabel() {
         if (sleepAtEnd) return "End of document";
-        if (sleepAt < 0) return null;
-        long m = Math.max(1, (sleepAt - SystemClock.elapsedRealtime() + 59_999) / 60_000);
+        long left = sleepAt >= 0 ? sleepAt - SystemClock.elapsedRealtime() : sleepLeft;
+        if (left < 0) return null;
+        long m = Math.max(1, (left + 59_999) / 60_000);
         return m + " min";
     }
 
@@ -210,6 +238,7 @@ final class Narrator {
 
     private void renderFrom(int start) {
         int g = gen.incrementAndGet();
+        player.flush();   // after the bump: a render still in flight sees the new generation and writes nothing more
         Doc d = doc;
         Style base = Style.load(app).copy();
         base.contextual = false;          // the document's own moods apply below, not the phone's situation
@@ -274,24 +303,43 @@ final class Narrator {
             doc.pos = 0;            // finished: next time starts from the top
             doc.done = true;
             doc.savePos(app);
-            Log.i(TAG, "narrator finished " + doc.title);
-            java.util.List<Doc> next = Doc.upNext(app, doc.id);
+            if (SteerTTS.debug(app)) Log.i(TAG, "narrator finished " + doc.title);
+            java.util.List<Doc.Meta> next = Doc.upNext(app, doc.id);
             if (autoNext() && !sleepAtEnd && !next.isEmpty()) {
-                Doc n = next.get(0);
-                playing = false;
-                doc = null;
-                open(n);
-                intro = "Next: " + Narration.display(n.title) + ".";
-                play();
+                // straight on to the next document, still playing: the player never leaves the foreground in between;
+                // the book is loaded off the main thread
+                String nextId = next.get(0).id;
+                engineThread.post(() -> {
+                    Doc n = Doc.load(app, nextId);
+                    main.post(() -> {
+                        if (gen.get() != g || n == null) {
+                            if (n == null) stopAtEnd();
+                            return;
+                        }
+                        doc = n;
+                        heard = n.pos;
+                        n.opened = System.currentTimeMillis();
+                        n.savePos(app);
+                        intro = "Next: " + Narration.display(n.title) + ".";
+                        renderFrom(heard);
+                        changed();
+                    });
+                });
                 return;
             }
-            sleepAtEnd = false;
-            playing = false;
-            heard = doc.sentences.size();
-            am.abandonAudioFocusRequest(focus);
-            ReaderService.update(app);
-            changed();
+            stopAtEnd();
         }, 300);
+    }
+
+    /** The end of the last document: stop, forget focus, keep the notification paused. */
+    private void stopAtEnd() {
+        if (doc == null) return;
+        sleepAtEnd = false;
+        playing = false;
+        suspended = false;
+        heard = doc.sentences.size();
+        am.abandonAudioFocusRequest(focus);
+        changed();
     }
 
     private static String voiceFor(SteerTTS e, String v) {

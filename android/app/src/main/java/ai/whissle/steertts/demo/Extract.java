@@ -45,7 +45,7 @@ final class Extract {
         return Doc.create(t, "text", null, paras);
     }
 
-    static Doc fromUrl(String shared) {
+    static Doc fromUrl(String shared) throws IOException {
         Article a = Article.resolve(shared);
         List<String> paras = new ArrayList<>();
         for (String p : a.text.split("\n")) if (!p.trim().isEmpty()) paras.add(TextClean.speakable(p.trim()));
@@ -75,22 +75,32 @@ final class Extract {
     }
 
     // ---------------------------------------------------------------- PDF
+    /**
+     * A PDF read from the page itself (PdfText + PdfLayout: lines where they are, columns, headers and footers dropped,
+     * headings found); the file is kept so the reader can show its pages.
+     */
     private static Doc pdf(Context c, Uri uri, String title) throws IOException {
         if (Build.VERSION.SDK_INT < 35) throw new Unsupported("Reading PDFs needs Android 15 or newer.");
-        List<String> pages = new ArrayList<>();
-        try (ParcelFileDescriptor fd = c.getContentResolver().openFileDescriptor(uri, "r");
-             android.graphics.pdf.PdfRenderer r = new android.graphics.pdf.PdfRenderer(fd)) {
-            for (int i = 0; i < r.getPageCount(); ++i) {
-                try (android.graphics.pdf.PdfRenderer.Page p = r.openPage(i)) {
-                    StringBuilder b = new StringBuilder();
-                    for (android.graphics.pdf.content.PdfPageTextContent t : p.getTextContents()) b.append(t.getText()).append('\n');
-                    pages.add(b.toString());
-                }
-            }
+        String id = java.util.UUID.randomUUID().toString();
+        java.io.File f = PdfText.file(c, id);
+        try (InputStream in = c.getContentResolver().openInputStream(uri);
+             java.io.OutputStream out = new java.io.FileOutputStream(f)) {
+            if (in == null) throw new IOException("cannot open " + uri);
+            byte[] buf = new byte[1 << 16];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
         }
-        List<String> paras = TextClean.clean(pages);
-        if (paras.isEmpty()) throw new Unsupported("This PDF has no text to read (it may be scanned pages).");
-        return Doc.create(title, "pdf", uri.toString(), paras);
+        PdfText.Result r;
+        try {
+            r = PdfText.read(f);
+        } catch (IOException | RuntimeException e) {
+            f.delete();
+            throw new Unsupported("This PDF could not be opened (it may be protected with a password).");
+        }
+        if (r.paragraphs.isEmpty()) {
+            f.delete();
+            throw new Unsupported("This PDF has no text to read (it may be scanned pages).");
+        }
+        return Doc.createPdf(id, title, uri.toString(), r.paragraphs, r.spans);
     }
 
     // ---------------------------------------------------------------- EPUB
@@ -206,11 +216,19 @@ final class Extract {
     private static Map<String, byte[]> unzip(byte[] data) throws IOException {
         Map<String, byte[]> out = new LinkedHashMap<>();
         try (ZipInputStream z = new ZipInputStream(new java.io.ByteArrayInputStream(data))) {
+            long total = 0;
             for (ZipEntry e; (e = z.getNextEntry()) != null; ) {
-                if (e.isDirectory()) continue;
+                String name = e.getName().toLowerCase(java.util.Locale.ROOT);
+                // text only (pictures, fonts and audio are skipped), each entry and the whole capped: a large
+                // illustrated book, or a zip bomb, must not run the phone out of memory
+                if (e.isDirectory() || !name.matches(".*\\.(xhtml|html|htm|xml|opf|ncx|rels)$")) continue;
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
                 byte[] buf = new byte[1 << 15];
-                for (int n; (n = z.read(buf)) > 0; ) b.write(buf, 0, n);
+                for (int n; (n = z.read(buf)) > 0; ) {
+                    b.write(buf, 0, n);
+                    total += n;
+                    if (b.size() > (16 << 20) || total > (96 << 20)) throw new Unsupported("This file is too large to open.");
+                }
                 out.put(e.getName(), b.toByteArray());
             }
         }

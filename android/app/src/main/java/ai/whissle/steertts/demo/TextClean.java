@@ -82,7 +82,7 @@ final class TextClean {
         cur.setLength(0);
     }
 
-    private static String normalizeChars(String s) {
+    static String normalizeChars(String s) {
         for (Map.Entry<String, String> e : LIGATURES.entrySet()) s = s.replace(e.getKey(), e.getValue());
         return s.replace("\u00AD", "")                     // soft hyphen
                 .replace('\u00A0', ' ').replace('\u2009', ' ').replace('\u202F', ' ')
@@ -165,12 +165,25 @@ final class TextClean {
     /** Clean paragraphs -> sentences. */
     static List<String> sentences(List<String> paragraphs) {
         List<String> out = new ArrayList<>();
-        for (String p : paragraphs) for (String s : splitParagraph(p)) for (String t : splitLong(s)) out.add(t);
+        for (String p : paragraphs) for (int[] sp : spans(p)) out.add(p.substring(sp[0], sp[1]));
         return out;
     }
 
-    private static List<String> splitParagraph(String p) {
-        List<String> out = new ArrayList<>();
+    /** Where each sentence of a paragraph is: [start, end) character ranges, trimmed, in order. */
+    static List<int[]> spans(String p) {
+        List<int[]> out = new ArrayList<>();
+        for (int[] s : splitParagraph(p)) out.addAll(splitLong(p, s[0], s[1]));
+        return out;
+    }
+
+    private static int[] trimmed(String p, int a, int b) {
+        while (a < b && Character.isWhitespace(p.charAt(a))) a++;
+        while (b > a && Character.isWhitespace(p.charAt(b - 1))) b--;
+        return new int[] {a, b};
+    }
+
+    private static List<int[]> splitParagraph(String p) {
+        List<int[]> out = new ArrayList<>();
         int start = 0, n = p.length();
         for (int i = 0; i < n; ++i) {
             char c = p.charAt(i);
@@ -193,11 +206,13 @@ final class TextClean {
                 String word = p.substring(w + 1, i).toLowerCase(Locale.ROOT).replaceAll("^[(\"'“‘]+", "");
                 if (ABBREV.contains(word) || word.matches("[a-z]")) continue;    // "Dr.", "J. Smith"
             }
-            out.add(p.substring(start, j).trim());
+            int[] t = trimmed(p, start, j);
+            if (t[1] > t[0]) out.add(t);
             start = k;
             i = k - 1;
         }
-        if (start < n && !p.substring(start).trim().isEmpty()) out.add(p.substring(start).trim());
+        int[] t = trimmed(p, start, n);
+        if (t[1] > t[0]) out.add(t);
         return out;
     }
 
@@ -213,9 +228,11 @@ final class TextClean {
         return curly > 0 || straight % 2 == 1;
     }
 
-    private static List<String> splitLong(String s) {
-        List<String> out = new ArrayList<>();
-        while (s.length() > MAX) {
+    /** A sentence longer than MAX, split again at a pause (; : — ,), as character ranges of p. */
+    private static List<int[]> splitLong(String p, int a, int b) {
+        List<int[]> out = new ArrayList<>();
+        while (b - a > MAX) {
+            String s = p.substring(a, b);
             int cut = -1;
             for (String sep : new String[] {"; ", ": ", " — ", ", "}) {
                 int at = s.lastIndexOf(sep, MAX);
@@ -226,10 +243,13 @@ final class TextClean {
             }
             if (cut < 0) cut = s.lastIndexOf(' ', MAX);
             if (cut <= 0) break;
-            out.add(s.substring(0, cut + 1).trim());
-            s = s.substring(cut + 1).trim();
+            int[] head = trimmed(p, a, a + cut + 1);
+            if (head[1] > head[0]) out.add(head);
+            int[] rest = trimmed(p, a + cut + 1, b);
+            a = rest[0];
+            b = rest[1];
         }
-        if (!s.isEmpty()) out.add(s);
+        if (b > a) out.add(new int[] {a, b});
         return out;
     }
 }

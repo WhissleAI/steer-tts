@@ -42,6 +42,32 @@ final class AssistantPrefs {
     boolean announceMeetings() { return p.getBoolean("meetings", true); }
     void setAnnounceMeetings(boolean on) { p.edit().putBoolean("meetings", on).apply(); }
 
+    boolean reminders() { return p.getBoolean("reminders", true); }
+    void setReminders(boolean on) { p.edit().putBoolean("reminders", on).apply(); }
+    boolean deliveries() { return p.getBoolean("deliveries", true); }
+    void setDeliveries(boolean on) { p.edit().putBoolean("deliveries", on).apply(); }
+    boolean email() { return p.getBoolean("email", false); }
+    void setEmail(boolean on) { p.edit().putBoolean("email", on).apply(); }
+    boolean battery() { return p.getBoolean("battery", true); }
+    void setBattery(boolean on) { p.edit().putBoolean("battery", on).apply(); }
+
+    /** Apps whose notifications are reminders, alarms and timers (calendars are left to the meeting reminders). */
+    static final Set<String> REMINDER_APPS = new HashSet<>(Arrays.asList(
+            "com.google.android.deskclock", "com.android.deskclock", "com.sec.android.app.clockpackage",
+            "com.google.android.apps.tasks", "com.google.android.keep", "com.todoist", "com.microsoft.todos",
+            "com.ticktick.task", "com.anydo"));
+    /** Deliveries, food and rides. */
+    static final Set<String> DELIVERY_APPS = new HashSet<>(Arrays.asList(
+            "com.ubercab", "com.ubercab.eats", "me.lyft.android", "com.dd.doordash", "com.instacart.client",
+            "com.grubhub.android", "com.amazon.mShop.android.shopping", "in.swiggy.android", "com.application.zomato",
+            "com.olacabs.customer", "com.fedex.ida.android", "com.ups.mobile.android", "com.deliveroo.orderapp",
+            "com.global.foodpanda.android", "com.grabtaxi.passenger", "ee.mtakso.client", "com.postmates.android"));
+    static final Set<String> EMAIL_APPS = new HashSet<>(Arrays.asList(
+            "com.google.android.gm", "com.microsoft.office.outlook", "com.yahoo.mobile.client.android.mail",
+            "com.samsung.android.email.provider", "ch.protonmail.android", "com.readdle.spark"));
+    static final Set<String> CALENDAR_APPS = new HashSet<>(Arrays.asList(
+            "com.google.android.calendar", "com.samsung.android.calendar", "com.microsoft.office.outlook.calendar"));
+
     /** Each person's messages in a voice of their own (Voices.forPerson). */
     boolean personVoices() { return p.getBoolean("person_voices", true); }
     void setPersonVoices(boolean on) { p.edit().putBoolean("person_voices", on).apply(); }
@@ -73,9 +99,22 @@ final class AssistantPrefs {
 
     // ------------------------------------------------------------------ the phone's state
 
-    /** Headphones, a headset, a car or any other Bluetooth / wired / USB output: speech is heard by the user only. */
+    /**
+     * Speech would be heard by the user only: headphones, a headset, a car. On Android 13+ the route the assistant's
+     * audio would actually take is checked (a connected but unused headset does not count); a Bluetooth speaker that
+     * reports itself as one is never private. (Classic Bluetooth speakers and cars both report as A2DP and cannot be
+     * told apart without the Bluetooth permission; they count as private.)
+     */
     static boolean privateOutput(AudioManager am) {
-        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+        AudioDeviceInfo[] devices;
+        if (Build.VERSION.SDK_INT >= 33) {
+            java.util.List<AudioDeviceInfo> route = am.getAudioDevicesForAttributes(new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ASSISTANT).build());
+            devices = route.toArray(new AudioDeviceInfo[0]);
+        } else {
+            devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+        }
+        for (AudioDeviceInfo d : devices) {
             switch (d.getType()) {
                 case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
                 case AudioDeviceInfo.TYPE_WIRED_HEADSET:
@@ -84,11 +123,16 @@ final class AssistantPrefs {
                 case AudioDeviceInfo.TYPE_USB_HEADSET:
                     return true;
                 default:
-                    if (Build.VERSION.SDK_INT >= 31 && (d.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET
-                            || d.getType() == AudioDeviceInfo.TYPE_BLE_SPEAKER)) return true;
+                    if (Build.VERSION.SDK_INT >= 31 && d.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET) return true;
             }
         }
         return false;
+    }
+
+    /** Do Not Disturb (any filter but "all"). */
+    static boolean doNotDisturb(Context c) {
+        android.app.NotificationManager nm = c.getSystemService(android.app.NotificationManager.class);
+        return nm != null && nm.getCurrentInterruptionFilter() > android.app.NotificationManager.INTERRUPTION_FILTER_ALL;
     }
 
     static boolean inCall(AudioManager am) {
@@ -110,9 +154,9 @@ final class AssistantPrefs {
         }
     }
 
-    /** Announcements (calls, meetings) play through headphones, or out loud with the ringer on. */
+    /** Announcements (meetings, the briefing) play through headphones, or out loud with the ringer on; not in DND. */
     static boolean mayAnnounceNow(Context c) {
         AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
-        return !inCall(am) && (privateOutput(am) || am.getRingerMode() == AudioManager.RINGER_MODE_NORMAL);
+        return !inCall(am) && !doNotDisturb(c) && (privateOutput(am) || am.getRingerMode() == AudioManager.RINGER_MODE_NORMAL);
     }
 }

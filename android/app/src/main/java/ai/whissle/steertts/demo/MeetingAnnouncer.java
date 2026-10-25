@@ -54,7 +54,7 @@ public class MeetingAnnouncer extends BroadcastReceiver {
      * Speaks the events due for announcement and re-arms the alarm. leadMinutes > 0 (adb test hook): announce every
      * event starting within that many minutes, announced before or not. Blocks until spoken (at most 20 s).
      */
-    static void check(Context c, int leadMinutes) {
+    static synchronized void check(Context c, int leadMinutes) {   // one at a time: never two threads announcing one event
         AssistantPrefs prefs = new AssistantPrefs(c);
         if (!prefs.announceMeetings() || !allowed(c)) {
             cancel(c);
