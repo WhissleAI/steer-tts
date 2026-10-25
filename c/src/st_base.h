@@ -43,6 +43,8 @@ typedef struct st_pool st_pool;
 st_pool* st_pool_create(int n_threads);   /* n <= 1: everything runs on the calling thread */
 void st_pool_destroy(st_pool* p);
 int st_pool_size(const st_pool* p);       /* 1 for NULL */
+/* Linux: the workers' kernel thread ids (not the caller's); the count. 0 elsewhere. */
+int st_pool_tids(const st_pool* p, int* out, int max);
 /* Runs fn(ctx, task, n_tasks) for task in [0, n_tasks) on the pool (the caller works too) and waits. A call made
  * from inside one of the pool's tasks, or while another thread is using the pool, runs serially on the caller. */
 typedef void (*st_task_fn)(void* ctx, int task, int n_tasks);

@@ -5,3 +5,4 @@ __pycache__/
 !tests/golden/**/*.wav
 *.o
 *.obj
+build-*/

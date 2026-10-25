@@ -76,6 +76,14 @@ STEERTTS_API steertts_engine* steertts_create_ex(const char* model_dir, const st
 /* = steertts_create_ex with the default config and `threads` worker threads. */
 STEERTTS_API steertts_engine* steertts_create(const char* model_dir, int threads, char* err, size_t err_len);
 STEERTTS_API void steertts_destroy(steertts_engine* e);
+/* Replaces the worker pool with one of `threads` threads (0 = number of CPUs), without reloading the model: e.g. when
+ * the CPUs the process may use change (Android moves background apps to its slow cores). The new workers inherit the
+ * calling thread's CPU affinity and priority. Not while the engine is synthesizing. 0 on success. */
+STEERTTS_API int steertts_set_threads(steertts_engine* e, int threads);
+STEERTTS_API int steertts_threads(const steertts_engine* e);   /* worker threads in use (1 = the calling thread) */
+/* Linux / Android: kernel thread ids of the engine's worker threads (the calling thread is not among them), e.g. for
+ * Android's APerformanceHint sessions. Returns how many were written (at most max); 0 on other systems. */
+STEERTTS_API int steertts_worker_tids(const steertts_engine* e, int32_t* tids, int max);
 
 STEERTTS_API const char* steertts_version(void);
 STEERTTS_API int steertts_sample_rate(void);

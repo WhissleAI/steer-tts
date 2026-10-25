@@ -593,6 +593,25 @@ void steertts_destroy(steertts_engine* e) {
   st_free(e);
 }
 
+int steertts_set_threads(steertts_engine* e, int threads) {
+  if (!e) return -1;
+  int th = threads == 0 ? n_cpus() : threads;
+  st_pool* p = st_pool_create(th < 1 ? 1 : th);
+  if (!p) return -1;
+  st_pool_destroy(e->pool);
+  e->pool = p;
+  e->cfg.threads = threads;
+  return 0;
+}
+
+int steertts_threads(const steertts_engine* e) { return e ? st_pool_size(e->pool) : 0; }
+
+int steertts_worker_tids(const steertts_engine* e, int32_t* tids, int max) {
+  int buf[256], n = e && tids ? st_pool_tids(e->pool, buf, max < 256 ? max : 256) : 0;
+  for (int i = 0; i < n; ++i) tids[i] = buf[i];
+  return n;
+}
+
 const char* steertts_version(void) { return STEERTTS_VERSION; }
 int steertts_sample_rate(void) { return SR; }
 const char* steertts_model_type(const steertts_engine* e) { return !e ? NULL : e->edge ? "steer-tts-edge" : "steer-tts"; }

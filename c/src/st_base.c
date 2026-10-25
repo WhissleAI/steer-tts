@@ -22,6 +22,10 @@
 #else
 #include <pthread.h>
 #include <sys/resource.h>
+#if defined(__linux__)
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 #endif
 
 /* ------------------------------------------------------------------ errors */
@@ -217,6 +221,8 @@ struct st_pool {
   st_task_fn fn;
   void* ctx;
   atomic_int quit;
+  atomic_int* tids;        /* Linux: each worker's kernel thread id (0 until it has started), for st_pool_tids */
+  atomic_int tid_slot;
   _Alignas(64) atomic_int gen;       /* job generation (each hot counter on its own cache line) */
   _Alignas(64) atomic_int next;      /* next task to claim */
   _Alignas(64) atomic_int pending;   /* workers still inside the current job */
@@ -269,6 +275,9 @@ static void* pool_main(void* arg)
   st_pool* p = (st_pool*)arg;
   int seen = 0;
   t_in_pool = p;
+#if defined(__linux__)
+  if (p->tids) atomic_store(&p->tids[atomic_fetch_add(&p->tid_slot, 1)], (int)syscall(SYS_gettid));
+#endif
   for (;;) {
     if (!spin_wait(&p->gen, seen, 1, ST_WORKER_SPIN_MS)) {
 #ifdef _WIN32
@@ -341,7 +350,10 @@ st_pool* st_pool_create(int n_threads) {
   p->n = n_threads < 1 ? 1 : n_threads;
   if (p->n == 1) return p;
   p->th = (st_thread_t*)st_calloc(sizeof(st_thread_t) * (size_t)(p->n - 1));
+  p->tids = (atomic_int*)st_calloc(sizeof(atomic_int) * (size_t)(p->n - 1));   /* optional: NULL = no ids */
   if (!p->th) {   /* no worker array: a serial pool still works */
+    st_free(p->tids);
+    p->tids = NULL;
     p->n = 1;
     return p;
   }
@@ -373,7 +385,9 @@ st_pool* st_pool_create(int n_threads) {
   if (started == 0) {   /* no worker could be started: run serially */
     pool_sync_destroy(p);
     st_free(p->th);
+    st_free(p->tids);
     p->th = NULL;
+    p->tids = NULL;
     p->n = 1;
     return p;
   }
@@ -389,10 +403,30 @@ void st_pool_destroy(st_pool* p) {
     pool_sync_destroy(p);
   }
   st_free(p->th);
+  st_free(p->tids);
   st_free(p);
 }
 
 int st_pool_size(const st_pool* p) { return p ? p->n : 1; }
+
+int st_pool_tids(const st_pool* p, int* out, int max) {
+#if defined(__linux__)
+  if (!p || !p->tids || p->n < 2) return 0;
+  int n = 0;
+  for (int i = 0; i < p->n - 1 && n < max; ++i) {
+    int t = 0;
+    for (int w = 0; w < 2000 && !(t = atomic_load(&p->tids[i])); ++w) {   /* a worker still starting: up to 100 ms */
+      struct timespec ts = {0, 50000};
+      nanosleep(&ts, NULL);
+    }
+    if (t) out[n++] = t;
+  }
+  return n;
+#else
+  (void)p, (void)out, (void)max;
+  return 0;
+#endif
+}
 
 static void run_serial(int n_tasks, st_task_fn fn, void* ctx) {
   for (int t = 0; t < n_tasks; ++t) fn(ctx, t, n_tasks);

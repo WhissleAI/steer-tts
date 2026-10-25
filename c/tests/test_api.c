@@ -93,6 +93,19 @@ int main(void) {
   CHECK(steertts_gender_voice(e, "other") == NULL && steertts_gender_voice(NULL, "male") == NULL &&
             steertts_voice_gender(e, -1) == NULL && steertts_voice_gender(e, steertts_num_voices(e)) == NULL,
         "gender getters reject bad input");
+  /* resizing the pool keeps the model and renders the same audio */
+  {
+    float *y1 = NULL, *y3 = NULL;
+    size_t n1 = 0, n3 = 0;
+    int ok = steertts_set_threads(e, 1) == 0 && steertts_threads(e) == 1 &&
+             steertts_synthesize(e, "Hello there.", NULL, &y1, &n1, err, sizeof err) == 0 &&
+             steertts_set_threads(e, 3) == 0 && steertts_threads(e) == 3 &&
+             steertts_synthesize(e, "Hello there.", NULL, &y3, &n3, err, sizeof err) == 0;
+    CHECK(ok && n1 == n3 && n1 > 0 && !memcmp(y1, y3, n1 * sizeof(float)), "set_threads: same audio at 1 and 3 threads");
+    steertts_free(y1);
+    steertts_free(y3);
+    CHECK(steertts_set_threads(NULL, 2) != 0 && steertts_threads(NULL) == 0, "set_threads: NULL engine");
+  }
   CHECK(steertts_synthesize(e, "x", NULL, &y, &n, NULL, 0) == 0, "err == NULL is allowed");
   steertts_free(y);
 
