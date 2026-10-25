@@ -133,10 +133,11 @@ final class AssistantScreen {
         root.addView(u.section("Recently"));
         recent = u.card();
         root.addView(recent);
+        Recent.init(a);
         Recent.onChange = this::showRecent;
 
         TextView tip = u.text("Read aloud anywhere: select text or tap Share in any app, then “Read with SteerTTS”. "
-                + "Add the “Read copied text” and “Catch me up” tiles to Quick Settings for one-tap access.", 13, Ui.MUTED, false);
+                + "Add the “Read this screen”, “Read copied text” and “Catch me up” tiles to Quick Settings for one-tap access.", 13, Ui.MUTED, false);
         tip.setPadding(u.dp(4), u.dp(18), u.dp(4), 0);
         root.addView(tip);
 
@@ -171,7 +172,7 @@ final class AssistantScreen {
             case CALLS: return on ? "Who is calling, missed calls, and when it's urgent" : "Hear who's calling without looking";
             case REMINDERS: return on ? "Alarms, timers and to-do reminders, read out" : "Hear what an alarm or reminder is for";
             case DELIVERIES: return on ? "Rides, food and parcels, as they move" : "“Your driver is arriving”, read out";
-            case EMAIL: return on ? "Who it's from and the subject" : "Hear who emailed and what about";
+            case EMAIL: return on ? "Who it's from, the subject and how it starts" : "Hear who emailed and what about";
             case BATTERY: return on ? "When it's low, and when it's full" : "A heads-up before the battery runs out";
             case SCREEN: return on ? "Tap “Read this screen” in Quick Settings, in any app" : "Any app's page, read aloud, with a tiny control";
             case MEETINGS: {
@@ -243,7 +244,7 @@ final class AssistantScreen {
             r.addView(u.badge(e.spoken ? R.drawable.ic_check : R.drawable.ic_inbox, e.spoken ? Ui.ACCENT_SOFT : Ui.LINE, e.spoken ? Ui.ACCENT : Ui.MUTED, 30));
             LinearLayout t = u.column();
             t.setPadding(u.dp(12), 0, 0, 0);
-            t.addView(u.text(e.app + (e.who.isEmpty() ? "" : " · " + e.who) + "  ·  " + tf.format(new java.util.Date(e.time)), 14, Ui.INK, true));
+            t.addView(u.text(e.app + (e.who.isEmpty() ? "" : " · " + e.who) + "  ·  " + when(e.time, tf), 14, Ui.INK, true));
             t.addView(u.text(e.outcome, 13, e.spoken ? Ui.ACCENT : Ui.MUTED, false));
             r.addView(t, Ui.weight(1));
             if (e.fix != null) {
@@ -252,6 +253,16 @@ final class AssistantScreen {
             }
             recent.addView(r);
         }
+    }
+
+    /** "2:14 PM" today, "Yesterday 9:02 AM", else "Oct 21". */
+    private static String when(long t, java.text.DateFormat tf) {
+        java.time.LocalDate d = java.time.Instant.ofEpochMilli(t).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        String time = tf.format(new java.util.Date(t));
+        if (d.equals(today)) return time;
+        if (d.equals(today.minusDays(1))) return "Yesterday " + time;
+        return d.format(java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.getDefault()));
     }
 
     /** A tap on a "not read" row: fix it right there. */

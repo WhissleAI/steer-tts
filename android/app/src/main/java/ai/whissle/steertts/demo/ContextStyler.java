@@ -75,7 +75,8 @@ final class ContextStyler {
             s.add("rate", 1.0f);
             note(why, "screen reader: brisk");
         }
-        if (!alert) {
+        boolean navigation = MAPS.equals(caller) || WAZE.equals(caller);
+        if (!alert && !navigation) {   // directions while driving stay clear at night and on silent
             int hour = hour(ctx);
             AudioManager am = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
             boolean quietRinger = am != null && am.getRingerMode() != AudioManager.RINGER_MODE_NORMAL;

@@ -48,6 +48,7 @@ public class ReadoutListener extends NotificationListenerService {
     private long connectedAt;
 
     @Override public void onListenerConnected() {
+        Recent.init(this);
         MeetingAnnouncer.watchCalendar(this);
         seed();
         if (batteryWatch == null) watchBattery();
@@ -232,7 +233,8 @@ public class ReadoutListener extends NotificationListenerService {
                 Recent.add(app, title, "Not read: Email is off. Tap to turn it on", false, pkg, "email");
                 return true;
             }
-            sp = Readout.email(title, text);
+            CharSequence big = x.getCharSequence(Notification.EXTRA_BIG_TEXT);
+            sp = Readout.email(title, text, big == null ? null : big.toString());
         } else {
             return false;
         }

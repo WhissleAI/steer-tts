@@ -11,7 +11,6 @@ import android.speech.tts.TextToSpeechService;
 import android.speech.tts.Voice;
 import android.util.Log;
 
-import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -192,16 +191,29 @@ public class SteerTtsService extends TextToSpeechService {
         return true;
     }
 
+    /**
+     * Text in the pieces it is rendered in: sentences (abbreviations, initials and decimals do not end one), long ones
+     * split at a pause; the first piece is kept short (a clause) so the first sound comes quickly.
+     */
     static List<String> sentences(String text) {
         List<String> out = new ArrayList<>();
-        BreakIterator it = BreakIterator.getSentenceInstance(Locale.US);
-        it.setText(text);
-        for (int a = it.first(), b = it.next(); b != BreakIterator.DONE; a = b, b = it.next()) {
-            String s = text.substring(a, b).trim();
-            if (!s.isEmpty()) out.add(s);
+        for (String para : text.split("\\n+")) for (int[] sp : TextClean.spans(para)) out.add(para.substring(sp[0], sp[1]));
+        if (!out.isEmpty() && out.get(0).length() > FIRST) {
+            String f = out.get(0);
+            int cut = -1;
+            for (String sep : new String[] {"; ", ", ", " — ", ": "}) {
+                int at = f.indexOf(sep, 30);
+                if (at > 0 && at <= FIRST && (cut < 0 || at < cut)) cut = at + 1;
+            }
+            if (cut > 0 && f.length() - cut > 20) {
+                out.set(0, f.substring(0, cut).trim());
+                out.add(1, f.substring(cut).trim());
+            }
         }
         return out;
     }
+
+    private static final int FIRST = 100;   // characters: about a second and a half of speech
 
     private void broadcast(Style s, String voice, String text, String caller, boolean speaking) {
         Intent i = new Intent(ACTION_STYLE).setPackage(getPackageName()).putExtra("speaking", speaking);

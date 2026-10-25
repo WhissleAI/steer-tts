@@ -121,12 +121,54 @@ final class Readout {
         return sp.add(cap(sentence(said)), Expression.of(said));
     }
 
-    /** "Email from Priya: Contract signed." (the subject only, never the body). */
-    static Speech email(String sender, String subject) {
-        String who = clean(sender), sub = clean(subject);
+    /**
+     * "Email from Priya. Contract signed. It starts: The signed copy is attached…" The subject, then the first sentence
+     * of the preview the notification itself shows (never more). sender: a name, or an address ("billing@acme.com" is
+     * said "Acme"). preview: the notification's expanded text (often "subject\nbody"), may be null.
+     */
+    static Speech email(String sender, String subject, String preview) {
+        String who = clean(senderName(sender)), sub = clean(subject);
         if (who.isEmpty()) who = "someone";
+        java.util.regex.Matcher many = java.util.regex.Pattern.compile("(?i)^(\\d+) new (messages|emails)$").matcher(who);
+        if (many.find()) return new Speech().add("You have " + many.group(1) + " new emails.", null, null, 0);
         Speech sp = new Speech().add("Email from " + who + ".", null, null, 150);
-        return sub.isEmpty() ? sp : sp.add(cap(sentence(sub)), Expression.of(sub));
+        if (!sub.isEmpty()) sp.add(cap(sentence(sub)), Expression.of(sub), null, 120);
+        String first = firstSentence(preview, subject);
+        if (!first.isEmpty()) sp.add(first, Expression.of(first), null, 0);
+        return sp;
+    }
+
+    static Speech email(String sender, String subject) { return email(sender, subject, null); }
+
+    /** "Priya Sharma <priya@x.com>" -> "Priya Sharma"; "no-reply@accounts.google.com" -> "Google". */
+    static String senderName(String s) {
+        if (s == null) return "";
+        String t = s.replaceAll("<[^>]*>", "").replace("\"", "").trim();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^[\\w.+-]+@([\\w-]+\\.)*?([\\w-]+)\\.[a-z]{2,}(\\.[a-z]{2})?$").matcher(t.toLowerCase(java.util.Locale.ROOT));
+        if (m.find()) {
+            String org = m.group(2);
+            if (org.matches("gmail|yahoo|outlook|hotmail|icloud|proton|protonmail")) org = t.substring(0, t.indexOf('@')).replaceAll("[._-]+", " ");
+            StringBuilder b = new StringBuilder();
+            for (String w : org.trim().split(" +")) if (!w.isEmpty()) b.append(b.length() > 0 ? " " : "").append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
+            return b.toString();
+        }
+        return t;
+    }
+
+    /** The first sentence of an email preview, without the subject line it repeats, at most about 140 characters. */
+    static String firstSentence(String preview, String subject) {
+        if (preview == null) return "";
+        String p = preview.trim();
+        if (subject != null && !subject.trim().isEmpty() && p.startsWith(subject.trim())) p = p.substring(subject.trim().length());
+        p = Expression.speakable(p.replaceAll("\\s+", " ")).trim();
+        if (p.length() < 12) return "";
+        java.util.List<int[]> sp = TextClean.spans(p);
+        String f = sp.isEmpty() ? p : p.substring(sp.get(0)[0], sp.get(0)[1]);
+        if (f.length() > 140) {
+            int cut = f.lastIndexOf(' ', 140);
+            f = f.substring(0, cut > 40 ? cut : 140) + "…";
+        }
+        return f;
     }
 
     /** "Battery at 15 percent. Time to charge." / "Fully charged." */

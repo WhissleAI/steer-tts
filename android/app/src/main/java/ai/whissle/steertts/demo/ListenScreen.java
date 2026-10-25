@@ -213,11 +213,17 @@ final class ListenScreen implements Narrator.Listener {
         c.addView(label);
         LinearLayout r = u.row();
         LinearLayout t = u.column();
-        TextView title = u.text(Narration.display(d.title), 20, Ui.INK, true);
+        String[] ta = titleAndAuthor(d.title);
+        TextView title = u.text(ta[0], 20, Ui.INK, true);
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
-        title.setPadding(0, u.dp(6), 0, u.dp(4));
+        title.setPadding(0, u.dp(6), 0, ta[1] == null ? u.dp(4) : 0);
         t.addView(title);
+        if (ta[1] != null) {
+            TextView by = u.text(ta[1], 14.5f, Ui.INK, false);
+            by.setPadding(0, 0, 0, u.dp(4));
+            t.addView(by);
+        }
         String sleep = n.sleepLabel();
         t.addView(u.text(d.minutesLeft(n.pace() * Style.load(a).pace) + " min left · " + Math.round(100 * d.progress()) + "%"
                 + (sleep != null ? " · sleep in " + sleep.toLowerCase() : ""), 13.5f, Ui.MUTED, false));
@@ -285,12 +291,14 @@ final class ListenScreen implements Narrator.Listener {
                 Ui.ACCENT_SOFT, Ui.ACCENT, 40));
         LinearLayout t = u.column();
         t.setPadding(u.dp(12), 0, u.dp(8), 0);
-        TextView title = u.text(Narration.display(d.title), 15.5f, Ui.INK, true);
+        String[] ta = titleAndAuthor(d.title);
+        TextView title = u.text(ta[0], 15.5f, Ui.INK, true);
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         t.addView(title);
         String kind = d.kind.equals("epub") ? "E-book" : d.kind.equals("pdf") ? "PDF" : d.kind.equals("docx") ? "Word"
                 : d.kind.equals("web") ? "Web page" : "Text";
+        if (ta[1] != null) kind = ta[1] + " · " + kind;
         String meta = d.done ? kind + " · finished"
                 : kind + " · " + (d.progress() > 0 ? Math.round(100 * d.progress()) + "% · " : "")
                 + d.minutesLeft(Narrator.get(a).pace() * Style.load(a).pace) + " min";
@@ -399,5 +407,12 @@ final class ListenScreen implements Narrator.Listener {
                 });
             }
         }, "steertts-extract").start();
+    }
+
+    /** "The Scarlet Letter · Nathaniel Hawthorne" -> {title, author}; author null when there is none. */
+    static String[] titleAndAuthor(String full) {
+        String t = Narration.display(full);
+        int at = t.lastIndexOf(" · ");
+        return at > 0 ? new String[] {t.substring(0, at), t.substring(at + 3)} : new String[] {t, null};
     }
 }

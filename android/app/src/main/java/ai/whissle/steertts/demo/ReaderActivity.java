@@ -104,8 +104,9 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
         back.setPadding(u.dp(10), 0, u.dp(14), u.dp(4));
         back.setOnClickListener(v -> finish());
         top.addView(back);
-        title = u.text(d.title, 19, Ui.INK, true);
-        title.setMaxLines(2);
+        title = u.text("", 19, Ui.INK, false);
+        title.setText(heading(d.title));
+        title.setMaxLines(3);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         top.addView(title, Ui.weight(1));
         root.addView(top);
@@ -288,7 +289,7 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
             boolean first = shown == null;
             shown = d.id;
             if (!first) setUpPages(d);
-            title.setText(d.title);
+            title.setText(heading(d.title));
             seek.setMax(Math.max(1, d.sentences.size() - 1));
             list.setSelectionFromTop(narrator.position(), u.dp(120));
         }
@@ -334,5 +335,18 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
             t.setTextColor(cur ? Ui.INK : Ui.MUTED);
             return t;
         }
+    }
+
+    /** The title, and the author on a smaller, quieter second line. */
+    private static CharSequence heading(String full) {
+        String[] ta = ListenScreen.titleAndAuthor(full);
+        android.text.SpannableString s = new android.text.SpannableString(ta[1] == null ? ta[0] : ta[0] + "\n" + ta[1]);
+        s.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, ta[0].length(), 0);
+        if (ta[1] != null) {
+            int a = ta[0].length() + 1;
+            s.setSpan(new android.text.style.RelativeSizeSpan(0.74f), a, s.length(), 0);
+            s.setSpan(new android.text.style.ForegroundColorSpan(Ui.MUTED), a, s.length(), 0);
+        }
+        return s;
     }
 }

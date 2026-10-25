@@ -203,6 +203,7 @@ public class MainActivity extends Activity implements VoicesScreen.Host {
             b.addView(pillBox);
             TextView label = u.text(TAB_NAMES[i], 12.5f, Ui.MUTED, true);
             label.setPadding(0, u.dp(4), 0, 0);
+            label.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
             b.addView(label);
             b.setOnClickListener(v -> selectTab(t));
             b.setContentDescription(TAB_NAMES[i]);

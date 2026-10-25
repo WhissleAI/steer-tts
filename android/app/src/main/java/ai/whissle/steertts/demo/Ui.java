@@ -288,6 +288,7 @@ final class Ui {
         col.addView(b);
         TextView t = text(label, 13, INK, true);
         t.setPadding(0, dp(6), 0, 0);
+        t.setGravity(Gravity.CENTER_HORIZONTAL);
         col.addView(t);
         col.setOnClickListener(l);
         col.setFocusable(true);

@@ -303,4 +303,16 @@ public class SpeechLogicTest {
         assertFalse(text, text.contains("249") || text.contains("Gleam") || text.contains("Rabbit-Hole") || text.contains("Custom House"));
         assertTrue(text, text.contains("It is a little remarkable, said “he.”"));
     }
+
+    @Test public void emailSaysWhoWhatAndHowItStarts() {
+        Speech sp = Readout.email("Priya Sharma", "Contract signed", "Contract signed\nHi Karan, the signed copy is attached. Let me know if anything else is needed.");
+        assertEquals("Email from Priya Sharma.", sp.parts.get(0).text);
+        assertEquals("Contract signed.", sp.parts.get(1).text);
+        assertEquals("Hi Karan, the signed copy is attached.", sp.parts.get(2).text);
+        assertEquals("Google", Readout.senderName("no-reply@accounts.google.com"));
+        assertEquals("Acme", Readout.senderName("billing@acme.co.uk"));
+        assertEquals("John Smith", Readout.senderName("john.smith@gmail.com"));
+        assertEquals("You have 3 new emails.", Readout.email("3 new messages", "x").parts.get(0).text);
+        assertEquals(2, Readout.email("Sam", "Lunch?", "Lunch?").parts.size());
+    }
 }
