@@ -73,6 +73,7 @@ def _expand(text: str) -> str:
                   if "." in m.group(0) else _num(int(m.group(0).replace(",", ""))), text)
     text = re.sub(r"\b\d+\.\d+\b", lambda m: _num(float(m.group(0))), text)
     text = re.sub(r"\b\d{5,}\b", lambda m: _num(int(m.group(0))), text)         # g2p_en reads long digit runs badly
+    text = re.sub(r"(?<=[a-z])([A-Z]{2,5}s?)\b", r" \1", text)   # a word ending in capitals: SteerTTS -> Steer TTS, macOS -> mac OS
     cmu = _g2p().cmu  # acronyms CMUdict does not know (IOC, BBC): letter by letter; NASA, UNESCO keep their entry
     text = re.sub(r"\b[A-Z]{2,5}s?\b", lambda m: m.group(0) if m.group(0).lower() in cmu
                   else " ".join(m.group(0).rstrip("s")) + ("'s" if m.group(0).endswith("s") and len(m.group(0)) > 2 else ""), text)

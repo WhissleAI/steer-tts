@@ -214,7 +214,7 @@ struct st_front {
   char* symbols[ST_N_SYMBOLS];
   int sym_sorted[ST_N_SYMBOLS];   /* symbol ids sorted by name (bsearch) */
   st_g2p g2p;
-  st_rx *quotes, *range, *by, *compound, *currency, *percent, *ordinal, *comma_num, *decimal, *long_digits, *acronym,
+  st_rx *quotes, *range, *by, *compound, *currency, *percent, *ordinal, *comma_num, *decimal, *long_digits, *camel_acr, *acronym,
       *ws, *event;
   st_rx* units[15];
   const char* unit_words[15];

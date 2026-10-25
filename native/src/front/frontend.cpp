@@ -66,6 +66,7 @@ Frontend::Impl::Impl(const std::string& dir)
       comma_num(&ucd, R"(\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b)"),
       decimal(&ucd, R"(\b\d+\.\d+\b)"),
       long_digits(&ucd, R"(\b\d{5,}\b)"),
+      camel_acr(&ucd, R"((?<=[a-z])([A-Z]{2,5}s?)\b)"),
       acronym(&ucd, R"(\b[A-Z]{2,5}s?\b)"),
       ws(&ucd, R"(\s+)"),
       event(&ucd, R"(\[\s*([A-Za-z_]+)\s*\])"),
@@ -161,6 +162,11 @@ u32str Frontend::Impl::expand(const u32str& text0) const {
   t = decimal.sub(t, [&](const Regex::Match& m, const u32str& s) { return A(num_float(m.str(s, 0))); });
   t = long_digits.sub(t, [&](const Regex::Match& m, const u32str& s) {
     return A(num(detail::py_int_digits(m.str(s, 0), u), false));
+  });
+  t = camel_acr.sub(t, [&](const Regex::Match& m, const u32str& s) {   // SteerTTS -> Steer TTS
+    u32str o = U" ";
+    o += m.str(s, 1);
+    return o;
   });
   t = acronym.sub(t, [&](const Regex::Match& m, const u32str& s) {
     std::string g = N(m.str(s, 0)), low;

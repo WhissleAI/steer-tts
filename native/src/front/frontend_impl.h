@@ -29,7 +29,7 @@ struct Frontend::Impl {
   detail::u32str strip(const detail::u32str& s) const;             // str.strip()
   detail::u32str collapse_ws(const detail::u32str& s) const;       // re.sub(r"\s+", " ", s)
 
-  detail::Regex quotes, range, by, compound, currency, percent, ordinal, comma_num, decimal, long_digits, acronym, ws,
+  detail::Regex quotes, range, by, compound, currency, percent, ordinal, comma_num, decimal, long_digits, camel_acr, acronym, ws,
       event;
   std::vector<std::pair<detail::Regex, std::string>> units;
   // markup

@@ -84,7 +84,7 @@ void st_front_free(st_front* f) {
   if (!f) return;
   g2p_free(&f->g2p);
   st_rx* all[] = {f->quotes, f->range,       f->by,      f->compound, f->currency, f->percent, f->ordinal,
-                  f->comma_num, f->decimal,  f->long_digits, f->acronym, f->ws,    f->event,   f->emph,
+                  f->comma_num, f->decimal,  f->long_digits, f->camel_acr, f->acronym, f->ws,    f->event,   f->emph,
                   f->token,  f->sent_end};
   for (size_t k = 0; k < sizeof all / sizeof all[0]; ++k) st_rx_free(all[k]);
   for (int k = 0; k < 15; ++k) st_rx_free(f->units[k]);
@@ -129,6 +129,7 @@ st_front* st_front_load(const char* dir) {
       {&f->comma_num, "\\b\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?\\b", 0},
       {&f->decimal, "\\b\\d+\\.\\d+\\b", 0},
       {&f->long_digits, "\\b\\d{5,}\\b", 0},
+      {&f->camel_acr, "(?<=[a-z])([A-Z]{2,5}s?)\\b", 0},                         /* SteerTTS -> Steer TTS */
       {&f->acronym, "\\b[A-Z]{2,5}s?\\b", 0},
       {&f->ws, "\\s+", 0},
       {&f->event, "\\[\\s*([A-Za-z_]+)\\s*\\]", 0},
@@ -296,6 +297,11 @@ static void r_acronym(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o
   if (g[n - 1] == 's' && n > 2) u32s_ascii(x, o, "'s");
 }
 
+static void r_camel_acr(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  u32s_push(x, o, ' ');
+  for (int i = m->caps[2]; i < m->caps[3]; ++i) u32s_push(x, o, s[i]);
+}
+
 static void expand(fx* x, const st_front* f, st_u32s* t) {
   void* F = (void*)f;
   sub_inplace(x, f->range, t, r_range, NULL);
@@ -308,6 +314,7 @@ static void expand(fx* x, const st_front* f, st_u32s* t) {
   sub_inplace(x, f->comma_num, t, r_comma_num, F);
   sub_inplace(x, f->decimal, t, r_decimal, F);
   sub_inplace(x, f->long_digits, t, r_long_digits, F);
+  sub_inplace(x, f->camel_acr, t, r_camel_acr, NULL);
   sub_inplace(x, f->acronym, t, r_acronym, F);
 }
 
