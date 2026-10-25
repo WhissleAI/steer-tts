@@ -10,6 +10,11 @@ cd android && ./gradlew assembleRelease      # or: -PsteerttsModel=/path/to/stee
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
+Package names: the store build is **ai.whissle.steertts**; debug builds are **ai.whissle.steertts.debug** (they
+install side by side, and the adb hooks and demo-recording tools below work only in debug builds). The code lives in
+the `ai.whissle.steertts.demo` package, so components are named in full, e.g.
+`ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity`. Publishing: see [`play/README.md`](play/README.md).
+
 The release build is signed with the key named in `~/.gradle/gradle.properties` (`STEERTTS_STORE_FILE`,
 `STEERTTS_STORE_PASSWORD`, `STEERTTS_KEY_ALIAS`, `STEERTTS_KEY_PASSWORD`), else with the debug key. Phones only update an
 installed app from an APK signed with the same key: switching keys means uninstalling first. The native library is
@@ -22,8 +27,8 @@ app storage on first start.
 Driving it from a computer (results in `adb logcat -s SteerTTS`):
 
 ```bash
-adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es speak "Hello there." --es voice male
-adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es bench 0,1,4,6     # 0 = Auto
+adb shell am start -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity --es speak "Hello there." --es voice male
+adb shell am start -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity --es bench 0,1,4,6     # 0 = Auto
 ```
 
 ## Assistant
@@ -41,16 +46,16 @@ grants on the app's screen:
 `Announcer` is the shared voice: its own engine (closed after two idle minutes), a sentence at a time, at most 8 s
 ahead of playback, other audio ducked. `ContextStyler` styles each utterance (a call is announced as an alert, late at
 night softer). For demo videos (screen recorders cannot capture an assistant's voice), a debug build copies every utterance it
-plays to `files/tap/<epoch ms>.f32` while that directory exists (`adb shell run-as ai.whissle.steertts.demo mkdir -p
+plays to `files/tap/<epoch ms>.f32` while that directory exists (`adb shell run-as ai.whissle.steertts.debug mkdir -p
 files/tap`), to be laid back under the recording. adb hooks for testing, besides the ones above:
 
 ```bash
-adb shell cmd notification allow_listener ai.whissle.steertts.demo/ai.whissle.steertts.demo.ReadoutListener
-adb shell am start -n ai.whissle.steertts.demo/.MainActivity --ei readout_when 2 --es readout_allow com.android.shell
+adb shell cmd notification allow_listener ai.whissle.steertts.debug/ai.whissle.steertts.demo.ReadoutListener
+adb shell am start -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity --ei readout_when 2 --es readout_allow com.android.shell
 adb shell "cmd notification post -S messaging --conversation Plans --message 'Priya:Dinner at eight?' t1 x"
-adb shell am start -n ai.whissle.steertts.demo/.MainActivity --ei meetings_check 600   # announce events within 10 h
+adb shell am start -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity --ei meetings_check 600   # announce events within 10 h
 adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "Read this." \
-    -n ai.whissle.steertts.demo/.ReadAloudActivity
+    -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.ReadAloudActivity
 ```
 
 ## Using it in your app

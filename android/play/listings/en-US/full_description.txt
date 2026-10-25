@@ -1,0 +1,28 @@
+SteerTTS gives your phone an expressive voice that runs entirely on the device. No account, no internet connection, nothing sent anywhere: every word is made right on your phone.
+
+SAY IT YOUR WAY
+• One tap says the same words happy, whispered, excited or sad.
+• Inline markup changes delivery mid-sentence: a whisper, stress on one word, a pause.
+• Pick from 200 voices, set the speed, and fine-tune twelve delivery controls such as speaking rate, loudness and pitch.
+
+IT SPEAKS UP FOR YOU
+• Message readouts: new messages from the apps you choose, read aloud as they arrive. By default only with headphones or in the car, never during a call or in Do Not Disturb.
+• Incoming calls: hear who is calling while the phone rings.
+• Meeting reminders: your next event announced a few minutes before it starts, including where it happens.
+• Read aloud anywhere: select text in any app, or share a link, and choose "Read with SteerTTS".
+
+IT ADAPTS TO THE MOMENT
+Alerts come out faster and louder, questions rise at the end, and late at night it speaks softer. You can switch this off.
+
+YOUR PHONE'S VOICE
+Set SteerTTS as Android's text-to-speech engine and other apps on your phone speak with it too.
+
+FAST AND SMALL
+• First sound in under 60 milliseconds on a single CPU core (Pixel 10).
+• Renders speech more than 60 times faster than real time.
+• The whole app, voice model included, is about 13 MB.
+
+PRIVATE BY DESIGN
+Notification text and calendar events are read on the phone, spoken, and never stored or sent anywhere. The app uses the internet only to open a link you share with it.
+
+SteerTTS speaks English. Made by Whissle.

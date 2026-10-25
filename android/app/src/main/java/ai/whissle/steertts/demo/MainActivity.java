@@ -44,9 +44,9 @@ import java.util.Locale;
  * settings here are also the system engine's base style (SteerTtsService); when SteerTTS speaks, for this app or for
  * another one, the sliders move to the style actually used and the reason is shown. Engine calls run on one background
  * thread. adb hooks (results in logcat, tag SteerTTS):
- *   adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es speak "Hello there." [--es voice male] [--ei threads N]
- *   adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es bench 0,1,4   (0 = Auto)
- *   adb shell am start -n ai.whissle.steertts.demo/.MainActivity --es systts "Text"   (through android.speech.tts)
+ *   adb shell am start -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity --es speak "Hello there." [--es voice male] [--ei threads N]
+ *   adb shell am start -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity --es bench 0,1,4   (0 = Auto)
+ *   adb shell am start -n ai.whissle.steertts.debug/ai.whissle.steertts.demo.MainActivity --es systts "Text"   (through android.speech.tts)
  * and for the assistant:
  *   --es announce "Text"            speak through the assistant's voice (Announcer)
  *   --ei readout_when 0|1|2         when messages are read (AssistantPrefs: headphones / + screen off / any time)
@@ -168,7 +168,9 @@ public class MainActivity extends Activity {
     }
 
     private void handleIntent(Intent i) {
-        if (i == null) return;
+        // the adb hooks below are for development and demo recordings only: in a store build any app could send this
+        // (exported) activity an intent, so they are ignored unless the build is debuggable
+        if (i == null || (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) return;
         if (i.hasExtra("threads")) threadsSel = i.getIntExtra("threads", 0);
         AssistantPrefs ap = new AssistantPrefs(this);
         if (i.hasExtra("demo_hour")) ContextStyler.setDemoHour(this, i.getIntExtra("demo_hour", -1));
@@ -447,10 +449,33 @@ public class MainActivity extends Activity {
         pages.addView(studio);
         studio.setVisibility(View.GONE);
         setContentView(pages);
+        // edge to edge (Android 15+ draws apps under the status and navigation bars): keep content clear of them
+        if (Build.VERSION.SDK_INT >= 30)
+            pages.setOnApplyWindowInsetsListener((v, insets) -> {
+                android.graphics.Insets b = insets.getInsets(android.view.WindowInsets.Type.systemBars()
+                        | android.view.WindowInsets.Type.displayCutout());
+                v.setPadding(b.left, b.top, b.right, b.bottom);
+                return android.view.WindowInsets.CONSUMED;
+            });
         showVoiceChips();
     }
 
+    // Back from Voice & style returns home. Android 16 (target 36) no longer calls onBackPressed: the predictive back
+    // gesture goes to a callback, registered only while the second page is open so back on home leaves the app normally.
+    private Object backToHome;
+
     private void showPage(View page) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            android.window.OnBackInvokedDispatcher d = getOnBackInvokedDispatcher();
+            if (page == studio && backToHome == null) {
+                android.window.OnBackInvokedCallback cb = () -> showPage(home);
+                d.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, cb);
+                backToHome = cb;
+            } else if (page != studio && backToHome != null) {
+                d.unregisterOnBackInvokedCallback((android.window.OnBackInvokedCallback) backToHome);
+                backToHome = null;
+            }
+        }
         home.setVisibility(page == home ? View.VISIBLE : View.GONE);
         studio.setVisibility(page == studio ? View.VISIBLE : View.GONE);
     }

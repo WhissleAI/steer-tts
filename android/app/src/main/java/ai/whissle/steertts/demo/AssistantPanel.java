@@ -49,7 +49,7 @@ final class AssistantPanel {
         readRow = ui.settingRow("Message readouts", "", read, v -> readoutOptions());
         read.setOnCheckedChangeListener((v, on) -> {
             prefs.setReadMessages(on);
-            if (on && !listenerOn()) openListenerSettings();
+            if (on && !listenerOn()) askListenerAccess(read);
             refresh();
         });
         card.addView(readRow);
@@ -59,7 +59,7 @@ final class AssistantPanel {
         callRow = ui.settingRow("Incoming calls", "", calls, null);
         calls.setOnCheckedChangeListener((v, on) -> {
             prefs.setAnnounceCalls(on);
-            if (on && !listenerOn()) openListenerSettings();
+            if (on && !listenerOn()) askListenerAccess(calls);
             refresh();
         });
         card.addView(callRow);
@@ -69,8 +69,7 @@ final class AssistantPanel {
         meetRow = ui.settingRow("Meeting reminders", "", meetings, v -> leadOptions());
         meetings.setOnCheckedChangeListener((v, on) -> {
             prefs.setAnnounceMeetings(on);
-            if (on && !MeetingAnnouncer.allowed(a))
-                a.requestPermissions(new String[] {Manifest.permission.READ_CALENDAR}, REQ_CALENDAR);
+            if (on && !MeetingAnnouncer.allowed(a)) askCalendarAccess();
             MeetingAnnouncer.reschedule(a);
             refresh();
         });
@@ -99,7 +98,11 @@ final class AssistantPanel {
             int m = prefs.leadMinutes();
             sub(meetRow, m + (m == 1 ? " minute" : " minutes") + " before each event", false);
         }
-        if (!access) {   // without access the switches cannot do anything
+        if (access && waitingFor != null) {   // back from the system screen with access: the switch that asked stays on
+            Switch s = waitingFor;
+            waitingFor = null;
+            s.setChecked(true);
+        } else if (!access && waitingFor == null) {   // without access the switches cannot do anything
             read.setChecked(false);
             calls.setChecked(false);
         }
@@ -117,6 +120,38 @@ final class AssistantPanel {
         TextView t = (TextView) row.getTag();
         t.setText(s);
         t.setTextColor(warn ? Ui.WARN : Ui.MUTED);
+    }
+
+    // ------------------------------------------------------------------ disclosures (before every system permission screen)
+    private Switch waitingFor;   // the switch that sent the user to the notification-access screen
+
+    /** What notification access is used for, in the app's words, before the system screen (Play's disclosure rule). */
+    private void askListenerAccess(Switch from) {
+        new AlertDialog.Builder(a)
+                .setTitle("Let SteerTTS read notifications?")
+                .setMessage("To read new messages aloud and say who is calling, SteerTTS needs notification access.\n\n"
+                        + "It reads the text of new notifications from the apps you choose and speaks it on this phone. "
+                        + "Nothing is stored, and nothing leaves your phone.\n\n"
+                        + "Next, Android shows its notification access screen: switch SteerTTS on there.")
+                .setPositiveButton("Continue", (d, w) -> {
+                    waitingFor = from;
+                    openListenerSettings();
+                })
+                .setNegativeButton("Not now", (d, w) -> from.setChecked(false))
+                .setOnCancelListener(d -> from.setChecked(false))
+                .show();
+    }
+
+    private void askCalendarAccess() {
+        new AlertDialog.Builder(a)
+                .setTitle("Let SteerTTS see your calendar?")
+                .setMessage("To announce meetings a few minutes before they start, SteerTTS reads the title, time and "
+                        + "place of your upcoming events. It stays on this phone and is never sent anywhere.")
+                .setPositiveButton("Continue",
+                        (d, w) -> a.requestPermissions(new String[] {Manifest.permission.READ_CALENDAR}, REQ_CALENDAR))
+                .setNegativeButton("Not now", (d, w) -> meetings.setChecked(false))
+                .setOnCancelListener(d -> meetings.setChecked(false))
+                .show();
     }
 
     private ComponentName listener() { return new ComponentName(a, ReadoutListener.class); }
