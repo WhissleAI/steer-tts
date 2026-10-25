@@ -53,6 +53,40 @@ std::vector<std::string> make_symbols() {
   for (int i = 0; i < 13; ++i) s.push_back("[reserved" + std::to_string(i) + "]");
   return s;
 }
+
+// markup._SENT_END: . ! ? and a space, but not after a title, a common abbreviation or an initial
+std::string sent_end_pattern() {
+  const char* abbr[] = {"Dr",  "Mr",  "Mrs", "Ms",  "Prof", "St",  "Jr",  "Sr",   "vs",  "No",  "Fig", "Vol", "pp",
+                        "approx", "Jan", "Feb", "Mar", "Apr", "Jun", "Jul", "Aug", "Sep", "Sept", "Oct", "Nov", "Dec"};
+  std::string p = "(?<=[.!?])";
+  for (const char* a : abbr) p += std::string("(?<!\\b") + a + "\\.)";
+  return p + R"((?<!\be\.g\.)(?<!\bi\.e\.)(?<!\b[ap]\.m\.)(?<!\b[A-Z]\.)\s+)";
+}
+
+// text._roman
+int roman_value(const std::string& r) {
+  auto v = [](char c) {
+    switch (c) {
+      case 'I': return 1;
+      case 'V': return 5;
+      case 'X': return 10;
+      case 'L': return 50;
+      case 'C': return 100;
+      case 'D': return 500;
+      default: return 1000;
+    }
+  };
+  int t = 0;
+  for (size_t i = 0; i < r.size(); ++i) t += (i + 1 < r.size() && v(r[i]) < v(r[i + 1])) ? -v(r[i]) : v(r[i]);
+  return t;
+}
+
+// str(int(s)) for a string of ASCII digits
+std::string int_str(const std::string& d) {
+  size_t i = 0;
+  while (i + 1 < d.size() && d[i] == '0') ++i;
+  return d.substr(i);
+}
 }  // namespace
 
 Frontend::Impl::Impl(const std::string& dir)
@@ -75,7 +109,7 @@ Frontend::Impl::Impl(const std::string& dir)
             R"x((<\s*(/?)\s*([A-Za-z_]+)(?:\s+prompt\s*=\s*"([^"]*)")?\s*>))x"
             R"x(|(\[\s*([A-Za-z_]+)(?:\s+([\d.]+)\s*(ms|s)?)?\s*\]))x",
             /*icase=*/true),
-      sent_end(&ucd, R"((?<=[.!?])\s+)") {
+      sent_end(&ucd, sent_end_pattern()) {
   ucd.load(dir + "/unicode.bin");
   symbols = make_symbols();
   for (size_t i = 0; i < symbols.size(); ++i) sym2id[symbols[i]] = static_cast<int>(i);
@@ -93,6 +127,107 @@ Frontend::Impl::Impl(const std::string& dir)
     for (char c : e.first) pat += c == '/' ? std::string("[ /]") : std::string(1, c);  // re.escape is a no-op here
     units.emplace_back(Regex(&ucd, "(\\d)\\s?" + pat + "\\b"), e.second);
   }
+  // text._pre
+  phone = Regex(&ucd, R"((?<![0-9-])(?:\(([0-9]{3})\)\s?|([0-9]{3})[-.])([0-9]{3})[-.]([0-9]{4})(?![0-9-]))");
+  time = Regex(&ucd, R"((?<![0-9:])\b([01]?[0-9]|2[0-3]):([0-5][0-9])(?!:[0-9])(?:\s?([AaPp])(?:\.[Mm]\.?|[Mm])(?![A-Za-z]))?)");
+  colon = Regex(&ucd, R"((?<=[0-9]):(?=[0-9]))");
+  ampm = Regex(&ucd, R"(\b([0-9]{1,2})\s?([AaPp])(?:\.[Mm]\.?|[Mm])(?![A-Za-z]))");
+  const char* ab[][2] = {
+      {R"(\bDr\.?(?=\s+[A-Z]))", "Doctor"},      {R"(\bMrs\.?(?=\s+[A-Z]))", "Missus"},
+      {R"(\bMr\.?(?=\s+[A-Z]))", "Mister"},      {R"(\bMs\.?(?=\s+[A-Z]))", "Mizz"},
+      {R"(\bProf\.?(?=\s+[A-Z]))", "Professor"}, {R"(\bSt\.?(?=\s+[A-Z]))", "Saint"},
+      {R"(\bJr\.)", "Junior"},                   {R"(\bSr\.)", "Senior"},
+      {R"(\bvs\.)", "versus"},                   {R"(\be\.g\.)", "for example"},
+      {R"(\bi\.e\.)", "that is"},               {R"(\betc\.(?=\s*[,;:!?)]|\s+[a-z]))", "et cetera"},
+      {R"(\betc\.)", "et cetera."},              {R"(\bapprox\.)", "approximately"},
+      {R"(\bNo\.(?=\s*[0-9]))", "number"},          {R"(\bFig\.(?=\s*[0-9]))", "figure"},
+      {R"(\bVol\.(?=\s*[0-9]))", "volume"},         {R"(\bpp\.(?=\s*[0-9]))", "pages"},
+      {R"(\bJan\.)", "January"},                 {R"(\bFeb\.)", "February"},
+      {R"(\bMar\.(?=\s*[0-9]))", "March"},          {R"(\bApr\.)", "April"},
+      {R"(\bJun\.(?=\s*[0-9]))", "June"},           {R"(\bJul\.(?=\s*[0-9]))", "July"},
+      {R"(\bAug\.)", "August"},                  {R"(\bSept?\.)", "September"},
+      {R"(\bOct\.)", "October"},                 {R"(\bNov\.)", "November"},
+      {R"(\bDec\.)", "December"}};
+  for (auto& a : ab) abbrev.emplace_back(Regex(&ucd, a[0]), a[1]);
+  deg_cf = Regex(&ucd, "([0-9])\\s?°\\s?([CF])(?![A-Za-z])");
+  deg = Regex(&ucd, "([0-9])\\s?°");
+  letter_amp = Regex(&ucd, R"(\b([A-Z])\s?&\s?([A-Z])\b)");
+  amp = Regex(&ucd, R"(\s*&\s*)");
+  num_comma = Regex(&ucd, R"(\b(thousand|million|billion|trillion),(?= [a-z]))");
+  tilde = Regex(&ucd, R"(~\s?(?=[0-9]))");
+  scale = Regex(&ucd, "([$£€]\\s?[0-9]+(?:\\.[0-9]+)?)\\s?([KkMmBb])n?\\b");
+  version = Regex(&ucd, R"((?<![0-9])[0-9]+(?:\.[0-9]+){2,}(?![0-9]))");
+  roman = Regex(&ucd,
+                R"(\b(Chapter|Part|Book|Volume|Act|Scene|Section|Article|Phase|Season|Episode|Level|Stage|Round)\s+)"
+                R"((?=[IVXLCDM])(M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))\b)");
+  ww = Regex(&ucd, R"(\bWW(II|I|1|2)\b)");
+  fraction = Regex(&ucd, R"((?<![0-9/])([1-9])/(10|[2-9])(?![0-9/]))");
+  num_hyphen = Regex(&ucd, R"((?<=[a-z])-(?=[a-z]))");
+}
+
+u32str Frontend::Impl::pre(const u32str& text0) const {
+  u32str t = phone.sub(text0, [](const Regex::Match& m, const u32str& s) {
+    u32str o;
+    for (int g = 1; g <= 4; ++g) {
+      if (!m.has(g)) continue;
+      if (!o.empty()) o += U", ";
+      u32str d = m.str(s, g);
+      for (size_t i = 0; i < d.size(); ++i) {
+        if (i) o += U' ';
+        o += d[i];
+      }
+    }
+    return o;
+  });
+  t = time.sub(t, [](const Regex::Match& m, const u32str& s) {
+    std::string h = N(m.str(s, 1)), mm = N(m.str(s, 2)), w = int_str(h);
+    if (mm != "00")
+      w += mm[0] == '0' ? " oh " + mm.substr(1) : " " + mm;
+    else if (!m.has(3))
+      w += (std::atoi(h.c_str()) > 12 || std::atoi(h.c_str()) == 0 || h[0] == '0') ? " hundred" : " o'clock";
+    if (m.has(3)) w += (s[m.caps[6]] == U'A' || s[m.caps[6]] == U'a') ? " ay em" : " pee em";
+    return A(w);
+  });
+  t = colon.sub(t, [](const Regex::Match&, const u32str&) { return u32str(U" "); });  // durations, ratios
+  t = ampm.sub(t, [](const Regex::Match& m, const u32str& s) {
+    char32_t a = s[m.caps[4]];
+    return A(int_str(N(m.str(s, 1))) + (a == U'A' || a == U'a' ? " ay em" : " pee em"));
+  });
+  for (auto& ab : abbrev) {
+    const std::string& w = ab.second;
+    t = ab.first.sub(t, [&](const Regex::Match&, const u32str&) { return A(w); });
+  }
+  t = deg_cf.sub(t, [](const Regex::Match& m, const u32str& s) {
+    return m.str(s, 1) + (s[m.caps[4]] == U'C' ? U" degrees Celsius" : U" degrees Fahrenheit");
+  });
+  t = deg.sub(t, [](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" degrees"; });
+  t = letter_amp.sub(t, [](const Regex::Match& m, const u32str& s) {
+    auto l = [&](int g) { return s[m.caps[2 * g]] == U'A' ? u32str(U"ay") : m.str(s, g); };
+    return l(1) + U" and " + l(2);
+  });
+  t = amp.sub(t, [](const Regex::Match&, const u32str&) { return u32str(U" and "); });
+  t = tilde.sub(t, [](const Regex::Match&, const u32str&) { return u32str(U"about "); });
+  t = scale.sub(t, [](const Regex::Match& m, const u32str& s) {
+    char32_t c = s[m.caps[4]];
+    return m.str(s, 1) + (c == U'K' || c == U'k' ? U" thousand" : c == U'M' || c == U'm' ? U" million" : U" billion");
+  });
+  t = version.sub(t, [](const Regex::Match& m, const u32str& s) { return replace_all(m.str(s, 0), U".", U" point "); });
+  t = roman.sub(t, [](const Regex::Match& m, const u32str& s) {
+    return m.str(s, 1) + U" " + A(std::to_string(roman_value(N(m.str(s, 2)))));
+  });
+  t = ww.sub(t, [](const Regex::Match& m, const u32str& s) {
+    u32str g = m.str(s, 1);
+    return u32str(U"World War ") + (g == U"II" || g == U"2" ? U"2" : U"1");
+  });
+  t = fraction.sub(t, [](const Regex::Match& m, const u32str& s) {
+    static const char* one[] = {"", "", "half", "third", "quarter", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"};
+    static const char* many[] = {"", "", "halves", "thirds", "quarters", "fifths", "sixths", "sevenths", "eighths", "ninths",
+                                 "tenths"};
+    u32str n = m.str(s, 1), d = m.str(s, 2);
+    int k = d == U"10" ? 10 : static_cast<int>(d[0] - U'0');
+    return n + U" " + A(n == U"1" ? one[k] : many[k]);
+  });
+  return t;
 }
 
 u32str Frontend::Impl::strip(const u32str& s) const {
@@ -136,7 +271,7 @@ std::string Frontend::Impl::num_float(const u32str& s) const {
 
 u32str Frontend::Impl::expand(const u32str& text0) const {
   const detail::Ucd& u = ucd;
-  u32str t = range.sub(text0, [](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" to " + m.str(s, 2); });
+  u32str t = range.sub(pre(text0), [](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" to " + m.str(s, 2); });
   t = by.sub(t, [](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" by " + m.str(s, 2); });
   t = compound.sub(t, [](const Regex::Match&, const u32str&) { return u32str(U" "); });
   t = currency.sub(t, [](const Regex::Match& m, const u32str& s) {
@@ -177,12 +312,18 @@ u32str Frontend::Impl::expand(const u32str& text0) const {
     std::string o;
     for (size_t i = 0; i < base.size(); ++i) {
       if (i) o += ' ';
-      o += base[i];
+      if (base[i] == 'A')
+        o += "ay";  // a lone "A" is the article
+      else
+        o += base[i];
     }
     if (g.back() == 's' && g.size() > 2) o += "'s";
     return A(o);
   });
-  return t;
+  // g2p_en's own number pass, without its hyphens ("seventy-two" goes to the neural guesser, "seventy two" does not)
+  t = g2p->numwords().normalize_numbers(t);
+  t = num_hyphen.sub(t, [](const Regex::Match&, const u32str&) { return u32str(U" "); });
+  return num_comma.sub(t, [](const Regex::Match& m, const u32str& s) { return m.str(s, 1); });  // no pause inside a number
 }
 
 u32str Frontend::Impl::normalize(const u32str& text0) const {

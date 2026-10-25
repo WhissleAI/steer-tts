@@ -218,6 +218,12 @@ struct st_front {
       *ws, *event;
   st_rx* units[15];
   const char* unit_words[15];
+  /* text._pre: phone numbers, clock times, abbreviations, degrees, "&", "$4.2M", versions, Roman numerals, fractions */
+  st_rx *phone, *time, *colon, *ampm, *deg_cf, *deg, *letter_amp, *amp, *tilde, *scale, *version, *roman, *ww, *fraction, *num_hyphen,
+      *num_comma;
+#define ST_N_ABBREV 29
+  st_rx* abbrev[ST_N_ABBREV];
+  const char* abbrev_words[ST_N_ABBREV];
   st_rx *emph, *token, *sent_end;   /* markup */
 };
 

@@ -31,7 +31,11 @@ PROSODY = {  # Synth.word_shift user units: pitch semitones, energy dB, dur fact
 }
 _TOKEN = re.compile(r'(<\s*(/?)\s*([A-Za-z_]+)(?:\s+prompt\s*=\s*"([^"]*)")?\s*>)'
                     r'|(\[\s*([A-Za-z_]+)(?:\s+([\d.]+)\s*(ms|s)?)?\s*\])', re.I)
-_SENT_END = re.compile(r"(?<=[.!?])\s+")
+# a sentence ends at . ! ? and a space, but not after a title, a common abbreviation or an initial ("Dr. Smith",
+# "e.g. this", "J. K. Rowling"): those would split one sentence into two segments, with a pause between
+_SENT_ABBREV = ["Dr", "Mr", "Mrs", "Ms", "Prof", "St", "Jr", "Sr", "vs", "No", "Fig", "Vol", "pp", "approx", "Jan", "Feb", "Mar", "Apr", "Jun", "Jul", "Aug", "Sep", "Sept", "Oct", "Nov", "Dec"]
+_SENT_END = re.compile(r"(?<=[.!?])" + "".join(rf"(?<!\b{a}\.)" for a in _SENT_ABBREV)
+                       + r"(?<!\be\.g\.)(?<!\bi\.e\.)(?<!\b[ap]\.m\.)(?<!\b[A-Z]\.)\s+")
 
 
 @dataclass

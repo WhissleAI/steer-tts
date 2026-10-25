@@ -88,6 +88,10 @@ void st_front_free(st_front* f) {
                   f->token,  f->sent_end};
   for (size_t k = 0; k < sizeof all / sizeof all[0]; ++k) st_rx_free(all[k]);
   for (int k = 0; k < 15; ++k) st_rx_free(f->units[k]);
+  st_rx* pre[] = {f->phone,   f->time,  f->colon, f->ampm, f->deg_cf, f->deg,      f->letter_amp, f->amp,       f->tilde,
+                  f->scale,   f->version, f->roman, f->ww,   f->fraction, f->num_hyphen, f->num_comma};
+  for (size_t k = 0; k < sizeof pre / sizeof pre[0]; ++k) st_rx_free(pre[k]);
+  for (int k = 0; k < ST_N_ABBREV; ++k) st_rx_free(f->abbrev[k]);
   for (int k = 0; k < ST_N_SYMBOLS; ++k) st_free(f->symbols[k]);
   ucd_free(&f->ucd);
   st_free(f);
@@ -113,6 +117,16 @@ st_front* st_front_load(const char* dir) {
   free(path);
   if (rc || make_symbols(f) || g2p_init(&f->g2p, dir, &f->ucd, f)) goto fail;
   const st_ucd* u = &f->ucd;
+  /* markup._SENT_END: . ! ? and a space, but not after a title, a common abbreviation or an initial */
+  static const char* sent_abbr[] = {"Dr",  "Mr",  "Mrs", "Ms",  "Prof", "St",  "Jr",  "Sr",   "vs",  "No",  "Fig", "Vol", "pp",
+                                    "approx", "Jan", "Feb", "Mar", "Apr", "Jun", "Jul", "Aug", "Sep", "Sept", "Oct", "Nov", "Dec"};
+  char sent_end[1024] = "(?<=[.!?])";
+  for (size_t k = 0; k < sizeof sent_abbr / sizeof sent_abbr[0]; ++k) {
+    strcat(sent_end, "(?<!\\b");
+    strcat(sent_end, sent_abbr[k]);
+    strcat(sent_end, "\\.)");
+  }
+  strcat(sent_end, "(?<!\\be\\.g\\.)(?<!\\bi\\.e\\.)(?<!\\b[ap]\\.m\\.)(?<!\\b[A-Z]\\.)\\s+");
   struct {
     st_rx** r;
     const char* p;
@@ -138,7 +152,23 @@ st_front* st_front_load(const char* dir) {
        "(<\\s*(/?)\\s*([A-Za-z_]+)(?:\\s+prompt\\s*=\\s*\"([^\"]*)\")?\\s*>)"
        "|(\\[\\s*([A-Za-z_]+)(?:\\s+([\\d.]+)\\s*(ms|s)?)?\\s*\\])",
        1},
-      {&f->sent_end, "(?<=[.!?])\\s+", 0},
+      {&f->sent_end, sent_end, 0},
+      {&f->phone, "(?<![0-9-])(?:\\(([0-9]{3})\\)\\s?|([0-9]{3})[-.])([0-9]{3})[-.]([0-9]{4})(?![0-9-])", 0},
+      {&f->time, "(?<![0-9:])\\b([01]?[0-9]|2[0-3]):([0-5][0-9])(?!:[0-9])(?:\\s?([AaPp])(?:\\.[Mm]\\.?|[Mm])(?![A-Za-z]))?", 0},
+      {&f->colon, "(?<=[0-9]):(?=[0-9])", 0},
+      {&f->ampm, "\\b([0-9]{1,2})\\s?([AaPp])(?:\\.[Mm]\\.?|[Mm])(?![A-Za-z])", 0},
+      {&f->deg_cf, "([0-9])\\s?\xc2\xb0\\s?([CF])(?![A-Za-z])", 0},
+      {&f->deg, "([0-9])\\s?\xc2\xb0", 0},
+      {&f->letter_amp, "\\b([A-Z])\\s?&\\s?([A-Z])\\b", 0},
+      {&f->amp, "\\s*&\\s*", 0},
+      {&f->tilde, "~\\s?(?=[0-9])", 0},
+      {&f->scale, "([$\xc2\xa3\xe2\x82\xac]\\s?[0-9]+(?:\\.[0-9]+)?)\\s?([KkMmBb])n?\\b", 0},
+      {&f->version, "(?<![0-9])[0-9]+(?:\\.[0-9]+){2,}(?![0-9])", 0},
+      {&f->roman, "\\b(Chapter|Part|Book|Volume|Act|Scene|Section|Article|Phase|Season|Episode|Level|Stage|Round)\\s+(?=[IVXLCDM])(M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))\\b", 0},
+      {&f->ww, "\\bWW(II|I|1|2)\\b", 0},
+      {&f->fraction, "(?<![0-9/])([1-9])/(10|[2-9])(?![0-9/])", 0},
+      {&f->num_hyphen, "(?<=[a-z])-(?=[a-z])", 0},
+      {&f->num_comma, "\\b(thousand|million|billion|trillion),(?= [a-z])", 0},
   };
   for (size_t k = 0; k < sizeof t / sizeof t[0]; ++k)
     if (!(*t[k].r = st_rx_compile(u, t[k].p, t[k].icase))) goto fail;
@@ -159,6 +189,41 @@ st_front* st_front_load(const char* dir) {
     strcat(pat, "\\b");
     f->unit_words[k] = units[order[k]][1];
     if (!(f->units[k] = st_rx_compile(u, pat, 0))) goto fail;
+  }
+  static const char* abbrev[ST_N_ABBREV][2] = {  /* text._ABBREV */
+      {"\\bDr\\.?(?=\\s+[A-Z])", "Doctor"},
+      {"\\bMrs\\.?(?=\\s+[A-Z])", "Missus"},
+      {"\\bMr\\.?(?=\\s+[A-Z])", "Mister"},
+      {"\\bMs\\.?(?=\\s+[A-Z])", "Mizz"},
+      {"\\bProf\\.?(?=\\s+[A-Z])", "Professor"},
+      {"\\bSt\\.?(?=\\s+[A-Z])", "Saint"},
+      {"\\bJr\\.", "Junior"},
+      {"\\bSr\\.", "Senior"},
+      {"\\bvs\\.", "versus"},
+      {"\\be\\.g\\.", "for example"},
+      {"\\bi\\.e\\.", "that is"},
+      {"\\betc\\.(?=\\s*[,;:!?)]|\\s+[a-z])", "et cetera"},
+      {"\\betc\\.", "et cetera."},
+      {"\\bapprox\\.", "approximately"},
+      {"\\bNo\\.(?=\\s*[0-9])", "number"},
+      {"\\bFig\\.(?=\\s*[0-9])", "figure"},
+      {"\\bVol\\.(?=\\s*[0-9])", "volume"},
+      {"\\bpp\\.(?=\\s*[0-9])", "pages"},
+      {"\\bJan\\.", "January"},
+      {"\\bFeb\\.", "February"},
+      {"\\bMar\\.(?=\\s*[0-9])", "March"},
+      {"\\bApr\\.", "April"},
+      {"\\bJun\\.(?=\\s*[0-9])", "June"},
+      {"\\bJul\\.(?=\\s*[0-9])", "July"},
+      {"\\bAug\\.", "August"},
+      {"\\bSept?\\.", "September"},
+      {"\\bOct\\.", "October"},
+      {"\\bNov\\.", "November"},
+      {"\\bDec\\.", "December"},
+  };
+  for (int k = 0; k < ST_N_ABBREV; ++k) {
+    f->abbrev_words[k] = abbrev[k][1];
+    if (!(f->abbrev[k] = st_rx_compile(u, abbrev[k][0], 0))) goto fail;
   }
   return f;
 fail:
@@ -275,6 +340,7 @@ static void r_decimal(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o
 static void r_long_digits(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
   num_int(x, (const st_front*)ud, s + m->start, m->end - m->start, 0, o);
 }
+static void put_letter(fx* x, st_u32s* o, u32 c);
 static void r_acronym(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
   const st_front* f = (const st_front*)ud;
   char g[8], low[8];  /* [A-Z]{2,5}s? : at most 6 ascii characters */
@@ -292,7 +358,7 @@ static void r_acronym(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o
   while (b > 0 && g[b - 1] == 's') --b;  /* rstrip("s") */
   for (int i = 0; i < b; ++i) {
     if (i) u32s_push(x, o, ' ');
-    u32s_push(x, o, (unsigned char)g[i]);
+    put_letter(x, o, (unsigned char)g[i]);
   }
   if (g[n - 1] == 's' && n > 2) u32s_ascii(x, o, "'s");
 }
@@ -302,8 +368,143 @@ static void r_camel_acr(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s*
   for (int i = m->caps[2]; i < m->caps[3]; ++i) u32s_push(x, o, s[i]);
 }
 
+/* ------------------------------------------------------------------ text._pre */
+/* str(int(s)) for ASCII digits */
+static void put_int(fx* x, st_u32s* o, const u32* s, int n) {
+  int i = 0;
+  while (i + 1 < n && s[i] == '0') ++i;
+  u32s_put(x, o, s + i, n - i);
+}
+static int ascii_int(const u32* s, int n) {
+  int v = 0;
+  for (int i = 0; i < n; ++i) v = 10 * v + (int)(s[i] - '0');
+  return v;
+}
+static void r_phone(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  int first = 1;
+  for (int g = 1; g <= 4; ++g) {
+    if (!rxm_has(m, g)) continue;
+    if (!first) u32s_ascii(x, o, ", ");
+    first = 0;
+    const u32* d = rxm_ptr(m, s, g);
+    for (int i = 0; i < rxm_len(m, g); ++i) {
+      if (i) u32s_push(x, o, ' ');
+      u32s_push(x, o, d[i]);
+    }
+  }
+}
+static void put_ampm(fx* x, st_u32s* o, u32 c) { u32s_ascii(x, o, c == 'A' || c == 'a' ? " ay em" : " pee em"); }
+static void r_time(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  const u32 *h = rxm_ptr(m, s, 1), *mm = rxm_ptr(m, s, 2);
+  int hn = rxm_len(m, 1), hv = ascii_int(h, hn);
+  put_int(x, o, h, hn);
+  if (mm[0] != '0' || mm[1] != '0') {
+    if (mm[0] == '0') {
+      u32s_ascii(x, o, " oh ");
+      u32s_push(x, o, mm[1]);
+    } else {
+      u32s_push(x, o, ' ');
+      u32s_put(x, o, mm, 2);
+    }
+  } else if (!rxm_has(m, 3)) {
+    u32s_ascii(x, o, hv > 12 || hv == 0 || h[0] == '0' ? " hundred" : " o'clock");
+  }
+  if (rxm_has(m, 3)) put_ampm(x, o, s[m->caps[6]]);
+}
+static void r_ampm(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  put_int(x, o, rxm_ptr(m, s, 1), rxm_len(m, 1));
+  put_ampm(x, o, s[m->caps[4]]);
+}
+static void r_words(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) { u32s_ascii(x, o, (const char*)ud); }
+static void r_deg_cf(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  rxm_put(x, o, m, s, 1);
+  u32s_ascii(x, o, s[m->caps[4]] == 'C' ? " degrees Celsius" : " degrees Fahrenheit");
+}
+static void r_deg(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  rxm_put(x, o, m, s, 1);
+  u32s_ascii(x, o, " degrees");
+}
+static void put_letter(fx* x, st_u32s* o, u32 c) {  /* a lone "A" is the article: spell it "ay" */
+  if (c == 'A')
+    u32s_ascii(x, o, "ay");
+  else
+    u32s_push(x, o, c);
+}
+static void r_letter_amp(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  put_letter(x, o, s[m->caps[2]]);
+  u32s_ascii(x, o, " and ");
+  put_letter(x, o, s[m->caps[4]]);
+}
+static void r_scale(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  u32 c = s[m->caps[4]];
+  rxm_put(x, o, m, s, 1);
+  u32s_ascii(x, o, c == 'K' || c == 'k' ? " thousand" : c == 'M' || c == 'm' ? " million" : " billion");
+}
+static void r_version(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  for (int i = m->start; i < m->end; ++i) {
+    if (s[i] == '.')
+      u32s_ascii(x, o, " point ");
+    else
+      u32s_push(x, o, s[i]);
+  }
+}
+static int roman_digit(u32 c) {
+  switch (c) {
+    case 'I': return 1;
+    case 'V': return 5;
+    case 'X': return 10;
+    case 'L': return 50;
+    case 'C': return 100;
+    case 'D': return 500;
+    default: return 1000;
+  }
+}
+static void r_roman(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  const u32* r = rxm_ptr(m, s, 2);
+  int n = rxm_len(m, 2), v = 0;
+  for (int i = 0; i < n; ++i) v += (i + 1 < n && roman_digit(r[i]) < roman_digit(r[i + 1])) ? -roman_digit(r[i]) : roman_digit(r[i]);
+  char b[16];
+  snprintf(b, sizeof b, " %d", v);
+  rxm_put(x, o, m, s, 1);
+  u32s_ascii(x, o, b);
+}
+static void r_ww(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  int n = rxm_len(m, 1);
+  u32 c = s[m->caps[2]];
+  u32s_ascii(x, o, (n == 2 || c == '2') ? "World War 2" : "World War 1");
+}
+static void r_fraction(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  static const char* one[] = {"", "", "half", "third", "quarter", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"};
+  static const char* many[] = {"", "", "halves", "thirds", "quarters", "fifths", "sixths", "sevenths", "eighths", "ninths", "tenths"};
+  u32 nu = s[m->caps[2]];
+  int k = rxm_len(m, 2) == 2 ? 10 : (int)(s[m->caps[4]] - '0');
+  u32s_push(x, o, nu);
+  u32s_push(x, o, ' ');
+  u32s_ascii(x, o, nu == '1' ? one[k] : many[k]);
+}
+static void r_group1(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) { rxm_put(x, o, m, s, 1); }
+
+static void pre(fx* x, const st_front* f, st_u32s* t) {
+  sub_inplace(x, f->phone, t, r_phone, NULL);
+  sub_inplace(x, f->time, t, r_time, NULL);
+  sub_inplace(x, f->colon, t, repl_space, NULL);  /* durations (1:23:45), ratios (3:2) */
+  sub_inplace(x, f->ampm, t, r_ampm, NULL);
+  for (int k = 0; k < ST_N_ABBREV; ++k) sub_inplace(x, f->abbrev[k], t, r_words, (void*)f->abbrev_words[k]);
+  sub_inplace(x, f->deg_cf, t, r_deg_cf, NULL);
+  sub_inplace(x, f->deg, t, r_deg, NULL);
+  sub_inplace(x, f->letter_amp, t, r_letter_amp, NULL);
+  sub_inplace(x, f->amp, t, r_words, (void*)" and ");
+  sub_inplace(x, f->tilde, t, r_words, (void*)"about ");
+  sub_inplace(x, f->scale, t, r_scale, NULL);
+  sub_inplace(x, f->version, t, r_version, NULL);
+  sub_inplace(x, f->roman, t, r_roman, NULL);
+  sub_inplace(x, f->ww, t, r_ww, NULL);
+  sub_inplace(x, f->fraction, t, r_fraction, NULL);
+}
+
 static void expand(fx* x, const st_front* f, st_u32s* t) {
   void* F = (void*)f;
+  pre(x, f, t);
   sub_inplace(x, f->range, t, r_range, NULL);
   sub_inplace(x, f->by, t, r_by, NULL);
   sub_inplace(x, f->compound, t, repl_space, NULL);
@@ -316,6 +517,12 @@ static void expand(fx* x, const st_front* f, st_u32s* t) {
   sub_inplace(x, f->long_digits, t, r_long_digits, F);
   sub_inplace(x, f->camel_acr, t, r_camel_acr, NULL);
   sub_inplace(x, f->acronym, t, r_acronym, F);
+  /* g2p_en's own number pass, without its hyphens ("seventy-two" goes to the neural guesser, "seventy two" does not) */
+  st_u32s nn = {0};
+  nw_normalize_numbers(x, &f->g2p.nw, t->p, t->n, &nn);
+  u32s_move(t, &nn);
+  sub_inplace(x, f->num_hyphen, t, repl_space, NULL);
+  sub_inplace(x, f->num_comma, t, r_group1, NULL);  /* no pause inside a number */
 }
 
 static void r_quote(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {

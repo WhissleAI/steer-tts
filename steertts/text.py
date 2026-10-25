@@ -52,11 +52,78 @@ def _num(s, to="cardinal"):
     return num2words(s, to=to).replace("-", " ").replace(",", "")
 
 
+# ---- what readers meet in real text (messages, documents, books): applied first, in this order -----------------------
+_ABBREV = [  # (pattern, words); a title before a name keeps its meaning without the period ("Dr Smith")
+    (r"\bDr\.?(?=\s+[A-Z])", "Doctor"), (r"\bMrs\.?(?=\s+[A-Z])", "Missus"), (r"\bMr\.?(?=\s+[A-Z])", "Mister"),
+    (r"\bMs\.?(?=\s+[A-Z])", "Mizz"), (r"\bProf\.?(?=\s+[A-Z])", "Professor"), (r"\bSt\.?(?=\s+[A-Z])", "Saint"),
+    (r"\bJr\.", "Junior"), (r"\bSr\.", "Senior"), (r"\bvs\.", "versus"), (r"\be\.g\.", "for example"),
+    (r"\bi\.e\.", "that is"), (r"\betc\.(?=\s*[,;:!?)]|\s+[a-z])", "et cetera"), (r"\betc\.", "et cetera."),
+    (r"\bapprox\.", "approximately"), (r"\bNo\.(?=\s*[0-9])", "number"), (r"\bFig\.(?=\s*[0-9])", "figure"),
+    (r"\bVol\.(?=\s*[0-9])", "volume"), (r"\bpp\.(?=\s*[0-9])", "pages"), (r"\bJan\.", "January"), (r"\bFeb\.", "February"),
+    (r"\bMar\.(?=\s*[0-9])", "March"), (r"\bApr\.", "April"), (r"\bJun\.(?=\s*[0-9])", "June"), (r"\bJul\.(?=\s*[0-9])", "July"),
+    (r"\bAug\.", "August"), (r"\bSept?\.", "September"), (r"\bOct\.", "October"), (r"\bNov\.", "November"),
+    (r"\bDec\.", "December")]
+_PHONE = r"(?<![0-9-])(?:\(([0-9]{3})\)\s?|([0-9]{3})[-.])([0-9]{3})[-.]([0-9]{4})(?![0-9-])"  # (555) 123-4567, 555-123-4567
+_TIME = r"(?<![0-9:])\b([01]?[0-9]|2[0-3]):([0-5][0-9])(?!:[0-9])(?:\s?([AaPp])(?:\.[Mm]\.?|[Mm])(?![A-Za-z]))?"  # 9:55 AM (not 0:13:54)
+_AMPM = r"\b([0-9]{1,2})\s?([AaPp])(?:\.[Mm]\.?|[Mm])(?![A-Za-z])"                     # 7am, 2 PM
+_ROMAN = (r"\b(Chapter|Part|Book|Volume|Act|Scene|Section|Article|Phase|Season|Episode|Level|Stage|Round)\s+"
+          r"(?=[IVXLCDM])(M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))\b")
+_FRACTION = r"(?<![0-9/])([1-9])/(10|[2-9])(?![0-9/])"                              # 3/4, 1/2 (not dates like 1/2/2020)
+_DENOM = {"2": ("half", "halves"), "3": ("third", "thirds"), "4": ("quarter", "quarters"), "5": ("fifth", "fifths"),
+          "6": ("sixth", "sixths"), "7": ("seventh", "sevenths"), "8": ("eighth", "eighths"), "9": ("ninth", "ninths"),
+          "10": ("tenth", "tenths")}
+_SCALE = {"k": "thousand", "m": "million", "b": "billion"}
+
+
+def _normalize_numbers(text):
+    from g2p_en.expand import normalize_numbers
+    return normalize_numbers(text)
+
+
+def _roman(s):
+    v = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+    return sum(-v[c] if i + 1 < len(s) and v[c] < v[s[i + 1]] else v[c] for i, c in enumerate(s))
+
+
+def _time(m):
+    h, mm, ap = m.group(1), m.group(2), m.group(3)
+    w = str(int(h))
+    if mm != "00":
+        w += (" oh " + mm[1]) if mm[0] == "0" else " " + mm
+    elif not ap:
+        w += " hundred" if int(h) > 12 or int(h) == 0 or h[0] == "0" else " o'clock"
+    return w + ("" if not ap else " ay em" if ap in "Aa" else " pee em")
+
+
+def _pre(text: str) -> str:
+    """Read the way people write: phone numbers digit by digit, clock times, titles and abbreviations, degrees, "&",
+    "$4.2M", version numbers, chapter numbers in Roman numerals, simple fractions, "~5"."""
+    text = re.sub(_PHONE, lambda m: ", ".join(" ".join(g) for g in m.groups() if g), text)
+    text = re.sub(_TIME, _time, text)
+    text = re.sub(r"(?<=[0-9]):(?=[0-9])", " ", text)  # what is left: durations (1:23:45), ratios (3:2)
+    text = re.sub(_AMPM, lambda m: str(int(m.group(1))) + (" ay em" if m.group(2) in "Aa" else " pee em"), text)
+    for pat, words in _ABBREV:
+        text = re.sub(pat, words, text)
+    text = re.sub(r"([0-9])\s?°\s?([CF])(?![A-Za-z])", lambda m: m.group(1) + " degrees " +
+                  ("Celsius" if m.group(2) == "C" else "Fahrenheit"), text)
+    text = re.sub(r"([0-9])\s?°", r"\1 degrees", text)
+    text = re.sub(r"\b([A-Z])\s?&\s?([A-Z])\b", lambda m: " and ".join("ay" if c == "A" else c for c in m.groups()), text)
+    text = re.sub(r"\s*&\s*", " and ", text)
+    text = re.sub(r"~\s?(?=[0-9])", "about ", text)
+    text = re.sub(r"([$£€]\s?[0-9]+(?:\.[0-9]+)?)\s?([KkMmBb])n?\b", lambda m: m.group(1) + " " + _SCALE[m.group(2).lower()], text)
+    text = re.sub(r"(?<![0-9])[0-9]+(?:\.[0-9]+){2,}(?![0-9])", lambda m: m.group(0).replace(".", " point "), text)  # 2.0.1
+    text = re.sub(_ROMAN, lambda m: m.group(1) + " " + str(_roman(m.group(2))), text)
+    text = re.sub(r"\bWW(II|I|1|2)\b", lambda m: "World War " + ("2" if m.group(1) in ("II", "2") else "1"), text)
+    text = re.sub(_FRACTION, lambda m: m.group(1) + " " + _DENOM[m.group(2)][m.group(1) != "1"], text)
+    return text
+
+
 def _expand(text: str) -> str:
     """Spell out what g2p_en gets wrong (CV3-Eval en: 0.6 + 0.6 WER points of 3.3 came from these).
     g2p_en looks words up in CMUdict and sends anything else to a neural guesser - including every hyphenated
     compound ("pay-per-view" -> P EY V ER P IY, "low-tech" -> L OW T CH EH) and "4x4" / "Il-76" / "km/h". It only
     expands bare integers, reading "2,243" as "two" + "two hundred forty three"."""
+    text = _pre(text)
     text = re.sub(r"(\d)\s*[-–]\s*(\d)", r"\1 to \2", text)                     # ranges: 1990-1995, 10-20
     text = re.sub(r"(\d+)\s*[x×]\s*(\d+)", r"\1 by \2", text)                   # 4x4, 1920x1080
     text = re.sub(r"(?<=[A-Za-z0-9])[-‐/](?=[A-Za-z0-9])", " ", text)           # compounds: pay-per-view, Il-76, and/or
@@ -76,8 +143,13 @@ def _expand(text: str) -> str:
     text = re.sub(r"(?<=[a-z])([A-Z]{2,5}s?)\b", r" \1", text)   # a word ending in capitals: SteerTTS -> Steer TTS, macOS -> mac OS
     cmu = _g2p().cmu  # acronyms CMUdict does not know (IOC, BBC): letter by letter; NASA, UNESCO keep their entry
     text = re.sub(r"\b[A-Z]{2,5}s?\b", lambda m: m.group(0) if m.group(0).lower() in cmu
-                  else " ".join(m.group(0).rstrip("s")) + ("'s" if m.group(0).endswith("s") and len(m.group(0)) > 2 else ""), text)
-    return text
+                  else " ".join("ay" if c == "A" else c for c in m.group(0).rstrip("s"))  # a lone "A" is the article
+                  + ("'s" if m.group(0).endswith("s") and len(m.group(0)) > 2 else ""), text)
+    # what g2p_en's own number pass would do, but without its hyphens: "seventy-two" is one unknown word to g2p_en and
+    # goes to the neural guesser ("S EH V AH N T EH F Y UW"); "seventy two" is two dictionary words
+    text = _normalize_numbers(text)
+    text = re.sub(r"(?<=[a-z])-(?=[a-z])", " ", text)
+    return re.sub(r"\b(thousand|million|billion|trillion),(?= [a-z])", r"\1", text)  # no pause inside a number
 
 
 def normalize(text: str) -> str:
