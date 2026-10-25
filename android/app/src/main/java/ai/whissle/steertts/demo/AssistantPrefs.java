@@ -17,6 +17,7 @@ final class AssistantPrefs {
     static final int PRIVATE = 0, PRIVATE_OR_SCREEN_OFF = 1, ANY_TIME = 2;
     static final String[] WHEN_LABELS = {"Headphones or car only", "Headphones, car, or screen off",
             "Any time (not with the ringer off)"};
+    static final String[] WHEN_SHORT = {"Headphones or car", "Headphones, car or screen off", "Any time"};
     static final int[] LEAD_MINUTES = {1, 2, 5, 10, 15};
 
     /** Read by default: messaging apps. Any other app that posts a message-like notification can be switched on. */

@@ -29,17 +29,30 @@ android {
         applicationId "ai.whissle.steertts.demo"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.2.0"
+        versionCode 2
+        versionName "1.3.0"
         ndk { abiFilters "arm64-v8a" }
         externalNativeBuild {
             cmake { arguments "-DANDROID_STL=none" }
         }
     }
+    // Release key from ~/.gradle/gradle.properties (STEERTTS_STORE_FILE, ..._STORE_PASSWORD, ..._KEY_ALIAS,
+    // ..._KEY_PASSWORD); without them the release build is signed with the debug key. Updates to an installed app must
+    // be signed with the same key, so keep the keystore backed up.
+    signingConfigs {
+        if (project.hasProperty("STEERTTS_STORE_FILE")) {
+            release {
+                storeFile file(STEERTTS_STORE_FILE)
+                storePassword STEERTTS_STORE_PASSWORD
+                keyAlias STEERTTS_KEY_ALIAS
+                keyPassword STEERTTS_KEY_PASSWORD
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug   // a demo: installable without a release key
+            signingConfig project.hasProperty("STEERTTS_STORE_FILE") ? signingConfigs.release : signingConfigs.debug
         }
     }
     externalNativeBuild {
@@ -50,6 +63,11 @@ android {
     }
     sourceSets {
         main { assets.srcDirs += modelAssets }
+    }
+    packaging {
+        // compressed and extracted at install: AGP 8.2 aligns stored native libraries to 4 KB only, which phones with
+        // 16 KB pages (Android 15+) refuse to map from the APK ("app isn't 16 KB compatible")
+        jniLibs { useLegacyPackaging true }
     }
     androidResources {
         noCompress += ["safetensors", "bin", "json", "tsv", "txt"]   // copied once at first start, faster uncompressed

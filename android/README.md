@@ -10,6 +10,11 @@ cd android && ./gradlew assembleRelease      # or: -PsteerttsModel=/path/to/stee
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
+The release build is signed with the key named in `~/.gradle/gradle.properties` (`STEERTTS_STORE_FILE`,
+`STEERTTS_STORE_PASSWORD`, `STEERTTS_KEY_ALIAS`, `STEERTTS_KEY_PASSWORD`), else with the debug key. Phones only update an
+installed app from an APK signed with the same key: switching keys means uninstalling first. The native library is
+stored compressed (extracted at install), so the APK also installs on phones with 16 KB memory pages.
+
 Needs the Android SDK (platform 34), NDK 27.1.12297006 and CMake 3.22.1 (Android Studio's SDK manager), and a JDK
 Gradle 8.2 runs on (17 to 20). The APK is arm64-v8a only, 13.5 MB, of which 12.6 MB is the model; it is unpacked to
 app storage on first start.
@@ -35,7 +40,9 @@ grants on the app's screen:
 
 `Announcer` is the shared voice: its own engine (closed after two idle minutes), a sentence at a time, at most 8 s
 ahead of playback, other audio ducked. `ContextStyler` styles each utterance (a call is announced as an alert, late at
-night softer). adb hooks for testing, besides the ones above:
+night softer). For demo videos (screen recorders cannot capture an assistant's voice), a debug build copies every utterance it
+plays to `files/tap/<epoch ms>.f32` while that directory exists (`adb shell run-as ai.whissle.steertts.demo mkdir -p
+files/tap`), to be laid back under the recording. adb hooks for testing, besides the ones above:
 
 ```bash
 adb shell cmd notification allow_listener ai.whissle.steertts.demo/ai.whissle.steertts.demo.ReadoutListener

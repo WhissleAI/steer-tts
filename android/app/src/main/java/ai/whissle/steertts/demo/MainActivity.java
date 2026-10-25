@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,13 +15,15 @@ import android.os.Process;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
@@ -85,8 +86,7 @@ public class MainActivity extends Activity {
             if (i.getBooleanExtra("speaking", false)) {
                 try {
                     Style s = Style.fromJson(new JSONObject(i.getStringExtra("style")));
-                    String who = i.getStringExtra("caller");
-                    showApplied(s, "System TTS" + (who != null ? " for " + who : "") + ", " + i.getStringExtra("voice"));
+                    showApplied(s, who(i.getStringExtra("caller"), i.getStringExtra("source")), i.getStringExtra("text"));
                 } catch (Exception ignored) {
                 }
             } else {
@@ -100,6 +100,7 @@ public class MainActivity extends Activity {
         base = Style.load(this);
         buildUi();
         showStyle(base, false);
+        Player.initTap(this);
         player = new Player();
         IntentFilter f = new IntentFilter(SteerTtsService.ACTION_STYLE);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(styleReceiver, f, Context.RECEIVER_NOT_EXPORTED);
@@ -111,7 +112,7 @@ public class MainActivity extends Activity {
                 long t0 = System.nanoTime();
                 modelDir = SteerTTS.installModel(this);
                 engine();
-                say(String.format(Locale.US, "Ready: model loaded in %.0f ms, %d threads.", ms(t0), tts.threads()));
+                say(String.format(Locale.US, "Ready · offline · loaded in %.0f ms", ms(t0)));
                 String[] t = tts.tags();
                 runOnUiThread(() -> {
                     tags = t;
@@ -191,7 +192,7 @@ public class MainActivity extends Activity {
         SteerTTS e = engine();
         Style s = ContextStyler.decide(this, baseStyle, text, getPackageName());
         String voice = resolveVoice(e, s.voice);
-        runOnUiThread(() -> showApplied(s, "This app, " + voice));
+        runOnUiThread(() -> showApplied(s, "SteerTTS", text.replaceAll("<[^>]+>|\\[[^]]*]|\\*", "")));
         final long t0 = System.nanoTime();
         final double[] first = {-1};
         final long[] samples = {0};
@@ -208,7 +209,8 @@ public class MainActivity extends Activity {
                     "%s: %.2f s of audio, first sound after %.0f ms, rendered in %.0f ms (%.1fx real time), %d threads",
                     voice, audioS, first[0], total, audioS * 1000 / total, e.threads());
             Log.i(TAG, "speak " + r + " [" + s.reason + "]");
-            say(r);
+            say(String.format(Locale.US, "First sound in %.0f ms · rendered %.0f× faster than real time", first[0],
+                    audioS * 1000 / total));
         } catch (RuntimeException ex) {
             say("Error: " + ex.getMessage());
         }
@@ -308,12 +310,31 @@ public class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------------ UI
+    // Two pages: home (try it, what is being said now, the assistant's switches; fits one screen) and voice & style
+    // (voice, style tag, the 12 controls, threads and benchmark; scrolls). Back returns home.
+
+    private static final String[][] SAMPLES = {
+            {"Hello", "Hi! I'm SteerTTS, a voice that runs entirely on your phone. No internet needed."},
+            {"Whisper", "Can I tell you a secret? <whisper>I'm running on this phone, offline.</whisper>"},
+            {"Emphasis", "This is *really* important. [pause 300ms] Please read it twice."},
+            {"Question", "Are you free for coffee at four?"}};
+
+    private FrameLayout pages;
+    private View home, studio;
+    private TextView nowLabel, nowText, nowWhy, femaleChip, maleChip;
+    private Ui u;
+
     private void say(String s) { runOnUiThread(() -> status.setText(s)); }
 
-    /** Moves the sliders to a style used for speech and says why; returnToBase() moves them back. */
-    private void showApplied(Style s, String who) {
+    /** Shows a style used for speech: on home what and why, on voice & style the sliders; returnToBase() undoes. */
+    private void showApplied(Style s, String who, String text) {
         ui.removeCallbacksAndMessages(null);
         showingApplied = true;
+        nowLabel.setText("Now speaking · " + who);
+        nowLabel.setTextColor(Ui.ACCENT);
+        if (text != null) nowText.setText("“" + text.trim() + "”");
+        nowWhy.setText(s.reason);
+        nowWhy.setVisibility(View.VISIBLE);
         styleNote.setText("Speaking: " + who + "\n" + s.reason);
         showStyle(s, true);
     }
@@ -321,9 +342,25 @@ public class MainActivity extends Activity {
     private void returnToBase(long delayMs) {
         ui.postDelayed(() -> {
             showingApplied = false;
-            styleNote.setText("Your settings (drag to change; system speech starts from these)");
+            if (nowLabel.getText().toString().startsWith("Now speaking"))
+                nowLabel.setText(nowLabel.getText().toString().replace("Now speaking", "Last spoken"));
+            nowLabel.setTextColor(Ui.MUTED);
+            styleNote.setText("Your settings: everything SteerTTS says starts from these");
             showStyle(base, true);
         }, delayMs);
+    }
+
+    /** "WhatsApp", "Meeting reminder", "Maps (system voice)" for a broadcast's caller and source. */
+    private String who(String caller, String source) {
+        if ("calendar".equals(caller)) return "Meeting reminder";
+        if ("read-aloud".equals(caller)) return "Read aloud";
+        if (caller == null || caller.equals(getPackageName())) return "SteerTTS";
+        String name = caller;
+        try {
+            name = getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(caller, 0)).toString();
+        } catch (Exception ignored) {
+        }
+        return "assistant".equals(source) ? name : name + " (system voice)";
     }
 
     private void showStyle(Style s, boolean animate) {
@@ -343,6 +380,12 @@ public class MainActivity extends Activity {
 
     private void saveBase() {
         base.save(this);
+        showVoiceChips();
+    }
+
+    private void showVoiceChips() {
+        u.select(femaleChip, base.voice == null || "female".equals(base.voice));
+        u.select(maleChip, "male".equals(base.voice));
     }
 
     private void fillVoicesAndTags() {
@@ -366,99 +409,198 @@ public class MainActivity extends Activity {
     }
 
     private void buildUi() {
-        int pad = dp(16);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(pad, pad * 2, pad, pad);
+        u = new Ui(this);
+        home = buildHome();
+        studio = buildStudio();
+        pages = new FrameLayout(this);
+        pages.setBackgroundColor(Ui.BG);
+        pages.addView(home);
+        pages.addView(studio);
+        studio.setVisibility(View.GONE);
+        setContentView(pages);
+        showVoiceChips();
+    }
 
-        TextView title = new TextView(this);
-        title.setText("SteerTTS on device");
-        title.setTextSize(22);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        root.addView(title);
-        assistant = new AssistantPanel(this);
+    private void showPage(View page) {
+        home.setVisibility(page == home ? View.VISIBLE : View.GONE);
+        studio.setVisibility(page == studio ? View.VISIBLE : View.GONE);
+    }
+
+    @Override public void onBackPressed() {
+        if (studio.getVisibility() == View.VISIBLE) showPage(home);
+        else super.onBackPressed();
+    }
+
+    private void speakInput() {
+        String text = input.getText().toString();
+        Style s = base.copy();
+        say("Speaking…");
+        engineThread.post(() -> speak(text, s));
+    }
+
+    private void stopAll() {
+        if (tts != null) tts.cancel();
+        player.flush();
+        Announcer.get(this).stop();   // readouts and read aloud too
+        say("Stopped.");
+    }
+
+    private View buildHome() {
+        LinearLayout root = u.column();
+        root.setPadding(u.dp(16), u.dp(20), u.dp(16), u.dp(16));
+
+        LinearLayout head = u.row();
+        LinearLayout titles = u.column();
+        titles.addView(u.text("SteerTTS", 28, Ui.INK, true));
+        titles.addView(u.text("Expressive voice, fully on Android", 14, Ui.MUTED, false));
+        head.addView(titles, Ui.weight(1));
+        TextView studioBtn = u.pill("Voice & style", false, v -> showPage(studio));
+        head.addView(studioBtn);
+        root.addView(head);
+
+        // try it
+        LinearLayout tryCard = u.card();
+        tryCard.addView(u.label("Try it"));
+        input = new EditText(this);
+        input.setText(SAMPLES[0][1]);
+        input.setTextSize(16);
+        input.setTextColor(Ui.INK);
+        input.setMinLines(2);
+        input.setMaxLines(3);
+        input.setGravity(Gravity.TOP);
+        input.setBackground(Ui.round(Ui.BG, u.dp(14)));
+        input.setPadding(u.dp(12), u.dp(10), u.dp(12), u.dp(10));
+        tryCard.addView(input, Ui.matchWrap());
+
+        HorizontalScrollView sampleScroll = new HorizontalScrollView(this);
+        sampleScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout samples = u.row();
+        samples.setPadding(0, u.dp(10), 0, u.dp(4));
+        for (String[] smp : SAMPLES)
+            samples.addView(u.chip(smp[0], v -> {
+                input.setText(smp[1]);
+                speakInput();
+            }));
+        sampleScroll.addView(samples);
+        tryCard.addView(sampleScroll);
+
+        LinearLayout actions = u.row();
+        actions.setPadding(0, u.dp(8), 0, 0);
+        femaleChip = u.chip("Female", v -> {
+            base.voice = "female";
+            saveBase();
+            fillVoiceSelection();
+        });
+        maleChip = u.chip("Male", v -> {
+            base.voice = "male";
+            saveBase();
+            fillVoiceSelection();
+        });
+        actions.addView(femaleChip);
+        actions.addView(maleChip);
+        actions.addView(new View(this), Ui.weight(1));
+        TextView stop = u.pill("Stop", false, v -> stopAll());
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        sp.rightMargin = u.dp(8);
+        actions.addView(stop, sp);
+        actions.addView(u.pill("Speak", true, v -> speakInput()));
+        tryCard.addView(actions);
+        status = u.text("Loading the voice…", 12.5f, Ui.MUTED, false);
+        status.setPadding(0, u.dp(8), 0, 0);
+        tryCard.addView(status);
+        root.addView(tryCard);
+
+        // now speaking
+        LinearLayout now = u.card();
+        nowLabel = u.text("Idle", 11.5f, Ui.MUTED, true);
+        nowLabel.setLetterSpacing(0.08f);
+        nowLabel.setAllCaps(true);
+        now.addView(nowLabel);
+        nowText = u.text("Messages, callers, meetings and other apps' speech appear here as SteerTTS says them.",
+                15, Ui.INK, false);
+        nowText.setMaxLines(3);
+        nowText.setEllipsize(TextUtils.TruncateAt.END);
+        nowText.setPadding(0, u.dp(4), 0, 0);
+        now.addView(nowText);
+        nowWhy = u.text("", 13, Ui.ACCENT, true);
+        nowWhy.setPadding(0, u.dp(6), 0, 0);
+        nowWhy.setVisibility(View.GONE);
+        now.addView(nowWhy);
+        root.addView(now);
+
+        // assistant
+        assistant = new AssistantPanel(this, u);
         root.addView(assistant.build());
 
-        TextView voiceTitle = new TextView(this);
-        voiceTitle.setText("Voice");
-        voiceTitle.setTextSize(18);
-        voiceTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        root.addView(voiceTitle);
+        LinearLayout bottom = u.row();
+        bottom.setPadding(0, u.dp(12), 0, 0);
+        bottom.addView(u.pill("Try a readout", false, v -> Announcer.get(this).say(
+                "Priya on WhatsApp: Running ten minutes late. Can you order me a coffee?", "com.whatsapp", true, null)),
+                Ui.weight(1));
+        View gap = new View(this);
+        bottom.addView(gap, new LinearLayout.LayoutParams(u.dp(8), 1));
+        bottom.addView(u.pill("Phone's TTS settings", false,
+                v -> startActivity(new Intent("com.android.settings.TTS_SETTINGS"))), Ui.weight(1));
+        root.addView(bottom);
 
-        input = new EditText(this);
-        input.setMinLines(2);
-        input.setGravity(Gravity.TOP);
-        input.setText("Hello there. <whisper>This part is quiet.</whisper> [pause 300ms] And *this* is not!");
-        root.addView(input, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+        ScrollView sv = new ScrollView(this);   // fits a phone screen; scrolls only on small ones
+        sv.addView(root);
+        return sv;
+    }
 
-        LinearLayout row = new LinearLayout(this);
-        Button speak = new Button(this), stop = new Button(this), bench = new Button(this);
-        speak.setText("Speak");
-        stop.setText("Stop");
-        bench.setText("Bench");
-        speak.setOnClickListener(v -> {
-            String text = input.getText().toString();
-            Style s = base.copy();
-            say("Speaking...");
-            engineThread.post(() -> speak(text, s));
-        });
-        stop.setOnClickListener(v -> {
-            if (tts != null) tts.cancel();
-            player.flush();
-            Announcer.get(this).stop();   // readouts and read aloud too
-            say("Stopped.");
-        });
-        bench.setOnClickListener(v -> {
-            say("Benchmarking...");
-            engineThread.post(() -> benchmark("0,1,2,4,6"));
-        });
-        for (Button x : new Button[] {speak, stop, bench})
-            row.addView(x, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        root.addView(row);
+    private void fillVoiceSelection() {
+        int vi = voiceIds.indexOf(base.voice == null ? "female" : base.voice);
+        if (vi >= 0 && voicePick.getAdapter() != null) voicePick.setSelection(vi);
+    }
 
-        status = new TextView(this);
-        status.setText("Loading the model...");
-        status.setPadding(0, dp(4), 0, dp(8));
-        root.addView(status);
+    private View buildStudio() {
+        LinearLayout root = u.column();
+        root.setPadding(u.dp(16), u.dp(20), u.dp(16), u.dp(24));
 
+        LinearLayout head = u.row();
+        TextView back = u.text("‹", 30, Ui.INK, false);
+        back.setPadding(0, 0, u.dp(14), u.dp(4));
+        back.setOnClickListener(v -> showPage(home));
+        head.addView(back);
+        head.addView(u.text("Voice & style", 24, Ui.INK, true));
+        root.addView(head);
+
+        LinearLayout voiceCard = u.card();
+        voiceCard.addView(u.label("Voice"));
         voicePick = new Spinner(this);
         voicePick.setOnItemSelectedListener(listener(pos -> {
             if (pos < voiceIds.size()) base.voice = voiceIds.get(pos);
             saveBase();
         }));
-        root.addView(labeled("Voice", voicePick));
+        voiceCard.addView(labeled("Voice", voicePick));
         tagPick = new Spinner(this);
         tagPick.setOnItemSelectedListener(listener(pos -> {
             base.tag = tags[pos];
             saveBase();
         }));
-        root.addView(labeled("Style", tagPick));
-
-        contextual = new Switch(this);
-        contextual.setText("Context styling (alerts, questions, night, ringer, battery)");
-        contextual.setChecked(base.contextual);
+        voiceCard.addView(labeled("Style", tagPick));
+        contextual = u.toggle(base.contextual);
         contextual.setOnCheckedChangeListener((v, on) -> {
             base.contextual = on;
             saveBase();
         });
-        contextual.setPadding(0, dp(8), 0, dp(8));
-        root.addView(contextual);
+        voiceCard.addView(u.settingRow("Adapt to context", "Alerts, questions, night, ringer, battery", contextual,
+                null));
+        root.addView(voiceCard);
 
-        styleNote = new TextView(this);
-        styleNote.setText("Your settings (drag to change; system speech starts from these)");
-        styleNote.setTypeface(Typeface.DEFAULT_BOLD);
-        root.addView(styleNote);
-
+        LinearLayout ctl = u.card();
+        ctl.addView(u.label("Delivery"));
+        styleNote = u.text("Your settings: everything SteerTTS says starts from these", 13, Ui.MUTED, false);
+        styleNote.setPadding(0, 0, 0, u.dp(6));
+        ctl.addView(styleNote);
         for (int i = 0; i < bars.length; ++i) {
             final int k = i;
-            LinearLayout l = new LinearLayout(this);
-            l.setGravity(Gravity.CENTER_VERTICAL);
-            TextView name = new TextView(this);
-            name.setText(SteerTTS.CONTROLS[i]);
-            name.setMinWidth(dp(72));
-            TextView value = new TextView(this);
-            value.setMinWidth(dp(44));
+            LinearLayout l = u.row();
+            TextView name = u.text(SteerTTS.CONTROLS[i], 13.5f, Ui.INK, false);
+            name.setMinWidth(u.dp(64));
+            TextView value = u.text("", 13, Ui.MUTED, false);
+            value.setMinWidth(u.dp(40));
             value.setGravity(Gravity.END);
             barValues[i] = value;
             SeekBar bar = new SeekBar(this);
@@ -477,35 +619,40 @@ public class MainActivity extends Activity {
             });
             bars[i] = bar;
             l.addView(name);
-            l.addView(bar, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            l.addView(bar, Ui.weight(1));
             l.addView(value);
-            root.addView(l);
+            ctl.addView(l);
         }
-
-        LinearLayout row2 = new LinearLayout(this);
-        Button reset = new Button(this), sys = new Button(this);
-        reset.setText("Reset controls");
-        reset.setOnClickListener(v -> {
+        LinearLayout resetRow = u.row();
+        resetRow.setPadding(0, u.dp(8), 0, 0);
+        resetRow.addView(u.pill("Reset", false, v -> {
             Arrays.fill(base.z, 0f);
             saveBase();
             showStyle(base, true);
-        });
-        sys.setText("System TTS settings");
-        sys.setOnClickListener(v -> startActivity(new Intent("com.android.settings.TTS_SETTINGS")));
-        row2.addView(reset, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        row2.addView(sys, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        root.addView(row2);
+        }));
+        resetRow.addView(new View(this), Ui.weight(1));
+        resetRow.addView(u.pill("Speak", true, v -> speakInput()));
+        ctl.addView(resetRow);
+        root.addView(ctl);
 
+        LinearLayout perf = u.card();
+        perf.addView(u.label("Performance"));
         threadPick = new Spinner(this);
         List<String> tl = new ArrayList<>();
         for (int t : THREAD_CHOICES) tl.add(t == 0 ? "Auto" : String.valueOf(t));
         threadPick.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, tl));
         threadPick.setOnItemSelectedListener(listener(pos -> threadsSel = THREAD_CHOICES[pos]));
-        root.addView(labeled("Threads", threadPick));
+        perf.addView(labeled("Threads", threadPick));
+        perf.addView(u.pill("Run benchmark", false, v -> {
+            showPage(home);
+            say("Benchmarking…");
+            engineThread.post(() -> benchmark("0,1,2,4,6"));
+        }));
+        root.addView(perf);
 
         ScrollView sv = new ScrollView(this);
         sv.addView(root);
-        setContentView(sv);
+        return sv;
     }
 
     private interface OnPick { void picked(int pos); }
@@ -518,15 +665,11 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout labeled(String label, View v) {
-        LinearLayout l = new LinearLayout(this);
-        l.setGravity(Gravity.CENTER_VERTICAL);
-        TextView t = new TextView(this);
-        t.setText(label);
-        t.setMinWidth(dp(72));
+        LinearLayout l = u.row();
+        TextView t = u.text(label, 14, Ui.MUTED, false);
+        t.setMinWidth(u.dp(64));
         l.addView(t);
-        l.addView(v, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        l.addView(v, Ui.weight(1));
         return l;
     }
-
-    private int dp(int x) { return Math.round(x * getResources().getDisplayMetrics().density); }
 }

@@ -20,8 +20,8 @@
 
     <application
         android:label="SteerTTS"
-        android:allowBackup="false"
-        android:extractNativeLibs="false">
+        android:theme="@style/SteerTTS"
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"

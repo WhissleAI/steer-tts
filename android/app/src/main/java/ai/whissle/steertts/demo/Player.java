@@ -20,6 +20,19 @@ final class Player {
     private final AudioTrack track;
     private final Thread thread;
     private long playStartNs, frames, heardAtNs;   // player thread: the current utterance
+    private java.io.OutputStream tap;               // player thread: the current utterance's copy, see tapDir
+
+    /**
+     * Demo videos (screen recorders cannot capture an assistant's voice): when set, each utterance played is also
+     * written to tapDir/<wall-clock ms at its start>.f32 (raw 24 kHz float), to be put back under the recording.
+     * Set from files/tap, which only `adb shell run-as` (debug builds) can create.
+     */
+    static volatile java.io.File tapDir;
+
+    static void initTap(android.content.Context c) {
+        java.io.File d = new java.io.File(c.getFilesDir(), "tap");
+        if (d.isDirectory()) tapDir = d;
+    }
 
     Player() {
         int min = AudioTrack.getMinBufferSize(SteerTTS.SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
@@ -68,6 +81,36 @@ final class Player {
         track.release();
     }
 
+    private void openTap() {
+        closeTap();
+        java.io.File d = tapDir;
+        if (d == null) return;
+        try {
+            tap = new java.io.BufferedOutputStream(new java.io.FileOutputStream(
+                    new java.io.File(d, System.currentTimeMillis() + ".f32")));
+        } catch (java.io.IOException ignored) {
+        }
+    }
+
+    private void writeTap(float[] a) {
+        if (tap == null) return;
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(a.length * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        b.asFloatBuffer().put(a);
+        try {
+            tap.write(b.array());
+        } catch (java.io.IOException ignored) {
+        }
+    }
+
+    private void closeTap() {
+        if (tap == null) return;
+        try {
+            tap.close();
+        } catch (java.io.IOException ignored) {
+        }
+        tap = null;
+    }
+
     private void run() {
         try {
             while (!Thread.interrupted()) {
@@ -80,6 +123,7 @@ final class Player {
                 }
                 float[] a = (float[]) o;
                 if (a == END) {
+                    closeTap();
                     track.stop();   // plays out what was written, then stops (stop() itself returns at once)
                     heardAtNs = playStartNs + frames * 1000000000L / SteerTTS.SAMPLE_RATE + 250000000L;
                     continue;
@@ -88,9 +132,11 @@ final class Player {
                     track.play();
                     playStartNs = System.nanoTime();
                     frames = 0;
+                    openTap();
                 }
                 track.write(a, 0, a.length, AudioTrack.WRITE_BLOCKING);
                 frames += a.length;
+                writeTap(a);
                 pending.addAndGet(-a.length);
             }
         } catch (InterruptedException ignored) {
