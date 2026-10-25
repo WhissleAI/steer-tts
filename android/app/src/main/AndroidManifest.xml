@@ -20,6 +20,8 @@
 
     <application
         android:label="SteerTTS"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/SteerTTS"
         android:allowBackup="false">
         <activity

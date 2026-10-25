@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SteerTTS mark: a pill waveform (Whissle's drawing language) with the voice in Whissle red and the mint dot above it,
+     like the dot over Whissle's W, doubling as a steering knob. 108 dp adaptive-icon canvas, inside the 66 dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF" android:pathData="M23.58,56.37 A3.42,3.42 0 0 1 30.42,56.37 L30.42,57.63 A3.42,3.42 0 0 1 23.58,57.63 Z M32.58,52.77 A3.42,3.42 0 0 1 39.42,52.77 L39.42,61.23 A3.42,3.42 0 0 1 32.58,61.23 Z M41.58,48.27 A3.42,3.42 0 0 1 48.42,48.27 L48.42,65.73 A3.42,3.42 0 0 1 41.58,65.73 Z M59.58,48.27 A3.42,3.42 0 0 1 66.42,48.27 L66.42,65.73 A3.42,3.42 0 0 1 59.58,65.73 Z M68.58,52.77 A3.42,3.42 0 0 1 75.42,52.77 L75.42,61.23 A3.42,3.42 0 0 1 68.58,61.23 Z M77.58,56.37 A3.42,3.42 0 0 1 84.42,56.37 L84.42,57.63 A3.42,3.42 0 0 1 77.58,57.63 Z" />
+    <path android:fillColor="#F14E52" android:pathData="M50.58,46.92 A3.42,3.42 0 0 1 57.42,46.92 L57.42,67.08 A3.42,3.42 0 0 1 50.58,67.08 Z" />
+    <path android:fillColor="#ACEDDC" android:pathData="M50.22,36.12 A3.78,3.78 0 1 0 57.78,36.12 A3.78,3.78 0 1 0 50.22,36.12 Z" />
+</vector>
