@@ -41,6 +41,7 @@ final class AssistantScreen {
     private TextView catchUpLabel;
     private LinearLayout access;
     private int pending = -1;   // the feature waiting for a permission screen to come back
+    private boolean askedListener, retryListener;
     private int calendarFor = -1;   // who asked for calendar access: MEETINGS, BRIEFING (its sheet) or PLAY_BRIEFING
     private static final int PLAY_BRIEFING = 100;
 
@@ -179,10 +180,21 @@ final class AssistantScreen {
 
     void refresh() {
         if (tiles[0] == null) return;
-        if (pending >= 0) {   // back from a permission screen: switch the feature on if it was granted
+        if (askedListener) {   // back from the notification access screen
+            askedListener = false;
             int f = pending;
             pending = -1;
-            if (f >= 0 && needsListener(f) && listenerOn(a)) set(f, true);
+            if (listenerOn(a)) {
+                if (f >= 0 && needsListener(f)) set(f, true);
+            } else if (Build.VERSION.SDK_INT >= 33 && !fromStore()) {
+                restrictedHelp(f);   // most likely Android's "restricted setting" for apps installed from a file
+            }
+        } else if (retryListener) {   // back from App info after allowing restricted settings: straight to the switch
+            retryListener = false;
+            if (!listenerOn(a)) {
+                askedListener = true;
+                openListenerSettings();
+            }
         }
         for (int f = 0; f < N; ++f) tiles[f].set(on(f), status(f));
         access.setVisibility(listenerOn(a) ? View.GONE : View.VISIBLE);
@@ -345,7 +357,42 @@ final class AssistantScreen {
                         + "Next, Android shows its notification access screen: switch SteerTTS on there.")
                 .setPositiveButton("Continue", (d, w) -> {
                     pending = f;
+                    askedListener = true;
                     openListenerSettings();
+                })
+                .setNegativeButton("Not now", null)
+                .show();
+    }
+
+    /** Installed by an app store (or adb): Android's restricted settings do not apply. */
+    private boolean fromStore() {
+        try {
+            String by = Build.VERSION.SDK_INT >= 30
+                    ? a.getPackageManager().getInstallSourceInfo(a.getPackageName()).getInstallingPackageName()
+                    : a.getPackageManager().getInstallerPackageName(a.getPackageName());
+            return by != null && (by.equals("com.android.vending") || by.equals("com.android.shell")
+                    || by.equals("com.sec.android.app.samsungapps") || by.equals("com.amazon.venezia") || by.equals("com.huawei.appmarket"));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Android 13+ blocks notification access for apps installed from a file ("App was denied access" / "Restricted
+     * setting"). The user can lift it in App info; then the access switch works.
+     */
+    private void restrictedHelp(int f) {
+        new AlertDialog.Builder(a)
+                .setTitle("Android blocked notification access")
+                .setMessage("SteerTTS was installed from a file, so Android asks you to confirm before it can read "
+                        + "notifications.\n\n1. Tap Open app info.\n2. Tap the ⋮ menu at the top right, then “Allow "
+                        + "restricted settings”, and confirm.\n3. Come back: SteerTTS opens the notification access "
+                        + "switch again. Turn it on.")
+                .setPositiveButton("Open app info", (d, w) -> {
+                    pending = f;
+                    retryListener = true;
+                    a.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.fromParts("package", a.getPackageName(), null)));
                 })
                 .setNegativeButton("Not now", null)
                 .show();
