@@ -49,7 +49,8 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
     private String readingPkg;                           // the app whose screen is being read
     private String reading;   // the transient document's id while this reader owns the narrator
     private int lastPara = -1;
-    private int tries;   // auto-continue: looks after a scroll that found nothing new
+    private int turn;         // the current page turn (auto-continue); callbacks of older ones are dropped
+    private int emptyTurns;   // page turns in a row that brought no new text (pictures, an infobox)
 
     static boolean enabled() { return instance != null; }
 
@@ -81,12 +82,37 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         if (e.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != null && readingPkg != null
                 && !pkg.toString().equals(readingPkg) && !pkg.toString().equals(getPackageName())
                 && !pkg.toString().equals("com.android.systemui")) {
-            log("left the page for " + pkg + ": stop");
-            stop();
+            // a heads-up notification, the keyboard or an overlay also changes windows: stop only when the app in
+            // front really is another one a moment later
+            main.removeCallbacks(checkLeft);
+            main.postDelayed(checkLeft, 700);
         } else if (e.getEventType() == AccessibilityEvent.TYPE_VIEW_SCROLLED && !following) {
             main.removeCallbacks(relocate);
             main.postDelayed(relocate, 250);
         }
+    }
+
+    private final Runnable checkLeft = () -> {
+        if (reading == null || readingPkg == null) return;
+        String front = frontApp();
+        if (front != null && !front.equals(readingPkg) && !front.equals(getPackageName())) {
+            log("left the page for " + front + ": stop");
+            stop();
+        }
+    };
+
+    /** The package of the app window in front (not the keyboard, an overlay or the system bars); null if unknown. */
+    private String frontApp() {
+        try {
+            for (android.view.accessibility.AccessibilityWindowInfo w : getWindows()) {
+                if (w.getType() != android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION || !w.isActive()) continue;
+                AccessibilityNodeInfo r = w.getRoot();
+                if (r != null && r.getPackageName() != null) return r.getPackageName().toString();
+            }
+        } catch (Exception ignored) {
+        }
+        AccessibilityNodeInfo r = getRootInActiveWindow();
+        return r != null && r.getPackageName() != null ? r.getPackageName().toString() : null;
     }
 
     @Override public void onInterrupt() { stop(); }
@@ -123,7 +149,10 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         List<Item> items = new ArrayList<>();
         collect(root, items, 0);
         items.sort((a, b) -> Math.abs(a.box.top - b.box.top) > 12 ? Integer.compare(a.box.top, b.box.top) : Integer.compare(a.box.left, b.box.left));
-        if (!more) heard.clear();
+        if (!more) {
+            heard.clear();
+            emptyTurns = 0;
+        }
         List<String> paras = new ArrayList<>();
         boxes.clear();
         raw.clear();
@@ -137,9 +166,9 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
             heard.add(t);
         }
         if (paras.isEmpty()) {
-            if (more && tries < 2) {   // the page may still be settling, or scrolled too little: look again, scroll once more
-                tries++;
-                main.postDelayed(tries == 1 ? () -> read(true) : this::ended, 900);
+            // a picture, an infobox or a gap between sections came into view: turn the page again (a few times)
+            if (more && ++emptyTurns <= 6) {
+                main.postDelayed(this::ended, 250);
                 return;
             }
             if (more) {
@@ -150,7 +179,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
             }
             return;
         }
-        tries = 0;
+        emptyTurns = 0;
         if (SteerTTS.debug(this)) for (String x : paras) android.util.Log.i(MainActivity.TAG, "screen para [" + x.substring(0, Math.min(150, x.length())) + "]");
         String app = label(pkg == null ? "" : pkg.toString());
         readingPkg = pkg == null ? null : pkg.toString();
@@ -177,6 +206,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
             stop();
             return;
         }
+        int t = ++turn;   // one page turn at a time: callbacks of an older one are dropped
         if (hasNew()) {   // follow-along already brought new text into view: straight on, no page turn
             log("auto-continue: new text on screen");
             read(true);
@@ -184,6 +214,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         }
         String before = visibleSignature();
         swipe(() -> main.postDelayed(() -> {
+            if (t != turn || reading == null) return;
             if (moved(before)) {
                 log("auto-continue: swiped on");
                 read(true);
@@ -195,6 +226,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
                     && list.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId()))
                     || list.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD));
             main.postDelayed(() -> {
+                if (t != turn || reading == null) return;
                 if (acted && moved(before)) {
                     log("auto-continue: scrolled on");
                     read(true);
@@ -204,7 +236,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
                     stop();
                 }
             }, 900);
-        }, 900));
+        }, 700));
     }
 
     /**
@@ -295,7 +327,8 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
         if (!ok) next.run();
     }
 
-    private void log(String s) { if (SteerTTS.debug(this)) android.util.Log.i(MainActivity.TAG, s); }
+    /** What the reader decided (no page text): kept in store builds too, for "why did it stop?". */
+    private void log(String s) { android.util.Log.i(MainActivity.TAG, "screen reader: " + s); }
 
     private static final class Item {
         final String text;
@@ -462,6 +495,7 @@ public class ScreenReader extends AccessibilityService implements Narrator.Liste
     private void say(String s) { Announcer.get(this).say(s, "screen", true, null); }
 
     void stop() {
+        if (reading != null) log("stop" + (SteerTTS.debug(this) ? " " + android.util.Log.getStackTraceString(new Throwable()).split("\n")[2].trim() : ""));
         Narrator n = Narrator.get(this);
         n.removeListener(this);
         if (reading != null && n.doc() != null && n.doc().id.equals(reading)) n.close();
