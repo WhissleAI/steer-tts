@@ -289,4 +289,18 @@ public class SpeechLogicTest {
         assertTrue(t.contains(Narration.HEAD + "One"));
         assertTrue(t.contains(Narration.EM_ON + "cold" + Narration.EM_OFF));
     }
+
+    // ---------------------------------------------------------------- books from the web (Gutenberg EPUB markup)
+    @Test public void bookMarkupReadsCleanly() {
+        String html = "<h2>LIST OF ILLUSTRATIONS.</h2><table>"
+                + "<tr><td>“<span class=\"smcap\">He gathered herbs</span>”</td><td><a href=\"b.html#Page_213\">213</a></td></tr>"
+                + "<tr><td>A Gleam of Sunshine</td><td><a href=\"b.html#Page_249\">249</a></td></tr></table>"
+                + "<p><a href=\"c.html#ch1\">CHAPTER I. Down the Rabbit-Hole</a></p>"
+                + "<p class=\"figcenter\"><span title=\"The Custom House\" id=\"img_images_illu_001.jpg\">The Custom House</span></p>"
+                + "<div class=\"initial\"><span title=\"I\" id=\"img_images_initial_i.jpg\">I</span></div>"
+                + "<p><span class=\"firstwords\">t</span> is a little remarkable, said “<span>he</span>.”</p>";
+        String text = Extract.htmlToText(html);
+        assertFalse(text, text.contains("249") || text.contains("Gleam") || text.contains("Rabbit-Hole") || text.contains("Custom House"));
+        assertTrue(text, text.contains("It is a little remarkable, said “he.”"));
+    }
 }

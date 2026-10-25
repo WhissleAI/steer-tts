@@ -171,7 +171,7 @@ final class TextClean {
         List<String> out = new ArrayList<>();
         for (int i = from; i < to; ++i) {
             String p = paras.get(i), plain = Narration.display(p).trim();
-            if (plain.matches("(?i)(table of )?contents\\.?")) {   // skip the table of contents
+            if (plain.matches("(?i)(table of )?contents\\.?|(list of )?(illustrations|plates|figures)\\.?")) {   // skip the table of contents
                 int j = i + 1;
                 // contents entries are short lines; the story starts at the first real heading or a paragraph
                 while (j < to && !paras.get(j).startsWith(String.valueOf(Narration.HEAD))
@@ -179,9 +179,41 @@ final class TextClean {
                 i = j - 1;
                 continue;
             }
+            if (plain.isEmpty()) continue;
             out.add(p);
         }
+        return titlePage(out);
+    }
+
+    /**
+     * A title page is set one short line at a time ("PRIDE." / "and" / "PREJUDICE" / "by" / "Jane Austen,"); read
+     * line by line each would be its own sentence with a pause. Before the first real paragraph, runs of three or more
+     * short lines are read as one.
+     */
+    static List<String> titlePage(List<String> paras) {
+        List<String> out = new ArrayList<>();
+        int i = 0, n = paras.size();
+        while (i < n && Narration.display(paras.get(i)).length() < 120) {
+            int j = i;
+            while (j < n && Narration.display(paras.get(j)).trim().length() < 45 && !heading(paras.get(j))) j++;
+            if (j - i >= 3) {
+                StringBuilder b = new StringBuilder();
+                for (int k = i; k < j; ++k) {
+                    String x = Narration.display(paras.get(k)).trim();
+                    if (b.length() > 0) b.append(' ');
+                    b.append(x);
+                }
+                out.add(b.toString());
+                i = j;
+            } else out.add(paras.get(i++));
+        }
+        while (i < n) out.add(paras.get(i++));
         return out;
+    }
+
+    private static boolean heading(String p) {
+        return p.startsWith(String.valueOf(Narration.HEAD))
+                || Narration.display(p).trim().matches("(?i)(chapter|book|part|stave|volume|act)\\b.*|[IVXLC]+\\.?");
     }
 
     // ---------------------------------------------------------------- sentences

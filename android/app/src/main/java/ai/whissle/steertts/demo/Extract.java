@@ -166,14 +166,47 @@ final class Extract {
     /** Visible text of an HTML document, one block element per paragraph. */
     static String htmlToText(String html) {
         String h = html.replaceAll("(?is)<(script|style|noscript|svg|head|nav|header|footer|aside|form|figure|sup)\\b.*?</\\1>", " ");
+        h = contentsRemoved(h);
+        // pictures: a drop cap's letter is kept ("I" + "t is…"), a caption or alt text is not read
+        h = h.replaceAll("(?is)<img\\b[^>]*\\balt=\"([A-Za-z])\"[^>]*>", "$1").replaceAll("(?is)<img\\b[^>]*>", "");
+        h = sub(h, "(?is)<span\\b[^>]*\\bid=\"img_[^\"]*\"[^>]*>(.*?)</span>", m -> m.group(1).trim().length() == 1 ? m.group(1).trim() : "");
+        h = h.replaceAll("(?is)<span\\b[^>]*class=\"[^\"]*pageno[^\"]*\"[^>]*>.*?</span>", "");
         h = h.replaceAll("(?i)<br\\s*/?>", "\n");
         // italics and bold become stress markers, a heading starts with a heading marker (Narration reads both)
         h = h.replaceAll("(?i)<(em|i|strong|b)\\b[^>]*>", String.valueOf(Narration.EM_ON));
         h = h.replaceAll("(?i)</(em|i|strong|b)\\s*>", String.valueOf(Narration.EM_OFF));
         h = h.replaceAll("(?i)<h[1-6]\\b[^>]*>", "\n\n" + Narration.HEAD);
-        h = h.replaceAll("(?i)</?(p|div|h[1-6]|li|blockquote|section|article|tr|dt|dd|pre|title)\\b[^>]*>", "\n\n");
-        h = h.replaceAll("(?s)<[^>]*>", " ");
-        return decode(h).replaceAll("[ \\t]+", " ").replaceAll("\\n[ \\t]+", "\n").replaceAll("\\n{3,}", "\n\n");
+        h = h.replaceAll("(?i)</?(p|div|h[1-6]|li|blockquote|section|article|tr|dt|dd|pre|title|table|ul|ol|dl|hr|caption|figcaption|center|body)\\b[^>]*>", "\n\n");
+        h = h.replaceAll("(?i)</?(td|th)\\b[^>]*>", " ");
+        h = h.replaceAll("(?s)<[^>]*>", "");   // inline tags (span, a, small caps) join their text: “<span>He</span>” is “He”
+        String t = decode(h).replaceAll("[ \\t]+", " ").replaceAll("\\n[ \\t]+", "\n").replaceAll("\\n{3,}", "\n\n");
+        // a drop cap set apart from its word: "I" / "t is a little remarkable" -> "It is a little remarkable"
+        return t.replaceAll("(?m)^([“\"‘']?[A-Z])[ \\t]*\\n+[ \\t]*(?=[a-z])", "$1");
+    }
+
+    private static final Pattern PAGE_LINK = Pattern.compile(
+            "(?is)<a\\b[^>]*href=\"[^\"]*#[^\"]*\"[^>]*>\\s*(?:page\\s*)?[0-9ivxlcdmIVXLCDM]{1,8}\\.?\\s*</a>");
+    private static final Pattern INTERNAL_LINK = Pattern.compile("(?is)<a\\b[^>]*href=\"[^\"]*#[^\"]*\"[^>]*>.*?</a>");
+
+    /**
+     * A table of contents or list of illustrations, which nobody wants read aloud: table rows that link to a page
+     * ("A Gleam of Sunshine … 249"), and paragraphs or list items that are only links within the book.
+     */
+    static String contentsRemoved(String h) {
+        h = sub(h, "(?is)<tr\\b[^>]*>.*?</tr>", m -> PAGE_LINK.matcher(m.group()).find() ? "" : m.group());
+        return sub(h, "(?is)<(p|li|dt|dd)\\b[^>]*>(.*?)</\\1>", m -> {
+            if (!INTERNAL_LINK.matcher(m.group(2)).find()) return m.group();
+            String rest = INTERNAL_LINK.matcher(m.group(2)).replaceAll("").replaceAll("<[^>]*>", "").replaceAll("&[a-z]+;|[\\s.,:;—–-]", "");
+            return rest.length() <= 2 ? "" : m.group();
+        });
+    }
+
+    private static String sub(String s, String re, java.util.function.Function<Matcher, String> f) {
+        Matcher m = Pattern.compile(re).matcher(s);
+        StringBuffer b = new StringBuffer();
+        while (m.find()) m.appendReplacement(b, Matcher.quoteReplacement(f.apply(m)));
+        m.appendTail(b);
+        return b.toString();
     }
 
     private static String htmlTitle(String html) { return clean(first(html, "(?is)<title[^>]*>(.*?)</title>")); }
