@@ -156,6 +156,10 @@ final class Extract {
     static String htmlToText(String html) {
         String h = html.replaceAll("(?is)<(script|style|noscript|svg|head|nav|header|footer|aside|form|figure|sup)\\b.*?</\\1>", " ");
         h = h.replaceAll("(?i)<br\\s*/?>", "\n");
+        // italics and bold become stress markers, a heading starts with a heading marker (Narration reads both)
+        h = h.replaceAll("(?i)<(em|i|strong|b)\\b[^>]*>", String.valueOf(Narration.EM_ON));
+        h = h.replaceAll("(?i)</(em|i|strong|b)\\s*>", String.valueOf(Narration.EM_OFF));
+        h = h.replaceAll("(?i)<h[1-6]\\b[^>]*>", "\n\n" + Narration.HEAD);
         h = h.replaceAll("(?i)</?(p|div|h[1-6]|li|blockquote|section|article|tr|dt|dd|pre|title)\\b[^>]*>", "\n\n");
         h = h.replaceAll("(?s)<[^>]*>", " ");
         return decode(h).replaceAll("[ \\t]+", " ").replaceAll("\\n[ \\t]+", "\n").replaceAll("\\n{3,}", "\n\n");
@@ -167,7 +171,9 @@ final class Extract {
         String t = md.replaceAll("(?s)```.*?```", " ");
         t = t.replaceAll("!\\[[^]]*]\\([^)]*\\)", "");                    // images
         t = t.replaceAll("\\[([^]]+)]\\([^)]*\\)", "$1");                 // links -> their text
-        t = t.replaceAll("(?m)^\\s{0,3}#{1,6}\\s*(.*?)\\s*#*$", "\n$1.\n");  // headings
+        t = t.replaceAll("(?m)^\\s{0,3}#{1,6}\\s*(.*?)\\s*#*$", "\n" + Narration.HEAD + "$1.\n");  // headings
+        t = t.replaceAll("(\\*\\*|__)(\\S(?:.*?\\S)?)\\1", Narration.EM_ON + "$2" + Narration.EM_OFF);  // **bold**
+        t = t.replaceAll("(?<![\\w*])([*_])(\\S(?:.*?\\S)?)\\1(?![\\w*])", Narration.EM_ON + "$2" + Narration.EM_OFF);  // *italic*
         t = t.replaceAll("(?m)^\\s*>\\s?", "");
         t = t.replaceAll("(\\*\\*|__|\\*|_|`)", "");
         t = t.replaceAll("(?m)^\\s*([-*+]|\\d+\\.)\\s+", "• ");

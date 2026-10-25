@@ -61,23 +61,36 @@ public class Briefing extends BroadcastReceiver {
     }
 
     // ---------------------------------------------------------------- the words
-    /** Builds the briefing (blocks up to a few seconds while Health Connect answers; call off the main thread). */
-    static String compose(Context c) {
-        List<String> parts = new ArrayList<>();
+    static final Expression.Mood RESTED = new Expression.Mood("rested", "contentment", "a good night: warm", "f0_iqr", 0.6, "h1h2", 0.5);
+    static final Expression.Mood SHORT_NIGHT = new Expression.Mood("short night", "sympathy", "a short night: gentle", "rate", -0.3, "loud", -0.3, "f0_iqr", -0.2);
+    static final Expression.Mood ACTIVE = new Expression.Mood("active", "pride", "an active day: upbeat", "f0_iqr", 0.9, "f0_med", 0.4, "rate", 0.2);
+
+    /**
+     * The briefing, each line in its own mood: the greeting bright in the morning and calm in the evening, sleep warm
+     * after a good night and gentle after a short one, steps upbeat after an active day, the calendar clear and brisk;
+     * then the messages that waited overnight (the Digest). Blocks up to a few seconds while Health Connect answers.
+     */
+    static Speech compose(Context c) {
+        Speech sp = new Speech();
         int h = LocalTime.now().getHour();
-        parts.add(h < 12 ? "Good morning." : h < 18 ? "Good afternoon." : "Good evening.");
-        if (healthGranted(c)) parts.addAll(health(c));
+        if (h < 12) sp.add("Good morning.", Expression.HAPPY, null, 250);
+        else if (h < 18) sp.add("Good afternoon.", null, null, 250);
+        else sp.add("Good evening.", Expression.CALM, null, 250);
+        int before = sp.parts.size();
+        if (healthGranted(c)) health(c, sp);
         String cal = calendar(c);
-        if (cal != null) parts.add(cal);
-        if (parts.size() == 1) parts.add("There's nothing new to tell you. Connect Health Connect or your calendar to hear more.");
-        return String.join(" ", parts);
+        if (cal != null) sp.add(cal, cal.contains("clear") ? Expression.CALM : Expression.CONFIDENT, null, 250);
+        AssistantPrefs prefs = new AssistantPrefs(c);
+        if (Digest.size() > 0) for (Speech.Part p : Digest.take(prefs.personVoices(), Style.load(c).voice).parts) sp.parts.add(p);
+        if (sp.parts.size() == before)
+            sp.add("There's nothing new to tell you. Connect Health Connect or your calendar on the Assistant tab to hear more.");
+        return sp;
     }
 
-    private static List<String> health(Context c) {
-        List<String> out = new ArrayList<>();
-        if (Build.VERSION.SDK_INT < 34) return out;
+    private static void health(Context c, Speech sp) {
+        if (Build.VERSION.SDK_INT < 34) return;
         android.health.connect.HealthConnectManager hc = c.getSystemService(android.health.connect.HealthConnectManager.class);
-        if (hc == null) return out;
+        if (hc == null) return;
         ZoneId z = ZoneId.systemDefault();
         Instant now = Instant.now(), today = LocalDate.now().atStartOfDay(z).toInstant(), yesterday = today.minus(Duration.ofDays(1));
         Long sleep = agg(c, hc, android.health.connect.datatypes.SleepSessionRecord.SLEEP_DURATION_TOTAL,
@@ -85,22 +98,23 @@ public class Briefing extends BroadcastReceiver {
                 android.health.connect.HealthPermissions.READ_SLEEP);
         if (sleep != null && sleep > 30 * 60_000L) {
             long m = sleep / 60_000L;
-            out.add("Last night you slept " + hours(m) + ".");
+            if (m >= 7 * 60) sp.add("You slept " + hours(m) + " last night. Nicely done.", RESTED, null, 200);
+            else if (m < 6 * 60) sp.add("You only slept " + hours(m) + " last night. Go easy on yourself today.", SHORT_NIGHT, null, 200);
+            else sp.add("Last night you slept " + hours(m) + ".", null, null, 200);
         }
         Long stepsToday = agg(c, hc, android.health.connect.datatypes.StepsRecord.STEPS_COUNT_TOTAL, today, now,
                 android.health.connect.HealthPermissions.READ_STEPS);
         Long stepsYesterday = agg(c, hc, android.health.connect.datatypes.StepsRecord.STEPS_COUNT_TOTAL, yesterday, today,
                 android.health.connect.HealthPermissions.READ_STEPS);
-        if (stepsYesterday != null && stepsYesterday > 0 && stepsToday != null && stepsToday > 0)
-            out.add(String.format(Locale.US, "You've walked %,d steps so far today, and %,d yesterday.", stepsToday, stepsYesterday));
+        if (stepsYesterday != null && stepsYesterday >= 8000)
+            sp.add(String.format(Locale.US, "Yesterday you walked %,d steps. Great job.", stepsYesterday), ACTIVE, null, 200);
         else if (stepsYesterday != null && stepsYesterday > 0)
-            out.add(String.format(Locale.US, "Yesterday you walked %,d steps.", stepsYesterday));
-        else if (stepsToday != null && stepsToday > 0)
-            out.add(String.format(Locale.US, "You've walked %,d steps so far today.", stepsToday));
+            sp.add(String.format(Locale.US, "Yesterday you walked %,d steps.", stepsYesterday), null, null, 200);
+        if (stepsToday != null && stepsToday >= 500)
+            sp.add(String.format(Locale.US, "So far today, %,d.", stepsToday), null, null, 200);
         Long rhr = agg(c, hc, android.health.connect.datatypes.RestingHeartRateRecord.BPM_AVG, now.minus(Duration.ofDays(2)), now,
                 android.health.connect.HealthPermissions.READ_RESTING_HEART_RATE);
-        if (rhr != null && rhr > 0) out.add("Your resting heart rate is " + rhr + " beats per minute.");
-        return out;
+        if (rhr != null && rhr > 0) sp.add("Your resting heart rate is " + rhr + " beats per minute.", null, null, 200);
     }
 
     private static String hours(long minutes) {

@@ -45,7 +45,12 @@ public final class SteerTTS implements AutoCloseable {
 
     /** One render of plain text (no markup); null if cancel() was called before it started. */
     public float[] synthesize(String text, String voice, String ctrl, float pace) {
-        return nativeSynthesize(h, text, voice, ctrl, pace);
+        return nativeSynthesize(h, text, voice, null, ctrl, pace, false);
+    }
+
+    /** One render with a style tag (may be null); markup: parse *word* and [pause 300ms] in text. */
+    public float[] synthesize(String text, String voice, String tag, String ctrl, float pace, boolean markup) {
+        return nativeSynthesize(h, text, voice, tag, ctrl, pace, markup);
     }
 
     /** Stops a running stream() from another thread (it returns after the current sentence). */
@@ -72,6 +77,18 @@ public final class SteerTTS implements AutoCloseable {
      * its TTS service (another process) may both call this at first start: a file lock makes one copy, the other waits.
      */
     public static File installModel(Context ctx) throws IOException {
+        // a file lock serializes processes; threads of one process must be serialized first (a second lock on the same
+        // file from this process throws OverlappingFileLockException instead of waiting)
+        synchronized (SteerTTS.class) {
+            if (installed != null) return installed;
+            installed = installLocked(ctx);
+            return installed;
+        }
+    }
+
+    private static File installed;   // this process has checked (and if needed copied) the model
+
+    private static File installLocked(Context ctx) throws IOException {
         try (java.io.RandomAccessFile lf = new java.io.RandomAccessFile(new File(ctx.getFilesDir(), "model.lock"), "rw");
              java.nio.channels.FileLock lock = lf.getChannel().lock()) {
             return installModelLocked(ctx);
@@ -115,7 +132,8 @@ public final class SteerTTS implements AutoCloseable {
     private static native int nativeThreads(long h);
     private static native void nativeStream(long h, String text, String voice, String tag, String ctrl, float pace,
                                             Sink sink);
-    private static native float[] nativeSynthesize(long h, String text, String voice, String ctrl, float pace);
+    private static native float[] nativeSynthesize(long h, String text, String voice, String tag, String ctrl, float pace,
+                                                   boolean markup);
     private static native String nativeVoiceGender(long h, String voice);
     private static native String[] nativeTags(long h);
     private static native void nativeCancel(long h);

@@ -19,7 +19,9 @@ import java.util.Set;
 
 /**
  * Notification access (Settings > Notifications > Device & app notifications): reads new messages aloud from the apps
- * the user picked ("Priya on WhatsApp: running late"), when AssistantPrefs.mayReadNow allows, and announces incoming
+ * the user picked ("Priya on WhatsApp", then her message in its mood and her voice; Readout), when
+ * AssistantPrefs.mayReadNow allows; what cannot be read then waits in the Digest for "catch me up", which also runs
+ * when headphones connect. Announces incoming
  * calls by the caller's name from the ringing call's own notification (the dialer's or a VoIP app's), so no phone or
  * contacts permission is needed. Messaging apps repost a conversation's notification with its whole recent history on
  * every message: only messages newer than the last one read, and not read before, are spoken; the user's own replies
@@ -27,7 +29,7 @@ import java.util.Set;
  * notifications, ongoing ones and group summaries are skipped, and nothing is read in Do Not Disturb.
  */
 public class ReadoutListener extends NotificationListenerService {
-    private static final int MAX_CHARS = 300, MAX_MESSAGES = 3;
+    private static final int MAX_MESSAGES = 3;
     private static final Set<String> DIALERS = new HashSet<>(java.util.Arrays.asList(
             "com.google.android.dialer", "com.android.dialer", "com.samsung.android.incallui", "com.android.incallui"));
 
@@ -36,9 +38,49 @@ public class ReadoutListener extends NotificationListenerService {
     private final Map<String, String> lastText = new HashMap<>();    // notification key -> text read (no history)
     private final Set<String> callsAnnounced = new HashSet<>();
 
-    @Override public void onListenerConnected() { MeetingAnnouncer.watchCalendar(this); }
+    private android.media.AudioDeviceCallback headphones;
+    private long connectedAt;
+
+    @Override public void onListenerConnected() {
+        MeetingAnnouncer.watchCalendar(this);
+        android.media.AudioManager am = getSystemService(android.media.AudioManager.class);
+        connectedAt = android.os.SystemClock.elapsedRealtime();
+        headphones = new android.media.AudioDeviceCallback() {
+            @Override public void onAudioDevicesAdded(android.media.AudioDeviceInfo[] added) {
+                // registering reports the devices already connected: only later arrivals count
+                if (android.os.SystemClock.elapsedRealtime() - connectedAt < 2000) return;
+                for (android.media.AudioDeviceInfo d : added) if (d.isSink() && personal(d.getType())) {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> catchUp(ReadoutListener.this, false), 2500);
+                    return;
+                }
+            }
+        };
+        am.registerAudioDeviceCallback(headphones, new android.os.Handler(android.os.Looper.getMainLooper()));
+    }
+
+    @Override public void onListenerDisconnected() {
+        if (headphones != null) getSystemService(android.media.AudioManager.class).unregisterAudioDeviceCallback(headphones);
+        headphones = null;
+    }
+
+    private static boolean personal(int type) {
+        return type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+                || type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET || type == android.media.AudioDeviceInfo.TYPE_USB_HEADSET
+                || (Build.VERSION.SDK_INT >= 31 && type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET);
+    }
+
+    /**
+     * Reads the messages that waited (Digest). asked false (headphones connecting): only when there is something and
+     * the user wants it; asked true (the tile, the app): always, "all caught up" included.
+     */
+    static void catchUp(android.content.Context c, boolean asked) {
+        AssistantPrefs prefs = new AssistantPrefs(c);
+        if (!asked && (!prefs.catchUp() || Digest.size() == 0 || !AssistantPrefs.mayAnnounceNow(c))) return;
+        Announcer.get(c).say(Digest.take(prefs.personVoices(), Style.load(c).voice), "catch-up", false, null);
+    }
 
     @Override public void onNotificationRemoved(StatusBarNotification sbn) {
+        Digest.removeKey(sbn.getKey());
         lastMessage.remove(sbn.getKey());
         readMessages.remove(sbn.getKey());
         lastText.remove(sbn.getKey());
@@ -60,27 +102,41 @@ public class ReadoutListener extends NotificationListenerService {
         Ranking r = new Ranking();
         if (ranking != null && ranking.getRanking(sbn.getKey(), r)
                 && r.getImportance() < NotificationManager.IMPORTANCE_DEFAULT) return;   // silent: not worth a voice
-        String text = describe(sbn.getKey(), n, pkg);
-        if (text == null) return;
+        Said said = describe(sbn.getKey(), n, pkg, prefs);
+        if (said == null || said.speech.isEmpty()) return;
         prefs.noteSeen(pkg);
-        if (!prefs.appOn(pkg) || getCurrentInterruptionFilter() > INTERRUPTION_FILTER_ALL || !prefs.mayReadNow(this))
+        if (!prefs.appOn(pkg)) return;
+        if (getCurrentInterruptionFilter() > INTERRUPTION_FILTER_ALL || !prefs.mayReadNow(this)) {
+            Digest.add(sbn.getKey(), said.person, label(pkg), said.words);   // for "catch me up" later
             return;
-        Announcer.get(this).say(text, pkg, false, null);
+        }
+        Announcer.get(this).say(said.speech, pkg, false, null);
+    }
+
+    /** A readout, and what the digest keeps if it cannot be spoken now. */
+    private static final class Said {
+        final Speech speech;
+        final String person, words;
+
+        Said(Speech speech, String person, String words) {
+            this.speech = speech;
+            this.person = person;
+            this.words = words;
+        }
     }
 
     /** "Incoming call from Mom" while a call rings (the notification with a full-screen intent), once per call. */
     private void call(StatusBarNotification sbn, Notification n, String pkg) {
         if (n.fullScreenIntent == null || !callsAnnounced.add(sbn.getKey())) return;
-        if (!AssistantPrefs.mayAnnounceNow(this)) return;
         CharSequence who = n.extras.getCharSequence(Notification.EXTRA_TITLE);
         String name = who != null && who.length() > 0 ? who.toString() : "an unknown caller";
-        String text = DIALERS.contains(pkg) ? "Incoming call from " + name + "."
-                : "Incoming " + label(pkg) + " call from " + name + ".";
-        Announcer.get(this).say(text, pkg, true, null);
+        int count = Readout.ringCount(name, System.currentTimeMillis());
+        if (!AssistantPrefs.mayAnnounceNow(this)) return;
+        Announcer.get(this).say(Readout.call(name, DIALERS.contains(pkg) ? null : label(pkg), count), pkg, true, null);
     }
 
-    /** The words to say for a new notification, or null if there is nothing new. */
-    private String describe(String key, Notification n, String pkg) {
+    /** What to say for a new notification, or null if there is nothing new. */
+    private Said describe(String key, Notification n, String pkg, AssistantPrefs prefs) {
         Bundle x = n.extras;
         String app = label(pkg);
         Parcelable[] msgs = x.getParcelableArray(Notification.EXTRA_MESSAGES);
@@ -107,8 +163,9 @@ public class ReadoutListener extends NotificationListenerService {
             CharSequence conv = x.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
             boolean group = Build.VERSION.SDK_INT >= 28 ? x.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION)
                     : conv != null;
-            String who = group && conv != null ? sender + " in " + conv : sender;
-            return cap(who + " on " + app + ": " + join(texts));
+            Speech sp = Readout.message(sender, group && conv != null ? conv.toString() : null, app, texts,
+                    prefs.personVoices(), Style.load(this).voice);
+            return new Said(sp, sender, String.join(" ", texts));
         }
         CharSequence title = x.getCharSequence(Notification.EXTRA_TITLE);
         CharSequence body = x.getCharSequence(Notification.EXTRA_BIG_TEXT);
@@ -116,9 +173,8 @@ public class ReadoutListener extends NotificationListenerService {
         if (title == null && body == null) return null;
         String said = (title != null ? title : "") + "\n" + (body != null ? body : "");
         if (said.equals(lastText.put(key, said))) return null;   // an update with the same words
-        if (title == null) return cap(app + ": " + body);
-        if (body == null) return cap(app + ": " + title);
-        return cap(title + " on " + app + ": " + body);
+        String t = title == null ? null : title.toString(), b = body == null ? null : body.toString();
+        return new Said(Readout.notice(t, b, app), t != null ? t : app, b != null ? b : t);
     }
 
     private static CharSequence senderOf(Bundle m) {
@@ -128,26 +184,6 @@ public class ReadoutListener extends NotificationListenerService {
             if (p != null) s = p.getName();
         }
         return s;
-    }
-
-    private static String join(List<String> texts) {
-        StringBuilder b = new StringBuilder();
-        for (String t : texts) {
-            String s = t.trim();
-            if (s.isEmpty()) continue;
-            if (b.length() > 0) b.append(' ');
-            b.append(s);
-            char c = s.charAt(s.length() - 1);
-            if (c != '.' && c != '!' && c != '?') b.append('.');   // one message = one sentence at least
-        }
-        return b.toString();
-    }
-
-    private static String cap(String s) {
-        s = s.replaceAll("\\s+", " ").trim();
-        if (s.length() <= MAX_CHARS) return s;
-        int cut = s.lastIndexOf(' ', MAX_CHARS);
-        return s.substring(0, cut > 0 ? cut : MAX_CHARS) + ", and more.";
     }
 
     private String label(String pkg) {

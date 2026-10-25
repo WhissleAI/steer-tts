@@ -30,7 +30,7 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
     private Ui u;
     private ListView list;
     private Adapter adapter;
-    private TextView title, left, voiceLine;
+    private TextView title, left, voiceLine, sleepBtn;
     private SeekBar seek;
     private ImageView playBtn;
     private final List<TextView> speedChips = new ArrayList<>();
@@ -158,11 +158,18 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
             speeds.addView(ch);
         }
         panel.addView(speeds);
+        LinearLayout foot = u.row();
+        foot.setPadding(0, u.dp(10), 0, 0);
+        sleepBtn = u.chip("", v -> sleepMenu());
+        foot.addView(sleepBtn);
+        foot.addView(new View(this), Ui.spacer());
         voiceLine = u.text("", 13.5f, Ui.ACCENT, true);
-        voiceLine.setGravity(Gravity.CENTER);
-        voiceLine.setPadding(0, u.dp(10), 0, 0);
-        voiceLine.setOnClickListener(v -> startActivity(new Intent(this, MainActivity.class).putExtra("tab", "voices")));
-        panel.addView(voiceLine, Ui.matchWrap());
+        voiceLine.setMinHeight(u.dp(40));
+        voiceLine.setGravity(Gravity.CENTER_VERTICAL);
+        voiceLine.setOnClickListener(v -> startActivity(new Intent(this, MainActivity.class).putExtra("tab", "voices")
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)));
+        foot.addView(voiceLine);
+        panel.addView(foot, Ui.matchWrap());
         root.addView(panel);
 
         setContentView(root);
@@ -173,6 +180,17 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
                 return android.view.WindowInsets.CONSUMED;
             });
         showSpeed();
+    }
+
+    private void sleepMenu() {
+        String[] labels = {"Off", "In 15 minutes", "In 30 minutes", "In 45 minutes", "In an hour", "At the end of this document"};
+        int[] minutes = {-1, 15, 30, 45, 60, 0};
+        new android.app.AlertDialog.Builder(this).setTitle("Sleep timer")
+                .setItems(labels, (d, w) -> {
+                    narrator.setSleep(minutes[w]);
+                    changed();
+                })
+                .show();
     }
 
     private static String trim(float s) { return String.valueOf(s).replaceAll("\\.?0+$", ""); }
@@ -202,7 +220,10 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
         left.setText(at >= d.sentences.size() - 1 && !playing && narrator.position() >= d.sentences.size()
                 ? "Finished" : d.minutesLeft(narrator.pace() * Style.load(this).pace) + " min left · "
                 + Math.round(100 * d.progress()) + "%");
-        voiceLine.setText("Voice: " + Voices.get(this).nameOf(Style.load(this).voice, null) + "  ·  change");
+        voiceLine.setText("Voice: " + Voices.get(this).nameOf(Style.load(this).voice, null) + "  ›");
+        String sl = narrator.sleepLabel();
+        sleepBtn.setText(sl == null ? "☾  Sleep timer" : "☾  " + sl);
+        u.select(sleepBtn, sl != null);
         adapter.notifyDataSetChanged();
         if (playing && System.currentTimeMillis() - userScrolledAt > 4000)
             list.smoothScrollToPositionFromTop(at, u.dp(140), 350);
@@ -217,7 +238,12 @@ public class ReaderActivity extends Activity implements Narrator.Listener {
             TextView t = v instanceof TextView ? (TextView) v : u.text("", 18, Ui.INK, false);
             t.setLineSpacing(0, 1.25f);
             t.setPadding(u.dp(12), u.dp(6), u.dp(12), u.dp(6));
-            t.setText(narrator.doc().sentences.get(i));
+            String raw = narrator.doc().sentences.get(i);
+            boolean heading = !raw.isEmpty() && raw.charAt(0) == Narration.HEAD;
+            t.setText(Narration.display(raw));
+            t.setTextSize(heading ? 21 : 18);
+            t.setTypeface(heading ? android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                    : android.graphics.Typeface.DEFAULT);
             boolean cur = i == narrator.position();
             t.setBackground(cur ? Ui.round(Ui.ACCENT_SOFT, u.dp(12)) : null);
             t.setTextColor(cur ? Ui.INK : Ui.MUTED);

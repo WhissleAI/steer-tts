@@ -176,12 +176,15 @@ final class TextClean {
             char c = p.charAt(i);
             if (c != '.' && c != '!' && c != '?') continue;
             int j = i + 1;
-            while (j < n && ".!?\"'”’)]".indexOf(p.charAt(j)) >= 0) j++;
+            while (j < n && (".!?\"'”’)]".indexOf(p.charAt(j)) >= 0 || p.charAt(j) == Narration.EM_OFF)) j++;
             if (j < n && !Character.isWhitespace(p.charAt(j))) continue;          // "3.5", "e.g.x", "U.S.A"
             int k = j;
             while (k < n && Character.isWhitespace(p.charAt(k))) k++;
-            if (k < n) {
-                char next = p.charAt(k);
+            if (insideQuote(p, start, j)) continue;   // "Run! They're coming!" stays one line of dialogue
+            int look = k;   // past emphasis and heading markers, to the first real character
+            while (look < n && (p.charAt(look) == Narration.EM_ON || p.charAt(look) == Narration.HEAD)) look++;
+            if (look < n) {
+                char next = p.charAt(look);
                 if (!(Character.isUpperCase(next) || Character.isDigit(next) || "\"'“‘(".indexOf(next) >= 0)) continue;
             }
             if (c == '.') {
@@ -196,6 +199,18 @@ final class TextClean {
         }
         if (start < n && !p.substring(start).trim().isEmpty()) out.add(p.substring(start).trim());
         return out;
+    }
+
+    /** Whether a quotation opened in p[from, to) is still open at to (curly quotes counted, straight ones paired). */
+    private static boolean insideQuote(String p, int from, int to) {
+        int curly = 0, straight = 0;
+        for (int i = from; i < to; ++i) {
+            char c = p.charAt(i);
+            if (c == '“') curly++;
+            else if (c == '”') curly = Math.max(0, curly - 1);
+            else if (c == '"') straight++;
+        }
+        return curly > 0 || straight % 2 == 1;
     }
 
     private static List<String> splitLong(String s) {

@@ -2,7 +2,8 @@ SteerTTS gives your phone an expressive voice that runs entirely on the device. 
 
 LISTEN TO ANYTHING
 • PDFs, EPUB e-books, Word documents, web pages and plain text, read aloud with a real player: pause, skip by sentence, speed from 0.8× to 2×, and the sentence being read highlighted as it goes.
-• Controls on the lock screen and in the notification; your place in every document is remembered.
+• Books are performed, not just read: dialogue in a second voice and in its own mood, italics stressed, a pause after each chapter heading.
+• Controls on the lock screen and in the notification, a sleep timer, and the next item in your list plays on its own. Your place in every document is remembered.
 • Share an article or a file to SteerTTS from any app, or select text and choose "Read with SteerTTS".
 
 SAY IT YOUR WAY
@@ -12,13 +13,18 @@ SAY IT YOUR WAY
 • Reads the way people write: times, dates, phone numbers, prices, temperatures, titles such as Dr. and Mrs., and chapter numbers.
 
 IT SPEAKS UP FOR YOU
-• Message readouts: new messages from the apps you choose, read aloud as they arrive. By default only with headphones or in the car, never during a call or in Do Not Disturb.
-• Incoming calls: hear who is calling while the phone rings.
+• Message readouts: new messages from the apps you choose, read aloud as they arrive, the way they were meant: a sorry sounds gentle, "HAPPY BIRTHDAY!!! 🎉" sounds excited, "haha" sounds amused. By default only with headphones or in the car, never during a call or in Do Not Disturb.
+• A voice for each person: every sender's messages in a voice of their own, so you know who wrote without hearing the name.
+• Catch me up: messages that arrived while SteerTTS couldn't read them out are summarised, person by person, when you put your headphones in.
+• Incoming calls: hear who is calling while the phone rings, and when someone calls a third time, that it may be urgent.
 • Meeting reminders: your next event announced a few minutes before it starts, including where it happens.
 • Daily briefing: every morning, or whenever you ask, your day ahead plus last night's sleep, your steps and resting heart rate from Health Connect.
 
 IT ADAPTS TO THE MOMENT
 Alerts come out faster and louder, questions rise at the end, and late at night it speaks softer. You can switch this off.
+
+ONE TAP, ANYWHERE
+Quick Settings tiles read whatever you copied, or catch you up, without opening the app.
 
 YOUR PHONE'S VOICE
 Set SteerTTS as Android's text-to-speech engine and other apps on your phone speak with it too.

@@ -133,7 +133,7 @@ public class SteerTtsService extends TextToSpeechService {
             Player.initTap(this);   // the tap directory may have been created after this process started
             java.io.OutputStream tap = Player.newTap();   // demo recordings only (see Player.tapDir)
             for (String sentence : sentences(text)) {
-                float[] y = e.synthesize(sentence, voice, s.ctrl(), pace);
+                float[] y = e.synthesize(Expression.bmp(sentence), voice, s.tagOrNull(), s.ctrl(), pace, false);
                 if (y == null) break;   // stopped
                 if (first < 0) first = (System.nanoTime() - t0) / 1e6;
                 samples += y.length;

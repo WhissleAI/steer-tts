@@ -16,7 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Reads a Doc aloud, sentence by sentence, with the controls a listener expects: play, pause, seek to a sentence,
- * skip back and forward, speed. Sentences are rendered a few seconds ahead of playback on the narrator's own thread
+ * skip back and forward, speed, a sleep timer; when one document ends the next in the queue starts. Each sentence is
+ * performed (Narration): headings slower, dialogue in a second voice and its own mood, italics stressed. Sentences are rendered a few seconds ahead of playback on the narrator's own thread
  * and engine, and a marker before each one tells the screen which sentence is being heard. Holds media audio focus:
  * a readout or a call (anything that takes focus) pauses it, and it resumes when focus comes back. Position is saved
  * as it goes, so a document resumes where it was left. One per process.
@@ -89,6 +90,10 @@ final class Narrator {
     void play() {
         if (doc == null || doc.sentences.isEmpty()) return;
         if (heard >= doc.sentences.size()) heard = 0;
+        if (doc.done) {
+            doc.done = false;
+            doc.savePos(app);
+        }
         if (am.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return;
         playing = true;
         renderFrom(heard);
@@ -162,31 +167,95 @@ final class Narrator {
         }
     }
 
+    // ---------------------------------------------------------------- reader settings
+    /** Dialogue (words in quotation marks) in a second voice. */
+    boolean dialogueVoice() { return prefs.getBoolean("dialogue_voice", true); }
+    void setDialogueVoice(boolean on) { prefs.edit().putBoolean("dialogue_voice", on).apply(); if (playing) seek(heard); }
+
+    /** When a document ends, the next one in the queue starts. */
+    boolean autoNext() { return prefs.getBoolean("auto_next", true); }
+    void setAutoNext(boolean on) { prefs.edit().putBoolean("auto_next", on).apply(); }
+
+    // ---------------------------------------------------------------- sleep timer (main thread)
+    private final Handler main = new Handler(android.os.Looper.getMainLooper());
+    private long sleepAt = -1;          // elapsedRealtime to pause at, or -1
+    private boolean sleepAtEnd;         // pause when this document ends (no next one)
+    private final Runnable sleepNow = () -> {
+        sleepAt = -1;
+        pause();
+    };
+
+    /** minutes > 0: pause after that long; 0: at the end of this document; -1: off. */
+    void setSleep(int minutes) {
+        main.removeCallbacks(sleepNow);
+        sleepAt = -1;
+        sleepAtEnd = minutes == 0;
+        if (minutes > 0) {
+            sleepAt = SystemClock.elapsedRealtime() + minutes * 60_000L;
+            main.postDelayed(sleepNow, minutes * 60_000L);
+        }
+        changed();
+    }
+
+    /** "12 min", "end of document" or null when no timer is set. */
+    String sleepLabel() {
+        if (sleepAtEnd) return "End of document";
+        if (sleepAt < 0) return null;
+        long m = Math.max(1, (sleepAt - SystemClock.elapsedRealtime() + 59_999) / 60_000);
+        return m + " min";
+    }
+
     // ---------------------------------------------------------------- rendering (engine thread)
+    private String intro;   // said before the first sentence ("Next: <title>."), once
+
     private void renderFrom(int start) {
         int g = gen.incrementAndGet();
         Doc d = doc;
         Style base = Style.load(app).copy();
-        base.contextual = false;          // a book is read in one voice, not restyled per sentence
+        base.contextual = false;          // the document's own moods apply below, not the phone's situation
         float pace = pace() * base.pace;
+        boolean second = dialogueVoice();
+        String say = intro;
+        intro = null;
         engineThread.post(() -> {
             try {
                 if (tts == null) tts = new SteerTTS(SteerTTS.installModel(app).getPath(), 0);
                 String voice = voiceFor(tts, base.voice);
+                String other = second ? dialogueVoiceFor(app, voice) : voice;
+                if (say != null) {
+                    float[] y = tts.synthesize(Expression.bmp(say), voice, null, base.ctrl(), pace, false);
+                    if (y == null || gen.get() != g) return;
+                    player.write(y);
+                    player.write(new float[SteerTTS.SAMPLE_RATE / 2]);
+                }
                 for (int i = start; i < d.sentences.size(); ++i) {
                     while (player.pendingSamples() > AHEAD && gen.get() == g) SystemClock.sleep(40);
                     if (gen.get() != g) return;
-                    float[] y = tts.synthesize(d.sentences.get(i), voice, base.ctrl(), pace);
-                    if (y == null || gen.get() != g) return;
                     final int idx = i;
                     player.mark(() -> heardSentence(g, idx));
-                    player.write(y);
+                    for (Narration.Seg seg : Narration.segments(d.sentences.get(i))) {
+                        Style st = Announcer.moodStyle(base, seg.mood);
+                        float[] y = tts.synthesize(Expression.bmp(seg.text), seg.dialogue ? other : voice, st.tagOrNull(),
+                                st.ctrl(), pace, true);
+                        if (y == null || gen.get() != g) return;
+                        player.write(y);
+                        if (seg.pauseAfterMs > 0) player.write(new float[SteerTTS.SAMPLE_RATE * seg.pauseAfterMs / 1000]);
+                    }
                 }
                 if (gen.get() == g) player.mark(() -> finished(g));
             } catch (Exception e) {
                 Log.e(TAG, "narrator", e);
             }
         });
+    }
+
+    /** The voice for dialogue: a featured voice of the other gender (a book's characters stand apart from its narrator). */
+    static String dialogueVoiceFor(Context c, String narrator) {
+        Voices vs = Voices.get(c);
+        Voices.Voice n = vs.voice(narrator);
+        String want = n != null && "female".equals(n.gender) ? "male" : "female";
+        for (Voices.Voice v : vs.featured()) if (want.equals(v.gender) && !v.id.equals(narrator)) return v.id;
+        return narrator;
     }
 
     private void heardSentence(int g, int i) {
@@ -200,12 +269,25 @@ final class Narrator {
     private void finished(int g) {
         if (gen.get() != g || doc == null) return;
         // the last sentence's audio is still playing out: stop once it has
-        new Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+        main.postDelayed(() -> {
             if (gen.get() != g || doc == null) return;
+            doc.pos = 0;            // finished: next time starts from the top
+            doc.done = true;
+            doc.savePos(app);
+            Log.i(TAG, "narrator finished " + doc.title);
+            java.util.List<Doc> next = Doc.upNext(app, doc.id);
+            if (autoNext() && !sleepAtEnd && !next.isEmpty()) {
+                Doc n = next.get(0);
+                playing = false;
+                doc = null;
+                open(n);
+                intro = "Next: " + Narration.display(n.title) + ".";
+                play();
+                return;
+            }
+            sleepAtEnd = false;
             playing = false;
             heard = doc.sentences.size();
-            doc.pos = 0;            // finished: next time starts from the top
-            doc.savePos(app);
             am.abandonAudioFocusRequest(focus);
             ReaderService.update(app);
             changed();

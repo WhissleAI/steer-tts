@@ -42,6 +42,14 @@ final class AssistantPrefs {
     boolean announceMeetings() { return p.getBoolean("meetings", true); }
     void setAnnounceMeetings(boolean on) { p.edit().putBoolean("meetings", on).apply(); }
 
+    /** Each person's messages in a voice of their own (Voices.forPerson). */
+    boolean personVoices() { return p.getBoolean("person_voices", true); }
+    void setPersonVoices(boolean on) { p.edit().putBoolean("person_voices", on).apply(); }
+
+    /** Messages that arrived while they could not be read out are offered when headphones connect. */
+    boolean catchUp() { return p.getBoolean("catch_up", true); }
+    void setCatchUp(boolean on) { p.edit().putBoolean("catch_up", on).apply(); }
+
     int leadMinutes() { return p.getInt("lead", 5); }
     void setLeadMinutes(int m) { p.edit().putInt("lead", m).apply(); }
 

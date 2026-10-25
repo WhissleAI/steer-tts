@@ -332,23 +332,25 @@ JNIEXPORT void JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeStream(JNIEn
   if (rc && !(*env)->ExceptionCheck(env)) throw_rt(env, err);
 }
 
-/* One render of plain text (no markup: system text such as "5*3 <b>" is read as written). null if cancelled. */
+/* One render with a style tag; markup != 0 parses inline markup (*word*, [pause 300ms]), otherwise the text is read as
+ * written (system text such as "5*3 <b>"). null if cancelled. */
 JNIEXPORT jfloatArray JNICALL Java_ai_whissle_steertts_demo_SteerTTS_nativeSynthesize(JNIEnv* env, jclass cls, jlong p,
                                                                                      jstring text, jstring voice,
-                                                                                     jstring ctrl, jfloat pace) {
+                                                                                     jstring tag, jstring ctrl,
+                                                                                     jfloat pace, jboolean markup) {
   handle* h = (handle*)(intptr_t)p;
   if (atomic_exchange(&h->cancel, 0)) return NULL;
   begin_request(h);
   jstrs js;
-  get_strs(env, text, voice, NULL, ctrl, &js);
+  get_strs(env, text, voice, tag, ctrl, &js);
   steertts_options o;
-  options(&js, pace, 0, &o);
+  options(&js, pace, markup ? 1 : 0, &o);
   float* y = NULL;
   size_t n = 0;
   char err[512];
   int rc = steertts_synthesize(h->e, js.text, &o, &y, &n, err, sizeof err);
   end_request(h);
-  release_strs(env, text, voice, NULL, ctrl, &js);
+  release_strs(env, text, voice, tag, ctrl, &js);
   if (rc) {
     throw_rt(env, err);
     return NULL;

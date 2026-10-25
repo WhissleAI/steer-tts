@@ -69,5 +69,8 @@ upload. Target SDK 36 (Android 16), min SDK 26 (Android 8), arm64 only.
 - The notification permission (Android 13+) is never requested: the only notification is the player's, and
   media-session notifications are exempt from it.
 - No `USE_EXACT_ALARM` (reserved for alarm and calendar apps).
-- adb test hooks only work in debuggable builds; the store build ignores them.
+- adb test hooks only work in debuggable builds; the store build ignores them. `tools/device_test.sh` drives every
+  flow through them on a phone (readouts and their moods, calls, catch-up, briefing, reader, process death).
+- Quick Settings tiles ("Read copied text", "Catch me up") need no permission; the clipboard is read only by an
+  activity that holds focus, as Android requires.
 - Model licence: the bundled edge model's weights are Whissle's own; the app is free.

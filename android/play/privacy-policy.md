@@ -15,7 +15,7 @@ servers. Speech is generated on your phone.
 | What | When | Why | Where it goes |
 |---|---|---|---|
 | **Text you type or select** | When you ask the app to speak | To speak it | Nowhere: it is spoken on the phone and not kept |
-| **Notification text** (sender and message) | Only if you turn on message readouts or incoming calls and grant notification access | To read new messages from the apps you choose, and to say who is calling | Nowhere: read, spoken and discarded on the phone |
+| **Notification text** (sender and message) | Only if you turn on message readouts or incoming calls and grant notification access | To read new messages from the apps you choose, and to say who is calling | Nowhere: read, spoken and discarded on the phone. Messages that could not be read out yet (no headphones, Do Not Disturb) are held in the app's memory for "catch me up" until you hear them, dismiss the notification or twelve hours pass; they are never written to storage |
 | **Calendar events** (title, time, place of upcoming events) | Only if you turn on meeting reminders and grant calendar access | To announce a meeting a few minutes before it starts | Nowhere: read on the phone; the app keeps only a list of reminders already given, on the phone |
 | **Health data from Health Connect** (last night's sleep, steps, resting heart rate) | Only if you connect Health Connect for the daily briefing | To say them in your briefing | Nowhere: read on the phone when the briefing plays, spoken and discarded; nothing is stored or written back |
 | **Documents you open** (PDF, EPUB, Word, web page, text) | When you open or share a file with the app | To read it aloud | The extracted text is kept on your phone in your reading list until you remove it |

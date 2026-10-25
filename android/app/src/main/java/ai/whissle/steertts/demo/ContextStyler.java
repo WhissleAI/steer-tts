@@ -32,7 +32,13 @@ final class ContextStyler {
     private ContextStyler() {}
 
     /** The style for one utterance. caller: the requesting app's package (null if unknown). */
-    static Style decide(Context ctx, Style base, String text, String caller) {
+    static Style decide(Context ctx, Style base, String text, String caller) { return decide(ctx, base, text, caller, true); }
+
+    /**
+     * textCues false: only the situation (the requesting app, time of day, ringer, battery); the words are left to the
+     * caller's own moods (the Announcer's parts carry Expression moods, which would otherwise count twice).
+     */
+    static Style decide(Context ctx, Style base, String text, String caller, boolean textCues) {
         Style s = base.copy();
         StringBuilder why = new StringBuilder();
         if (!base.contextual) {
@@ -40,7 +46,7 @@ final class ContextStyler {
             return s;
         }
         String t = text.toLowerCase(Locale.ROOT);
-        boolean alert = ALERT.matcher(t).find() || text.trim().endsWith("!!")
+        boolean alert = (textCues && (ALERT.matcher(t).find() || text.trim().endsWith("!!")))
                 || (caller != null && (caller.contains("deskclock") || caller.contains("alarm")));
         if (alert) {
             s.add("rate", 0.8f);
@@ -49,13 +55,13 @@ final class ContextStyler {
             s.add("tilt", 0.8f);
             s.add("pause", -0.5f);
             note(why, "alert: faster, louder, brighter");
-        } else if (GOOD.matcher(t).find()) {
+        } else if (textCues && GOOD.matcher(t).find()) {
             s.add("f0_iqr", 1.2f);
             s.add("f0_med", 0.4f);
             s.add("loud", 0.3f);
             note(why, "good news: livelier");
         }
-        if (text.trim().endsWith("?")) {
+        if (textCues && text.trim().endsWith("?")) {
             s.add("f0_end", 1.5f);
             note(why, "question: rising end");
         }

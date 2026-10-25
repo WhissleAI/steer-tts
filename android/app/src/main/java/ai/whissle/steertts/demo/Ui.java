@@ -79,9 +79,8 @@ final class Ui {
     /** A rounded card with padding, spaced from the one above. */
     LinearLayout card() {
         LinearLayout l = column();
-        l.setBackground(round(CARD, dp(20)));
+        l.setBackground(round(CARD, dp(22)));
         l.setPadding(dp(16), dp(14), dp(16), dp(14));
-        if (!dark) l.setElevation(dp(1));
         LinearLayout.LayoutParams lp = matchWrap();
         lp.topMargin = dp(12);
         l.setLayoutParams(lp);
@@ -230,6 +229,157 @@ final class Ui {
         track.addView(fill, new LinearLayout.LayoutParams(0, dp(6), Math.max(0.0001f, p)));
         track.addView(new View(c), new LinearLayout.LayoutParams(0, dp(6), Math.max(0.0001f, 1 - p)));
         return track;
+    }
+
+    // ---------------------------------------------------------------- icons, sections, tiles
+    /** A tinted vector icon. */
+    android.widget.ImageView img(int res, int color, float sizeDp) {
+        android.widget.ImageView v = new android.widget.ImageView(c);
+        v.setImageResource(res);
+        v.setImageTintList(ColorStateList.valueOf(color));
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp)));
+        v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return v;
+    }
+
+    /** An icon in a filled circle. */
+    android.widget.FrameLayout badge(int res, int bg, int fg, float sizeDp) {
+        android.widget.FrameLayout f = new android.widget.FrameLayout(c);
+        f.setBackground(round(bg, dp(sizeDp / 2)));
+        android.widget.ImageView i = img(res, fg, sizeDp * 0.5f);
+        f.addView(i, new android.widget.FrameLayout.LayoutParams(dp(sizeDp * 0.5f), dp(sizeDp * 0.5f), Gravity.CENTER));
+        f.setLayoutParams(new LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp)));
+        return f;
+    }
+
+    /** A screen's top: its title, and the settings gear at the end. */
+    LinearLayout topBar(String title, View.OnClickListener settings) {
+        LinearLayout r = row();
+        r.setPadding(0, dp(4), 0, dp(6));
+        TextView t = text(title, 30, INK, true);
+        if (Build.VERSION.SDK_INT >= 28) t.setAccessibilityHeading(true);
+        r.addView(t, weight(1));
+        if (settings != null) {
+            android.widget.ImageView g = img(R.drawable.ic_settings, MUTED, 48);
+            int pad = dp(12);
+            g.setPadding(pad, pad, pad, pad);
+            g.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+            g.setContentDescription("Settings");
+            g.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22000000), null, round(0xFFFFFFFF, dp(24))));
+            g.setOnClickListener(settings);
+            r.addView(g);
+        }
+        return r;
+    }
+
+    /** A section title: calmer than a coloured label, it reads as a heading. */
+    TextView section(String s) {
+        TextView t = text(s, 17, INK, true);
+        t.setPadding(dp(4), dp(22), 0, dp(4));
+        if (Build.VERSION.SDK_INT >= 28) t.setAccessibilityHeading(true);
+        return t;
+    }
+
+    /** A round action with its label underneath (Paste, File, Link, Type). */
+    LinearLayout action(int res, String label, View.OnClickListener l) {
+        LinearLayout col = column();
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+        android.widget.FrameLayout b = badge(res, ACCENT_SOFT, ACCENT, 58);
+        col.addView(b);
+        TextView t = text(label, 13, INK, true);
+        t.setPadding(0, dp(6), 0, 0);
+        col.addView(t);
+        col.setOnClickListener(l);
+        col.setFocusable(true);
+        col.setContentDescription(label);
+        col.setBackground(new RippleDrawable(ColorStateList.valueOf(0x18000000), null, round(0xFFFFFFFF, dp(16))));
+        col.setPadding(dp(4), dp(6), dp(4), dp(6));
+        return col;
+    }
+
+    /** A feature tile (Assistant): icon, title, a status line; Tile.set() shows on / off. */
+    static final class Tile {
+        final LinearLayout root;
+        final TextView title, status, state;
+        final android.widget.FrameLayout icon;
+        final Ui u;
+        final int res;
+
+        Tile(Ui u, int res, String name) {
+            this.u = u;
+            this.res = res;
+            root = u.column();
+            root.setPadding(u.dp(14), u.dp(14), u.dp(14), u.dp(14));
+            root.setMinimumHeight(u.dp(132));
+            LinearLayout top = u.row();
+            icon = u.badge(res, ACCENT_SOFT, ACCENT, 40);
+            top.addView(icon);
+            top.addView(new View(u.c), spacer());
+            state = u.text("", 12, MUTED, true);
+            state.setPadding(u.dp(9), u.dp(3), u.dp(9), u.dp(3));
+            top.addView(state);
+            root.addView(top, matchWrap());
+            title = u.text(name, 15.5f, INK, true);
+            title.setPadding(0, u.dp(10), 0, u.dp(2));
+            root.addView(title);
+            status = u.text("", 12.5f, MUTED, false);
+            status.setMaxLines(3);
+            status.setEllipsize(TextUtils.TruncateAt.END);
+            root.addView(status);
+            root.setFocusable(true);
+        }
+
+        void set(boolean on, String statusText) {
+            GradientDrawable g = round(on ? ACCENT_SOFT : CARD, u.dp(22));
+            if (!on) g.setStroke(u.dp(1), LINE);
+            root.setBackground(new RippleDrawable(ColorStateList.valueOf(0x18000000), g, null));
+            ((GradientDrawable) icon.getBackground()).setColor(on ? ACCENT : ACCENT_SOFT);
+            ((android.widget.ImageView) icon.getChildAt(0)).setImageTintList(ColorStateList.valueOf(on ? ON_ACCENT : ACCENT));
+            state.setText(on ? "On" : "Off");
+            state.setTextColor(on ? ON_ACCENT : MUTED);
+            state.setBackground(round(on ? ACCENT : LINE, u.dp(10)));
+            status.setText(statusText);
+            root.setContentDescription(title.getText() + ", " + (on ? "on" : "off") + ". " + statusText);
+        }
+    }
+
+    /** A little equaliser that moves while something is being said. */
+    static final class Bars extends View {
+        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0, (float) (2 * Math.PI));
+        private float phase;
+
+        Bars(Context c, int color) {
+            super(c);
+            paint.setColor(color);
+            anim.setDuration(1100);
+            anim.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            anim.setInterpolator(new android.view.animation.LinearInterpolator());
+            anim.addUpdateListener(a -> {
+                phase = (float) a.getAnimatedValue();
+                invalidate();
+            });
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+
+        void play(boolean on) {
+            if (on && !anim.isStarted()) anim.start();
+            else if (!on) {
+                anim.cancel();
+                phase = 0;
+                invalidate();
+            }
+        }
+
+        @Override protected void onDraw(android.graphics.Canvas cv) {
+            int n = 4;
+            float w = getWidth(), h = getHeight(), bw = w / (n * 2 - 1);
+            for (int i = 0; i < n; ++i) {
+                float a = anim.isStarted() ? 0.35f + 0.65f * (float) Math.abs(Math.sin(phase + i * 0.9)) : 0.35f;
+                float bh = h * a, x = i * 2 * bw, y = (h - bh) / 2;
+                cv.drawRoundRect(x, y, x + bw, y + bh, bw / 2, bw / 2, paint);
+            }
+        }
     }
 
     static LinearLayout.LayoutParams matchWrap() {

@@ -42,6 +42,38 @@
         <activity
             android:name=".OnboardingActivity"
             android:exported="false" />
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <!-- Quick Settings: "Read copied text" (the clipboard is readable only with window focus) and "Catch me up" -->
+        <activity
+            android:name=".ClipReadActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <service
+            android:name=".Tiles$ReadCopied"
+            android:exported="true"
+            android:icon="@drawable/ic_paste"
+            android:label="Read copied text"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".Tiles$CatchUp"
+            android:exported="true"
+            android:icon="@drawable/ic_inbox"
+            android:label="Catch me up"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
         <!-- the document player; its playback runs in ReaderService (media notification, lock screen controls) -->
         <activity
             android:name=".ReaderActivity"

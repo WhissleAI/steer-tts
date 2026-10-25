@@ -53,8 +53,7 @@ final class SettingsScreen {
 
     View build() {
         LinearLayout root = u.column();
-        root.setPadding(u.dp(16), u.dp(20), u.dp(16), u.dp(24));
-        root.addView(u.header("Settings", null));
+        root.setPadding(u.dp(18), u.dp(6), u.dp(18), u.dp(28));
 
         LinearLayout look = u.card();
         look.addView(u.label("Appearance"));
@@ -71,6 +70,18 @@ final class SettingsScreen {
         }
         look.addView(chips);
         root.addView(look);
+
+        LinearLayout reader = u.card();
+        reader.addView(u.label("Reading"));
+        Narrator n = Narrator.get(a);
+        android.widget.Switch dv = u.toggle(n.dialogueVoice());
+        dv.setOnCheckedChangeListener((v, on) -> n.setDialogueVoice(on));
+        reader.addView(u.settingRow("Dialogue in a second voice", "Words in quotation marks are read by another voice", dv, null));
+        reader.addView(u.divider());
+        android.widget.Switch an = u.toggle(n.autoNext());
+        an.setOnCheckedChangeListener((v, on) -> n.setAutoNext(on));
+        reader.addView(u.settingRow("Play the next one", "When a document ends, start the next in your list", an, null));
+        root.addView(reader);
 
         LinearLayout sys = u.card();
         sys.addView(u.label("Your phone"));
@@ -130,7 +141,7 @@ final class SettingsScreen {
             @Override public void onItemSelected(android.widget.AdapterView<?> p, View v, int pos, long id) { host.setThreads(THREADS[pos]); }
             @Override public void onNothingSelected(android.widget.AdapterView<?> p) { }
         });
-        box.addView(u.text("Engine threads (this screen's voice)", 13, Ui.MUTED, false));
+        box.addView(u.text("Benchmark threads", 13, Ui.MUTED, false));
         box.addView(threads);
         TextView result = u.text("", 13, Ui.MUTED, false);
         result.setPadding(0, u.dp(8), 0, 0);

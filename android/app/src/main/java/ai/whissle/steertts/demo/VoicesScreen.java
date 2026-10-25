@@ -25,6 +25,9 @@ final class VoicesScreen {
         Style base();
         void saveBase();                          // persist the base style and refresh the other screens
         void preview(String text, Style s);       // speak now, interrupting a previous preview
+        void stop();                              // stop whatever this screen is saying
+        void status(TextView t);                  // where to show "First sound in 41 ms"
+        void openSettings();
     }
 
     private static final String PREVIEW = "Hi, this is how I sound. Is this the voice you want?";
@@ -49,6 +52,10 @@ final class VoicesScreen {
     private TextView speedVal;
     private Switch contextual;
     private String filter = "All";
+    private android.widget.EditText input;
+    private TextView more;
+    private boolean showAll;
+    private static final int SHOWN = 12;
 
     VoicesScreen(Activity a, Ui u, Host host) {
         this.a = a;
@@ -59,38 +66,12 @@ final class VoicesScreen {
 
     View build() {
         LinearLayout root = u.column();
-        root.setPadding(u.dp(16), u.dp(20), u.dp(16), u.dp(24));
-        root.addView(u.header("Voices", "200 voices, all on your phone"));
+        root.setPadding(u.dp(18), u.dp(14), u.dp(18), u.dp(28));
+        root.addView(u.topBar("Voices", v -> host.openSettings()));
+        root.addView(tryCard());
 
         currentCard = u.card();
         root.addView(currentCard);
-
-        root.addView(section("Featured"));
-        HorizontalScrollView fs = new HorizontalScrollView(a);
-        fs.setHorizontalScrollBarEnabled(false);
-        LinearLayout feat = u.row();
-        for (Voices.Voice v : voices.featured()) feat.addView(featuredCard(v));
-        fs.addView(feat);
-        root.addView(fs);
-
-        root.addView(section("All voices"));
-        HorizontalScrollView fsc = new HorizontalScrollView(a);
-        fsc.setHorizontalScrollBarEnabled(false);
-        LinearLayout filters = u.row();
-        for (String f : FILTERS) {
-            TextView ch = u.chip(f, v -> {
-                filter = f;
-                fillList();
-            });
-            filterChips.add(ch);
-            filters.addView(ch);
-        }
-        fsc.addView(filters);
-        root.addView(fsc);
-        LinearLayout listCard = u.card();
-        list = u.column();
-        listCard.addView(list);
-        root.addView(listCard);
 
         LinearLayout style = u.card();
         style.addView(u.label("Style"));
@@ -167,10 +148,88 @@ final class VoicesScreen {
         delivery.addView(btns);
         root.addView(delivery);
 
+        root.addView(u.section("Choose a voice"));
+        HorizontalScrollView fs = new HorizontalScrollView(a);
+        fs.setHorizontalScrollBarEnabled(false);
+        LinearLayout feat = u.row();
+        for (Voices.Voice v : voices.featured()) feat.addView(featuredCard(v));
+        fs.addView(feat);
+        root.addView(fs);
+
+                HorizontalScrollView fsc = new HorizontalScrollView(a);
+        fsc.setHorizontalScrollBarEnabled(false);
+        LinearLayout filters = u.row();
+        for (String f : FILTERS) {
+            TextView ch = u.chip(f, v -> {
+                filter = f;
+                fillList();
+            });
+            filterChips.add(ch);
+            filters.addView(ch);
+        }
+        fsc.addView(filters);
+        root.addView(fsc);
+        LinearLayout listCard = u.card();
+        list = u.column();
+        listCard.addView(list);
+        root.addView(listCard);
+        more = u.pill("", false, v -> {
+            showAll = !showAll;
+            fillList();
+        });
+        LinearLayout.LayoutParams ml = Ui.matchWrap();
+        ml.topMargin = u.dp(10);
+        root.addView(more, ml);
+
+
         refresh();
         ScrollView sv = new ScrollView(a);
         sv.addView(root);
         return sv;
+    }
+
+    /** Type anything and hear it: in your voice and style, or once in a "Say it" delivery. */
+    private View tryCard() {
+        LinearLayout c = u.card();
+        c.setPadding(u.dp(18), u.dp(16), u.dp(18), u.dp(16));
+        input = new android.widget.EditText(a);
+        input.setText("Hi! I'm SteerTTS, a voice that runs entirely on your phone. No internet needed.");
+        input.setTextSize(16);
+        input.setTextColor(Ui.INK);
+        input.setHintTextColor(Ui.MUTED);
+        input.setHint("Type anything to hear it");
+        input.setMinLines(2);
+        input.setMaxLines(4);
+        input.setGravity(Gravity.TOP);
+        input.setBackground(Ui.round(Ui.BG, u.dp(16)));
+        input.setPadding(u.dp(14), u.dp(12), u.dp(14), u.dp(12));
+        c.addView(input, Ui.matchWrap());
+        HorizontalScrollView hs = new HorizontalScrollView(a);
+        hs.setHorizontalScrollBarEnabled(false);
+        LinearLayout chips = u.row();
+        chips.setPadding(0, u.dp(10), 0, 0);
+        for (String p : Style.PRESETS)
+            chips.addView(u.chip(p, v -> {
+                String t = input.getText().toString().trim();
+                if (!t.isEmpty()) host.preview(t, host.base().preset(p));
+            }));
+        hs.addView(chips);
+        c.addView(hs);
+        LinearLayout r = u.row();
+        r.setPadding(0, u.dp(10), 0, 0);
+        TextView st = u.text("", 12.5f, Ui.MUTED, false);
+        st.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        host.status(st);
+        r.addView(st, Ui.weight(1));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sp.rightMargin = u.dp(8);
+        r.addView(u.pill("Stop", false, v -> host.stop()), sp);
+        r.addView(u.pill("Speak", true, v -> {
+            String t = input.getText().toString().trim();
+            if (!t.isEmpty()) host.preview(t, ContextStyler.decide(a, host.base().copy(), t, a.getPackageName()));
+        }));
+        c.addView(r, Ui.matchWrap());
+        return c;
     }
 
     void refresh() {
@@ -244,13 +303,19 @@ final class VoicesScreen {
         for (int i = 0; i < FILTERS.length; ++i) u.select(filterChips.get(i), FILTERS[i].equals(filter));
         list.removeAllViews();
         String cur = currentId();
-        int n = 0;
+        int n = 0, total = 0;
         for (Voices.Voice v : voices.all()) {
             if (!matches(v)) continue;
+            total++;
+            if (!showAll && n >= SHOWN) continue;
             if (n++ > 0) list.addView(u.divider());
             list.addView(row(v, v.id.equals(cur)));
         }
         if (n == 0) list.addView(u.text("No voices here yet. Tap ☆ on a voice to keep it in Favourites.", 14, Ui.MUTED, false));
+        if (more != null) {
+            more.setVisibility(total > SHOWN ? View.VISIBLE : View.GONE);
+            more.setText(showAll ? "Show fewer" : "Show all " + total + " voices");
+        }
     }
 
     private boolean matches(Voices.Voice v) {

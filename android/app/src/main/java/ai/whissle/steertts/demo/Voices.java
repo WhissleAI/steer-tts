@@ -72,7 +72,7 @@ final class Voices {
     private final SharedPreferences prefs;
 
     static synchronized Voices get(Context c) {
-        if (instance == null) instance = new Voices(c.getApplicationContext());
+        if (instance == null || instance.byId.isEmpty()) instance = new Voices(c.getApplicationContext());   // retry a failed load
         return instance;
     }
 
@@ -126,4 +126,18 @@ final class Voices {
     }
 
     static List<String> featuredIds() { return Arrays.asList(FEATURED); }
+
+    /**
+     * A voice of their own for a person whose messages are read out: always the same for the same name, one of the
+     * featured voices, never the user's own (so the assistant's framing and the message are told apart).
+     */
+    static String forPerson(String name, String own) {
+        String ownId = own == null || "female".equals(own) ? FEATURED[0] : "male".equals(own) ? FEATURED[1] : own;
+        List<String> pool = new ArrayList<>();
+        for (String id : FEATURED) if (!id.equals(ownId)) pool.add(id);
+        String key = name.trim().toLowerCase(java.util.Locale.ROOT);
+        int h = 0;
+        for (int i = 0; i < key.length(); ++i) h = 31 * h + key.charAt(i);   // String.hashCode, spelled out: stable
+        return pool.get(Math.floorMod(h, pool.size()));
+    }
 }

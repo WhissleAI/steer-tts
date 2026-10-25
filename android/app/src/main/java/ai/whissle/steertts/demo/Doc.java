@@ -24,6 +24,7 @@ final class Doc {
     final long added;
     int pos;            // the sentence to read next
     long opened;
+    boolean done;       // heard to the end (pos is back at 0)
 
     private Doc(String id, String title, String kind, String source, List<String> paragraphs, long added, int pos, long opened) {
         this.id = id;
@@ -42,7 +43,15 @@ final class Doc {
         return new Doc(UUID.randomUUID().toString(), title, kind, source, paragraphs, now, 0, now);
     }
 
-    float progress() { return sentences.isEmpty() ? 0 : Math.min(1f, pos / (float) sentences.size()); }
+    float progress() { return done ? 1f : sentences.isEmpty() ? 0 : Math.min(1f, pos / (float) sentences.size()); }
+
+    /** The reading queue: documents not finished, the oldest added first (what plays next after one ends). */
+    static List<Doc> upNext(Context c, String exceptId) {
+        List<Doc> out = new ArrayList<>();
+        for (Doc d : all(c)) if (!d.done && !d.id.equals(exceptId)) out.add(d);
+        out.sort((a, b) -> Long.compare(a.added, b.added));
+        return out;
+    }
 
     /** Rough listening time left, from the characters still to read (about 15 characters a second at 1x). */
     int minutesLeft(float pace) {
@@ -78,7 +87,7 @@ final class Doc {
     void savePos(Context c) {
         File meta = new File(dir(c), id + ".pos");
         try (FileOutputStream out = new FileOutputStream(meta)) {
-            out.write((pos + " " + opened).getBytes());
+            out.write((pos + " " + opened + " " + (done ? 1 : 0)).getBytes());
         } catch (Exception ignored) {
         }
     }
@@ -91,17 +100,21 @@ final class Doc {
             for (int i = 0; i < a.length(); ++i) paras.add(a.getString(i));
             int pos = o.optInt("pos");
             long opened = o.optLong("opened");
+            boolean done = false;
             File meta = new File(dir(c), id + ".pos");
             if (meta.exists()) {
                 try (FileInputStream m = new FileInputStream(meta)) {
                     String[] p = new String(m.readAllBytes()).trim().split(" ");
                     pos = Integer.parseInt(p[0]);
                     if (p.length > 1) opened = Long.parseLong(p[1]);
+                    if (p.length > 2) done = "1".equals(p[2]);
                 } catch (Exception ignored) {
                 }
             }
-            return new Doc(o.getString("id"), o.getString("title"), o.optString("kind", "text"), o.optString("source"),
+            Doc d = new Doc(o.getString("id"), o.getString("title"), o.optString("kind", "text"), o.optString("source"),
                     paras, o.optLong("added"), pos, opened);
+            d.done = done;
+            return d;
         } catch (Exception e) {
             return null;
         }
