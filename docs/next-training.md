@@ -73,6 +73,13 @@ Kept up to date as the app is built. Newest first within each section.
     of the app stripping accents; (d) multilingual: Hindi/Hinglish, Devanagari and Cyrillic text is currently dropped
     (silence) — a voice for at least Hinglish messages is a real gap for the assistant.
 
+17. **Brand names and tech words are mispronounced (verified 2026-10-26, edge model, Whisper round-trip).** Found
+    recording the Mac demo: "WhatsApp" → "What's Baff", "iMessage" → "a message", "login" → "Logan", "GitHub" →
+    "Gethub" (respelled "Git Hub": "JIT Hub"), "npm" → "pen line" (fine as "N P M"). FaceTime, Slack, LinkedIn,
+    YouTube, iPhone, macOS, Microsoft Teams, Zoom, PDF were fine. The apps now respell WhatsApp, iMessage and login
+    (`Spoken.respell`), but every client would need its own list. *Train:* a lexicon of app, product and developer
+    terms (camel-case brands, CLI names) in the G2P training data, and camel-case splitting in the front end.
+
 12. **Long sentences (to measure).** Documents are split at 240 characters at a comma or semicolon for first-sound
     latency. Measure quality and prosody on 200–400 character inputs; if good, the split can be longer.
 
