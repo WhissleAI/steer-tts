@@ -83,3 +83,13 @@ Kept up to date as the app is built. Newest first within each section.
     are lost at every boundary. *Train/serve:* context from the previous sentence (text and prosody state) as input.
 13. **Headings and list items (to measure).** The reader slows headings with controls (`Narration.HEADING`). A
     `heading`/`list` delivery learned from audiobook and lecture data would sound more natural than control shifts.
+16. **Sentence endings and pauses don't follow the text, and dynamics are flat (measured 2026-10-26, small sample).**
+    Two LibriVox narrators read chapter 1 of *The Wonderful Wizard of Oz*. Each sentence was measured with
+    `steertts/measure.py` and compared with the edge voice reading the same sentences with no tag or controls.
+    - The voice follows the narrators' rate from text alone (r = 0.70), and loudness partly (0.44).
+    - It doesn't follow sentence endings (`f0_end` r = 0.07) or pauses (−0.24). Yet the two narrators agree with
+      each other on endings (0.48) and rate (0.55), so endings are predictable from text.
+    - Across sentences, humans vary loudness 2–3× more than the voice and pauses 1.5–3.5× more.
+
+    *Train:* learn contour and pause from text context, e.g. by adding audiobook data with paragraph context. Plan
+    a "director" model, which predicts per-sentence controls from context, trained on the same measurements at scale.
