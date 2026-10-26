@@ -1,0 +1,120 @@
+# The director: reading longer text as a performance
+
+SteerTTS renders one sentence at a time. Each sentence is expressive on its own, but a book read sentence by sentence
+has no performance across sentences:
+- no register for the genre,
+- no lift for dialogue,
+- no pause that says "new paragraph",
+- no ending that says "more to come" or "that's it".
+
+The **director** supplies that. It is a ~0.44M-parameter model (8-bit, ~0.5 MB, `director.bin` in the edge model
+directory) that reads the text in order and plans each sentence, in the units SteerTTS's controls already use:
+
+| Plan | Meaning | Becomes |
+|---|---|---|
+| `rate` | speaking rate, speaker-relative z | the `rate` control |
+| `loud` | loudness, z | the `loud` control |
+| `f0_med` | pitch level, z | the `f0_med` control |
+| `f0_iqr` | pitch range (liveliness), z | the `f0_iqr` control |
+| `end` | the final word's pitch against the sentence's, z | the `f0_end` control (× 0.8) |
+| `gap` | log(1 + seconds of silence after the sentence) | the pause before the next sentence (80–1500 ms) |
+
+It is trained on how audiobook narrators actually performed each sentence: LibriVox recordings of Project Gutenberg
+books in ten genres. Every sentence was measured with the same DSP code that defines SteerTTS's controls
+(`steertts/measure.py`), against the narrator's own average. It sees:
+- the sentence (hashed words and word pairs; punctuation, length, quotes, dashes),
+- its place in the paragraph,
+- whether it is dialogue and whether a speaker is attributed,
+- the next sentence,
+- an optional genre,
+- **its own plans for the sentences before**, so a scene keeps its register.
+
+It runs in about 20 µs per sentence on an M3 Mac and about 60 µs on a Pixel 10, so a whole novel is planned in well
+under a second, before the first sentence is rendered.
+
+## Command line
+
+```bash
+steertts --model models/steer-tts-edge --perform chapter.txt --genre children -o chapter.wav
+steertts --model models/steer-tts-edge --perform chapter.txt --plan          # print the plans, render nothing
+steertts --model models/steer-tts-edge --perform poem.txt --genre poetry --strength 0.7 --voice male
+```
+
+`--perform FILE` (`-` reads stdin) splits the text into paragraphs at blank lines and into sentences, plans them, and
+renders one WAV with the planned pauses between sentences.
+- `--strength` scales the plan: 1 is as narrators perform, 0 is no director.
+- `--ctrl` still applies and wins over the plan, so a voice's own style stays.
+- `--director` points at another `director.bin`.
+
+## C API
+
+```c
+#include "steertts.h"
+
+steertts_director* d = steertts_director_load("models/steer-tts-edge", err, sizeof err);   /* or .../director.bin */
+
+steertts_sentence s[] = {   /* text, dialogue, has_speaker, para_len, para_index */
+  {"Dorothy lived in the midst of the great Kansas prairies.", 0, 0, 2, 0},
+  {"“Where are we going?” she asked.", 1, 1, 2, 1},
+};
+float plans[2 * STEERTTS_PLAN_DIMS];
+steertts_director_plan(d, s, 2, "children", plans, err, sizeof err);   /* genre may be NULL */
+
+for (int i = 0; i < 2; i++) {
+  const float* p = plans + i * STEERTTS_PLAN_DIMS;
+  char ctrl[160];
+  steertts_plan_ctrl(p, 1.0f, ctrl, sizeof ctrl);       /* "rate=0.12,loud=-0.30,f0_med=0.41,f0_iqr=0.22,f0_end=0.10" */
+  steertts_options o;
+  steertts_default_options(&o);
+  o.ctrl = ctrl;
+  steertts_synthesize(engine, s[i].text, &o, &audio, &n, err, sizeof err);
+  int pause_ms = steertts_plan_pause_ms(p, o.pace);     /* silence to leave after it */
+  /* ... */
+}
+steertts_director_free(d);
+```
+
+| Function | Purpose |
+|---|---|
+| `steertts_director_load(path, err, len)` | Load `director.bin`, or the one in a model directory. NULL on failure. |
+| `steertts_director_from_memory(data, n, err, len)` | The same from bytes in memory (e.g. an Android asset). |
+| `steertts_director_plan(d, sentences, n, genre, plans, err, len)` | Plan a whole text: `n × STEERTTS_PLAN_DIMS` floats. |
+| `steertts_reading_begin(d, genre)` / `steertts_reading_next(r, s, next, plan)` / `steertts_reading_free(r)` | Plan sentence by sentence, keeping the context (messages arriving one by one, a reader that cannot see the whole text). `next` is the following sentence when known, else NULL. |
+| `steertts_plan_controls(plan, strength, out[5])` | The plan as control z-scores (rate, loud, f0_med, f0_iqr, f0_end), clamped to ±3. Add them to a voice's own style controls. |
+| `steertts_plan_ctrl(plan, strength, buf, len)` | The same as a `ctrl` string, independent of the C locale. |
+| `steertts_plan_pause_ms(plan, pace)` | The pause after the sentence in ms (80–1500), shorter at a faster pace. |
+| `steertts_director_genre(i)` | The genre names: `children`, `adventure`, `fantasy`, `mystery`, `scifi`, `gothic`, `literary`, `humour`, `nonfiction`, `poetry`. |
+
+Notes:
+- **Thread safety:** a director is read-only after loading and can be shared across threads. A reading belongs to one
+  thread.
+- **NULL arguments** are errors, not crashes, as in the rest of the API.
+
+## Using it well
+
+- **Plan a document once, when it opens.** The plans are 6 floats per sentence. Keeping them with the document makes
+  seeking, resuming and exporting consistent, because every sentence keeps the plan it got in context.
+- **Headings are not planned.** The training data left headings out, so render them with your own delivery (slower,
+  a pause after), and plan the body text.
+- **Dialogue:** narrators keep their own voice and lift the pitch for dialogue; the director plans that lift. A
+  different voice per character is a separate choice.
+- **Strength:** 0.6–1.0 suits most listeners. Plans add to the user's own style; they don't replace it.
+- **Genre** steadies the register when it is known, for example from a library shelf. Without one the director still
+  works: it was trained with the genre hidden a third of the time.
+
+## How well it does
+
+On whole books it never saw in training, the director tracks the narrator's speaking rate, pitch level, pitch range,
+sentence endings and pauses. Narrators don't fully agree with each other either, so their agreement on the same
+sentences is the ceiling:
+
+| Correlation with the narrator | rate | loud | f0_med | f0_iqr | end | gap |
+|---|---|---|---|---|---|---|
+| Rule-based moods (no director) | 0.01 | 0.05 | 0.09 | 0.05 | −0.01 | −0.01 |
+| Director | 0.28 | 0.01 | 0.23 | 0.21 | 0.13 | 0.35 |
+| Two narrators, same sentence | 0.61 | 0.33 | 0.36 | 0.21 | 0.26 | 0.48 |
+
+These numbers are from the first 25 hours of training data and will be updated with the full set. Loudness is
+carried by the scene: the director predicts it from the narrator's real history, not yet from its own.
+
+The C implementation is checked against the trained PyTorch model on 525 held-out sentences in `c/tests/test_director.c`.

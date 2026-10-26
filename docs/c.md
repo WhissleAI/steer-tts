@@ -189,6 +189,12 @@ The names match the [native C++ runtime's C API](native.md#c-api) (`steertts_cre
 `steertts_synthesize`, `steertts_stream`, `steertts_free_audio`, `steertts_save_wav`), so code written against it
 compiles against this library unchanged.
 
+### Director
+
+`steertts_director_*` plans how each sentence of a longer text is performed (rate, loudness, pitch, ending, pause),
+from the text, its context and its own previous plans, with a 0.5 MB model (`director.bin` in the edge model directory).
+The CLI's `--perform FILE` reads a whole text that way. See [the director](director.md).
+
 ## Parity with Python
 
 `c/tests` holds a test per component plus an end-to-end test, each against references from the Python packages.

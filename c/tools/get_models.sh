@@ -1,7 +1,7 @@
 #!/bin/sh
 # Download the model files the C library reads, with curl only (no Python):
 #
-#   c/tools/get_models.sh edge            -> models/steer-tts-edge   (12 MB + 2.6 MB front-end assets)
+#   c/tools/get_models.sh edge            -> models/steer-tts-edge   (12 MB + 2.6 MB front-end assets + 0.5 MB director)
 #   c/tools/get_models.sh v1 [int8|fp32]  -> models/steer-tts        (int8: 52 MB + helpers; fp32: 215 MB + helpers)
 #   c/tools/get_models.sh edge /opt/tts   (any destination directory; default ./models)
 #
@@ -37,6 +37,10 @@ if [ "$what" = edge ]; then
   d=$dest/steer-tts-edge
   echo "WhissleAI/steer-tts-edge -> $d"
   get WhissleAI/steer-tts-edge "$d" config.json voices.json acoustic.safetensors vocoder.safetensors voices.safetensors $front
+  # the director (docs/director.md, 0.5 MB): optional, so a missing file only warns
+  printf '  %s\n' director.bin
+  curl -fL --retry 3 -s ${auth:+-H "$auth"} -o "$d/director.bin" "https://huggingface.co/WhissleAI/steer-tts-edge/resolve/main/director.bin" \
+    || { rm -f "$d/director.bin"; echo "  (director.bin not available: --perform and steertts_director_* need it)" >&2; }
 else
   d=$dest/steer-tts
   echo "WhissleAI/steer-tts ($prec) -> $d"

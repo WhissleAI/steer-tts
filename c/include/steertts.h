@@ -160,6 +160,66 @@ STEERTTS_API int steertts_stream_json(steertts_engine* e, const char* request_js
 STEERTTS_API int steertts_resolve_json(steertts_engine* e, const char* request_json, char** json_out, char* err,
                                        size_t err_len);
 
+/* ------------------------------------------------------------------ director: planning a performance
+ * The director plans how each sentence of a longer text is performed: speaking rate, loudness, pitch level, pitch
+ * range, how the sentence ends and the pause after it, from the sentence, the next one and its own plans for the
+ * sentences before. A ~0.44M-parameter model in 8 bits (director.bin, ~0.5 MB, in the edge model directory), trained
+ * on measured audiobook narration: it plans in the units of SteerTTS's controls, so a plan becomes a request directly.
+ * It is independent of the engine (no steertts_engine needed) and takes ~20-60 us per sentence.
+ *
+ *   steertts_director* d = steertts_director_load("steer-tts-edge", err, sizeof err);   // a dir or director.bin
+ *   steertts_sentence s[] = {{"\u201cWho are you?\u201d she asked.", 1, 1, 2, 0}, {"Nobody answered.", 0, 0, 2, 1}};
+ *   float plan[2 * STEERTTS_PLAN_DIMS];
+ *   steertts_director_plan(d, s, 2, "children", plan, err, sizeof err);
+ *   char ctrl[160];
+ *   steertts_plan_ctrl(plan, 1.0f, ctrl, sizeof ctrl);          // "rate=0.21,loud=..,f0_med=..,f0_iqr=..,f0_end=.."
+ *   int pause = steertts_plan_pause_ms(plan, 1.0f);             // silence after the sentence
+ *
+ * plan[]: STEERTTS_PLAN_DIMS numbers per sentence: rate, loud, f0_med, f0_iqr (control z-scores), end (the final word's
+ * pitch against the sentence's, z), gap (log(1 + seconds of silence after the sentence)). */
+#define STEERTTS_PLAN_DIMS 6
+
+typedef struct steertts_director steertts_director;
+typedef struct steertts_reading steertts_reading;
+
+/* One sentence as the director reads it: its text (UTF-8), whether it holds dialogue (quoted speech), whether a speaker
+ * is attributed, and its place in its paragraph (para_len sentences, this one at para_index). */
+typedef struct {
+  const char* text;
+  int dialogue;
+  int has_speaker;
+  int para_len;
+  int para_index;
+} steertts_sentence;
+
+/* path: director.bin, or a directory holding it (the edge model's). NULL on failure (message in err). */
+STEERTTS_API steertts_director* steertts_director_load(const char* path, char* err, size_t err_len);
+/* From bytes in memory (e.g. an Android asset); they are copied. */
+STEERTTS_API steertts_director* steertts_director_from_memory(const void* data, size_t n, char* err, size_t err_len);
+STEERTTS_API void steertts_director_free(steertts_director* d);
+/* The genres the director knows ("children", "adventure", "fantasy", "mystery", "scifi", "gothic", "literary",
+ * "humour", "nonfiction", "poetry"); NULL past the end. A genre steadies the register; unknown is fine (NULL). */
+STEERTTS_API const char* steertts_director_genre(int i);
+
+/* A whole text at once: n sentences in order -> plans[n * STEERTTS_PLAN_DIMS]. genre may be NULL. 0 on success. */
+STEERTTS_API int steertts_director_plan(const steertts_director* d, const steertts_sentence* sentences, size_t n,
+                                        const char* genre, float* plans, char* err, size_t err_len);
+
+/* Sentence by sentence (e.g. messages as they arrive): a reading keeps the context. next: the sentence after this one
+ * when it is known (the director looks one ahead), else NULL. 0 on success. */
+STEERTTS_API steertts_reading* steertts_reading_begin(const steertts_director* d, const char* genre);
+STEERTTS_API int steertts_reading_next(steertts_reading* r, const steertts_sentence* s, const steertts_sentence* next,
+                                       float plan[STEERTTS_PLAN_DIMS]);
+STEERTTS_API void steertts_reading_free(steertts_reading* r);
+
+/* A plan as request controls: strength scales it (1 = as narrators perform, 0 = off); the ending is mapped to f0_end.
+ * out[5]: rate, loud, f0_med, f0_iqr, f0_end (z), clamped to +-3; add them to a voice's own style controls. */
+STEERTTS_API void steertts_plan_controls(const float plan[STEERTTS_PLAN_DIMS], float strength, float out[5]);
+/* The same as a ctrl string ("rate=0.21,loud=-0.10,..."): 0 on success (the string fits). */
+STEERTTS_API int steertts_plan_ctrl(const float plan[STEERTTS_PLAN_DIMS], float strength, char* ctrl, size_t len);
+/* The silence to leave after the sentence, in milliseconds (80 .. 1500), shorter at a faster pace. */
+STEERTTS_API int steertts_plan_pause_ms(const float plan[STEERTTS_PLAN_DIMS], float pace);
+
 /* ------------------------------------------------------------------ helpers */
 /* v1: the 512-d speaker vector of a reference clip: a WAV file, or (path == NULL) n float samples at sr Hz. */
 STEERTTS_API int steertts_speaker_vector(steertts_engine* e, const char* wav_path, const float* samples, size_t n,

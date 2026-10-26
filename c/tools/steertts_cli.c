@@ -21,6 +21,7 @@
 #endif
 #include <math.h>
 #include <signal.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,7 +44,7 @@ static const char* usage =
     "                [--prompt TEXT] [--ref-wav WAV] [--word-shift W:key=v,...;...] [--seed N] [--no-flow]\n"
     "                [--flow-steps N] [--precision fp32|int8] [--assets DIR] [--json REQUEST] [--resolve]\n"
     "                [--play] [-i] [--list voices|tags|controls] [--gender female|male] [--bench] [--bench-json]\n"
-    "                [--version]\n"
+    "                [--perform FILE [--plan] [--genre G] [--strength S] [--director PATH]] [--version]\n"
     "\n"
     "  TEXT           text to speak ('-' reads stdin)\n"
     "  -o OUT         output WAV (16-bit, 24 kHz; default out.wav). '-' writes raw 16-bit PCM to stdout\n"
@@ -64,7 +65,14 @@ static const char* usage =
     "  --json R       a full request as JSON (request.schema.json); TEXT and the request flags are then ignored\n"
     "  --resolve      print the resolved request (prompt mapped, defaults filled in) instead of rendering\n"
     "  --bench        render 20 fixed sentences, print real-time factor, latency and peak memory\n"
-    "  --bench-json   the same, as one JSON line\n";
+    "  --bench-json   the same, as one JSON line\n"
+    "  --perform F    read a whole text file ('-': stdin) as a performance: paragraphs at blank lines, each sentence\n"
+    "                 planned by the director (rate, loudness, pitch, ending, pause) and rendered into one WAV\n"
+    "  --plan         with --perform: print each sentence's plan (tab-separated) instead of rendering\n"
+    "  --genre G      with --perform: children, adventure, fantasy, mystery, scifi, gothic, literary, humour,\n"
+    "                 nonfiction or poetry (steadies the register; default unknown)\n"
+    "  --strength S   with --perform: how strongly the plan is applied (default 1; 0 = no director)\n"
+    "  --director P   director.bin, or its directory (default: the model directory)\n";
 
 /* strict number arguments: the whole string must parse (C locale, as the library) */
 double st_strtod(const char* s, char** end);
@@ -495,11 +503,194 @@ static int interactive(steertts_engine* e, steertts_options o, FILE* raw, const 
   return rc;
 }
 
+/* ------------------------------------------------------------------ --perform: a text read as a performance */
+
+/* a whole file ('-': stdin), NUL-terminated */
+static int read_text(const char* path, char** text, size_t* len) {
+  FILE* f = strcmp(path, "-") ? fopen(path, "rb") : stdin;
+  if (!f) {
+    fprintf(stderr, "steertts: cannot open %s\n", path);
+    return 1;
+  }
+  size_t cap = 1 << 16, n = 0;
+  char* b = (char*)malloc(cap);
+  for (size_t got; b && (got = fread(b + n, 1, cap - n - 1, f)) > 0;) {
+    n += got;
+    if (n + 1 >= cap) b = (char*)realloc(b, cap *= 2);
+  }
+  if (f != stdin) fclose(f);
+  if (!b) return 1;
+  b[n] = 0;
+  *text = b;
+  *len = n;
+  return 0;
+}
+
+typedef struct {
+  char** text;
+  steertts_sentence* s;
+  size_t n, cap;
+} sentences;
+
+static void add_sentence(sentences* v, const char* a, size_t len) {
+  while (len && isspace((unsigned char)a[0])) a++, len--;
+  while (len && isspace((unsigned char)a[len - 1])) len--;
+  if (!len) return;
+  if (v->n == v->cap) {
+    v->cap = v->cap ? 2 * v->cap : 256;
+    v->text = (char**)realloc(v->text, v->cap * sizeof *v->text);
+    v->s = (steertts_sentence*)realloc(v->s, v->cap * sizeof *v->s);
+  }
+  char* t = (char*)malloc(len + 1);
+  memcpy(t, a, len);
+  t[len] = 0;
+  for (char* q = t; *q; q++)
+    if (*q == '\n' || *q == '\r' || *q == '\t') *q = ' ';
+  v->text[v->n] = t;
+  memset(&v->s[v->n], 0, sizeof v->s[v->n]);
+  v->s[v->n].text = t;
+  v->n++;
+}
+
+static int is_abbrev(const char* p, const char* start) {   /* p at the '.' */
+  static const char* const ab[] = {"Mr", "Mrs", "Ms", "Dr", "St", "Mt", "Jr", "Sr", "vs", "etc", "e.g", "i.e", "No", 0};
+  for (int k = 0; ab[k]; k++) {
+    size_t n = strlen(ab[k]);
+    if ((size_t)(p - start) >= n && strncmp(p - n, ab[k], n) == 0 && (p - n == start || !isalpha((unsigned char)p[-(long)n - 1])))
+      return 1;
+  }
+  return p - start >= 1 && isupper((unsigned char)p[-1]) && (p - start == 1 || !isalpha((unsigned char)p[-2]));  /* "J." */
+}
+
+/* Paragraphs at blank lines; sentences at . ! ? (and closing quotes) before a space and a capital or a quote. */
+static void split_text(const char* text, sentences* v) {
+  const char* p = text;
+  while (*p) {
+    const char* end = strstr(p, "\n\n");
+    while (end && end[2] == '\n') end++;
+    size_t plen = end ? (size_t)(end - p) : strlen(p);
+    size_t first = v->n;
+    const char* a = p;
+    for (const char* q = p; q < p + plen; q++) {
+      if (*q != '.' && *q != '!' && *q != '?') continue;
+      if (*q == '.' && is_abbrev(q, p)) continue;
+      const char* e = q + 1;
+      while (e < p + plen && (*e == '.' || *e == '!' || *e == '?' || *e == '"' || *e == '\'' || *e == ')' ||
+                              ((unsigned char)*e == 0xE2 && (unsigned char)e[1] == 0x80 &&
+                               ((unsigned char)e[2] == 0x9D || (unsigned char)e[2] == 0x99))))
+        e += (unsigned char)*e == 0xE2 ? 3 : 1;
+      if (e >= p + plen) break;
+      if (!isspace((unsigned char)*e)) continue;
+      const char* nx = e;
+      while (nx < p + plen && isspace((unsigned char)*nx)) nx++;
+      if (nx < p + plen && (isupper((unsigned char)*nx) || *nx == '"' || (unsigned char)*nx == 0xE2)) {
+        add_sentence(v, a, (size_t)(e - a));
+        a = e;
+      }
+    }
+    add_sentence(v, a, (size_t)(p + plen - a));
+    for (size_t i = first; i < v->n; i++) {
+      const char* t = v->s[i].text;
+      int quoted = strchr(t, '"') != NULL || strstr(t, "\xE2\x80\x9C") != NULL || strstr(t, "\xE2\x80\x9D") != NULL;
+      v->s[i].dialogue = quoted;
+      v->s[i].has_speaker = quoted && (strstr(t, " said") || strstr(t, " asked") || strstr(t, " cried") ||
+                                       strstr(t, " replied") || strstr(t, " whispered") || strstr(t, " shouted"));
+      v->s[i].para_len = (int)(v->n - first);
+      v->s[i].para_index = (int)(i - first);
+    }
+    p += plen;
+    while (*p == '\n') p++;
+  }
+}
+
+static int perform(const char* model, const steertts_config* cfg, const steertts_options* base, const char* user_ctrl,
+                   const char* file, const char* director_path, const char* genre, float strength, int plan_only,
+                   const char* out) {
+  char err[512];
+  size_t len = 0;
+  char* text = NULL;
+  if (read_text(file, &text, &len) != 0) return 1;
+  sentences v = {0};
+  split_text(text, &v);
+  free(text);
+  if (!v.n) {
+    fprintf(stderr, "steertts: no sentences in %s\n", file);
+    return 1;
+  }
+  steertts_director* d = steertts_director_load(director_path ? director_path : model, err, sizeof err);
+  if (!d) {
+    fprintf(stderr, "steertts: %s\n", err);
+    return 1;
+  }
+  float* plans = (float*)malloc(v.n * STEERTTS_PLAN_DIMS * sizeof(float));
+  if (!plans || steertts_director_plan(d, v.s, v.n, genre, plans, err, sizeof err) != 0) {
+    fprintf(stderr, "steertts: %s\n", err);
+    return 1;
+  }
+  steertts_director_free(d);
+  int rc = 0;
+  if (plan_only) {
+    printf("sentence\tdialogue\tpara\trate\tloud\tf0_med\tf0_iqr\tend\tpause_ms\ttext\n");
+    for (size_t i = 0; i < v.n; i++) {
+      const float* p = plans + i * STEERTTS_PLAN_DIMS;
+      printf("%zu\t%d\t%d/%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%d\t%s\n", i, v.s[i].dialogue, v.s[i].para_index + 1,
+             v.s[i].para_len, p[0], p[1], p[2], p[3], p[4], steertts_plan_pause_ms(p, base->pace > 0 ? base->pace : 1),
+             v.s[i].text);
+    }
+  } else {
+    steertts_engine* e = steertts_create_ex(model, cfg, err, sizeof err);
+    if (!e) {
+      fprintf(stderr, "steertts: %s\n", err);
+      return 1;
+    }
+    float* all = NULL;
+    size_t total = 0;
+    for (size_t i = 0; i < v.n && !rc; i++) {
+      const float* p = plans + i * STEERTTS_PLAN_DIMS;
+      char ctrl[640], pc[160];
+      steertts_plan_ctrl(p, strength, pc, sizeof pc);
+      snprintf(ctrl, sizeof ctrl, "%s%s%s", strength > 0 ? pc : "", user_ctrl && strength > 0 ? "," : "",
+               user_ctrl ? user_ctrl : "");   /* the user's own controls last: they win */
+      steertts_options o = *base;
+      o.ctrl = ctrl[0] ? ctrl : NULL;
+      float* a = NULL;
+      size_t n = 0;
+      if (steertts_synthesize(e, v.s[i].text, &o, &a, &n, err, sizeof err) != 0) {
+        fprintf(stderr, "steertts: sentence %zu: %s\n", i, err);
+        rc = 1;
+        break;
+      }
+      size_t gap = strength > 0 ? (size_t)steertts_plan_pause_ms(p, o.pace > 0 ? o.pace : 1) * STEERTTS_SAMPLE_RATE / 1000
+                                : STEERTTS_SAMPLE_RATE * 3 / 10;
+      if (v.s[i].para_index == v.s[i].para_len - 1 && strength <= 0) gap = STEERTTS_SAMPLE_RATE * 6 / 10;
+      all = (float*)realloc(all, (total + n + gap) * sizeof(float));
+      memcpy(all + total, a, n * sizeof(float));
+      memset(all + total + n, 0, gap * sizeof(float));
+      total += n + gap;
+      steertts_free(a);
+    }
+    if (!rc) {
+      rc = steertts_save_wav(all, total, out);
+      if (!rc) fprintf(stderr, "%s: %zu sentences, %.1f s\n", out, v.n, (double)total / STEERTTS_SAMPLE_RATE);
+    }
+    free(all);
+    steertts_destroy(e);
+  }
+  for (size_t i = 0; i < v.n; i++) free(v.text[i]);
+  free(v.text);
+  free(v.s);
+  free(plans);
+  return rc;
+}
+
 int main(int argc, char** argv) {
   const char *text = NULL, *out = "out.wav", *model = NULL, *list = NULL, *json = NULL, *ctrl = NULL, *gender = NULL;
   char ctrl_buf[512];
   double rate = 0;
   int have_rate = 0, stream = 0, do_bench = 0, bench_json = 0, resolve = 0, play = 0, inter = 0, out_set = 0;
+  const char *perform_file = NULL, *director_path = NULL, *genre = NULL;
+  int plan_only = 0;
+  float strength = 1.0f;
   steertts_config cfg;
   steertts_options o;
   steertts_default_config(&cfg);
@@ -546,6 +737,11 @@ int main(int argc, char** argv) {
     else if (!strcmp(a, "--gender")) gender = NEXT();
     else if (!strcmp(a, "--bench")) do_bench = 1;
     else if (!strcmp(a, "--bench-json")) do_bench = bench_json = 1;
+    else if (!strcmp(a, "--perform")) perform_file = NEXT();
+    else if (!strcmp(a, "--plan")) plan_only = 1;
+    else if (!strcmp(a, "--genre")) genre = NEXT();
+    else if (!strcmp(a, "--strength")) strength = (float)num_arg(a, NEXT());
+    else if (!strcmp(a, "--director")) director_path = NEXT();
     else if (a[0] == '-' && a[1]) {
       fprintf(stderr, "steertts: unknown option %s\n", a);
       return 2;
@@ -579,6 +775,8 @@ int main(int argc, char** argv) {
   if (!model) model = ".";
   char err[1024];
   double t0 = now_ms();
+  if (perform_file)
+    return perform(model, &cfg, &o, ctrl, perform_file, director_path, genre, strength, plan_only, out);
   steertts_engine* e = steertts_create_ex(model, &cfg, err, sizeof err);
   if (!e) {
     fprintf(stderr, "steertts: %s\n", err);

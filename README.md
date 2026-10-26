@@ -62,6 +62,7 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 - [The request](docs/request.md): controls, tags, guidance, per-word shifts, markup
 - [Python](docs/python.md): `steertts` and `steertts_edge` APIs and CLIs
 - [C library](docs/c.md): the dependency-free C11 library and CLI for both models, API, parity, speed
+- [The director](docs/director.md): reading longer text as a performance (a 0.5 MB model that plans each sentence's controls and pauses)
 - [Native C++ + ONNX Runtime](docs/native.md): the edge build on ONNX Runtime
 - [Raspberry Pi](docs/raspberry-pi.md): what runs on a Pi 4 / Pi 5, measured and estimated
 - [FAQ](docs/faq.md): memory, speed, licensing, limitations
