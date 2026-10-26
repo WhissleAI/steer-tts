@@ -24,6 +24,8 @@ struct steertts_director {
   int buckets, emb, hid, nfeat, ngenre, ntarget;
   mat embm, enc, wih, whh, head;
   float *enc_b, *bih, *bhh, *head_b;
+  float cal[25];   /* request = want x cal (rate loud f0_med f0_iqr f0_end): how to ask the paired voice for a change */
+  int has_cal;
   void* blob;
 };
 
@@ -108,6 +110,11 @@ steertts_director* steertts_director_from_memory(const void* data, size_t n, cha
     set_err(err, err_len, "director model file is truncated");
     steertts_director_free(d);
     return NULL;
+  }
+  /* optional: the paired voice's calibration ("CAL1" + 25 floats) */
+  if ((size_t)(end - p) >= 4 + sizeof d->cal && memcmp(p, "CAL1", 4) == 0) {
+    memcpy(d->cal, p + 4, sizeof d->cal);
+    d->has_cal = 1;
   }
   return d;
 }
@@ -460,12 +467,21 @@ static float clamp3(float v) { return v < -3 ? -3 : v > 3 ? 3 : v; }
 /* how the ending (the final word's pitch, z) maps to the f0_end control (the end slope, z) */
 #define END_TO_F0_END 0.8f
 
-void steertts_plan_controls(const float plan[STEERTTS_PLAN_DIMS], float strength, float out[5]) {
+void steertts_plan_controls(const steertts_director* d, const float plan[STEERTTS_PLAN_DIMS], float strength,
+                            float out[5]) {
   if (!out) return;
   for (int k = 0; k < 5; k++) out[k] = 0;
   if (!plan) return;
-  for (int k = 0; k < 4; k++) out[k] = clamp3(strength * plan[k]);
-  out[4] = clamp3(strength * END_TO_F0_END * plan[4]);
+  float want[5] = {strength * plan[0], strength * plan[1], strength * plan[2], strength * plan[3],
+                   strength * END_TO_F0_END * plan[4]};
+  for (int j = 0; j < 5; j++) {
+    float v = want[j];
+    if (d && d->has_cal) {   /* the voice delivers only part of a requested change (pitch least): ask for more */
+      v = 0;
+      for (int i = 0; i < 5; i++) v += want[i] * d->cal[i * 5 + j];
+    }
+    out[j] = clamp3(v);
+  }
 }
 
 /* "-1.23" without the C locale (a comma-decimal locale must not change the string) */
@@ -477,11 +493,12 @@ static size_t put_z(char* b, float v) {
   return n;
 }
 
-int steertts_plan_ctrl(const float plan[STEERTTS_PLAN_DIMS], float strength, char* ctrl, size_t len) {
+int steertts_plan_ctrl(const steertts_director* d, const float plan[STEERTTS_PLAN_DIMS], float strength, char* ctrl,
+                       size_t len) {
   if (!ctrl || !len) return 1;
   ctrl[0] = 0;
   float z[5];
-  steertts_plan_controls(plan, strength, z);
+  steertts_plan_controls(d, plan, strength, z);
   static const char* const names[5] = {"rate", "loud", "f0_med", "f0_iqr", "f0_end"};
   char b[160];
   size_t n = 0;

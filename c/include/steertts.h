@@ -172,7 +172,7 @@ STEERTTS_API int steertts_resolve_json(steertts_engine* e, const char* request_j
  *   float plan[2 * STEERTTS_PLAN_DIMS];
  *   steertts_director_plan(d, s, 2, "children", plan, err, sizeof err);
  *   char ctrl[160];
- *   steertts_plan_ctrl(plan, 1.0f, ctrl, sizeof ctrl);          // "rate=0.21,loud=..,f0_med=..,f0_iqr=..,f0_end=.."
+ *   steertts_plan_ctrl(d, plan, 1.0f, ctrl, sizeof ctrl);       // "rate=0.21,loud=..,f0_med=..,f0_iqr=..,f0_end=.."
  *   int pause = steertts_plan_pause_ms(plan, 1.0f);             // silence after the sentence
  *
  * plan[]: STEERTTS_PLAN_DIMS numbers per sentence: rate, loud, f0_med, f0_iqr (control z-scores), end (the final word's
@@ -213,10 +213,14 @@ STEERTTS_API int steertts_reading_next(steertts_reading* r, const steertts_sente
 STEERTTS_API void steertts_reading_free(steertts_reading* r);
 
 /* A plan as request controls: strength scales it (1 = as narrators perform, 0 = off); the ending is mapped to f0_end.
+ * The director's file carries how its paired voice responds (it delivers ~30-95% of a requested change, pitch least),
+ * so the request asks for what makes the voice perform the plan; d may be NULL (the plan as is).
  * out[5]: rate, loud, f0_med, f0_iqr, f0_end (z), clamped to +-3; add them to a voice's own style controls. */
-STEERTTS_API void steertts_plan_controls(const float plan[STEERTTS_PLAN_DIMS], float strength, float out[5]);
+STEERTTS_API void steertts_plan_controls(const steertts_director* d, const float plan[STEERTTS_PLAN_DIMS],
+                                         float strength, float out[5]);
 /* The same as a ctrl string ("rate=0.21,loud=-0.10,..."): 0 on success (the string fits). */
-STEERTTS_API int steertts_plan_ctrl(const float plan[STEERTTS_PLAN_DIMS], float strength, char* ctrl, size_t len);
+STEERTTS_API int steertts_plan_ctrl(const steertts_director* d, const float plan[STEERTTS_PLAN_DIMS], float strength,
+                                    char* ctrl, size_t len);
 /* The silence to leave after the sentence, in milliseconds (80 .. 1500), shorter at a faster pace. */
 STEERTTS_API int steertts_plan_pause_ms(const float plan[STEERTTS_PLAN_DIMS], float pace);
 

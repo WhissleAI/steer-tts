@@ -1,528 +1,528 @@
 chapter 2
-0 0 4 0 0.2620404 -0.3229584 -0.380052 -0.1559679 -0.002532028 0.4016108	There was once a little princess whose father was king over a great country full of mountains and valleys.
-0 0 4 1 0.6283159 -0.2681844 -0.3289085 -0.09732279 -0.03943765 0.4645883	His palace was built upon one of the mountains, and was very grand and beautiful.
-0 0 4 2 -0.2705214 -0.1417711 -0.03401161 0.1011201 0.265761 0.3813794	The princess, whose name was Irene, was born there, but she was sent soon after her birth, because her mother was not very strong, to be brought up by country people in a large house, half castle, half farmhouse,
-0 0 4 3 0.533246 -0.01800409 -0.1032731 -0.04306033 0.1031611 0.7136223	on the side of another mountain, about half-way between its base and its peak.
-0 0 5 0 -0.2474779 -0.3022734 -0.1149704 0.152063 -0.07919055 0.596314	The princess was a sweet little creature, and at the time my story begins was about eight years old, I think, but she got older very fast.
-0 0 5 1 -0.3184259 -0.04027928 0.02262992 0.1642883 -0.06126739 0.5728527	Her face was fair and pretty, with eyes like two bits of night sky, each with a star dissolved in the blue.
-0 0 5 2 0.9541302 0.03622462 0.1163381 0.1459879 0.02392769 0.6111357	Those eyes you would have thought must have known they came from there, so often were they turned up in that direction.
-0 0 5 3 0.2899864 0.1109509 0.07640088 0.1909589 -0.01537753 0.5740699	The ceiling of her nursery was blue, with stars in it, as like the sky as they could make it.
-0 0 5 4 0.5386456 -0.08984724 0.1387265 0.2833348 -0.1807377 0.7216784	But I doubt if ever she saw the real sky with the stars in it, for a reason which I had better mention at once.
-0 0 4 0 -0.1091626 -0.05487428 0.02070904 0.2932183 -0.1328432 0.567948	These mountains were full of hollow places underneath; huge caverns, and winding ways, some with water running through them, and some shining with all colours of the rainbow when a light was taken in.
-0 0 4 1 0.3302921 0.06291324 0.06442963 0.1993215 -0.00642064 0.5661444	There would not have been much known about them, had there not been mines there, great deep pits, with long galleries and passages running off from them, which had been dug to get at the ore of which the mountains were full.
-0 0 4 2 0.09856127 0.05400424 0.02031424 0.09082152 0.03574898 0.6000744	In the course of digging, the miners came upon many of these natural caverns.
-0 0 4 3 0.7603994 0.1356547 0.175864 0.2599212 -0.03994512 0.7389921	A few of them had far-off openings out on the side of a mountain, or into a ravine.
-0 0 19 0 -0.2999512 0.04117167 0.1279512 0.2521206 -0.1516801 0.6295668	Now in these subterranean caverns lived a strange race of beings, called by some gnomes, by some kobolds, by some goblins.
-0 0 19 1 0.6300031 0.2326246 0.1660624 0.1851683 0.03221607 0.6476142	There was a legend current in the country that at one time they lived above ground, and were very like other people.
-0 0 19 2 0.5636893 0.2476019 0.3221622 0.3412457 0.1586601 0.5399376	But for some reason or other, concerning which there were different legendary theories, the king had laid what they thought too severe taxes upon them, or had required observances of them they did not like,
-0 0 19 3 0.3332296 0.2992601 0.3450727 0.3758093 0.2597751 0.5001212	According to the legend, however, instead of going to some other country, they had all taken refuge in the subterranean caverns, whence they never came out but at night, and then seldom showed themselves in any numbers,
-0 0 19 4 -0.0003425665 0.1388663 -0.05012358 0.09754926 -0.2509421 0.5816851	and never to many people at once.
-0 0 19 5 0.8767629 0.3064412 0.1609495 0.2302008 0.0006821473 0.6172491	It was only in the least frequented and most difficult parts of the mountains that they were said to gather even at night in the open air.
-0 0 19 6 0.6120492 0.3017177 0.1731424 0.2962292 -0.0152847 0.6210786	Those who had caught sight of any of them said that they had greatly altered in the course of generations; and no wonder, seeing they lived away from the sun, in cold and wet and dark places.
-0 0 19 7 -0.08002903 0.3593957 0.2740292 0.3104919 -0.05757514 0.6271546	They were now, not ordinarily ugly, but either absolutely hideous, or ludicrously grotesque both in face and form.
-0 0 19 8 0.3022084 0.2592463 0.1326697 0.3435113 -0.1536182 0.6639279	There was no invention, they said, of the most lawless imagination expressed by pen or pencil, that could surpass the extravagance of their appearance.
-0 0 19 9 0.102848 0.2790683 0.1363958 0.187506 -0.1497157 0.6438236	But I suspect those who said so had mistaken some of their animal companions for the goblins themselves—of which more by and by.
-0 0 19 10 0.5495155 0.5351425 0.1945134 0.1414088 -0.02663554 0.6731226	The goblins themselves were not so far removed from the human as such a description would imply.
-0 0 19 11 0.4710388 0.3757384 0.07276675 0.1855326 -0.05405074 0.6712851	And as they grew misshapen in body they had grown in knowledge and cleverness, and now were able to do things no mortal could see the possibility of.
-0 0 19 12 1.051727 0.2956893 0.119361 0.1280507 0.09176196 0.6579484	But as they grew in cunning, they grew in mischief, and their great delight was in every way they could think of to annoy the people who lived in the open-air storey above them.
-0 0 19 13 1.364343 0.441039 0.4672202 0.257587 0.2144811 0.5314872	They had enough of affection left for each other to preserve them from being absolutely cruel for cruelty's sake to those that came in their way;
-0 0 19 14 0.9530534 0.4965395 0.3592866 0.1469246 0.3231192 0.4889838	but still they so heartily cherished the ancestral grudge against those who occupied their former possessions and especially against the descendants of the king who had caused their expulsion,
-0 0 19 15 0.8057054 0.3295463 0.371346 0.2742433 -0.00529894 0.6124396	that they sought every opportunity of tormenting them in ways that were as odd as their inventors; and although dwarfed and misshapen, they had strength equal to their cunning.
-0 0 19 16 0.6752771 0.368556 0.2743629 0.239213 0.02309719 0.6129125	In the process of time they had got a king and a government of their own, whose chief business, beyond their own simple affairs, was to devise trouble for their neighbours.
-0 0 19 17 0.8305634 0.2432404 0.1236327 0.1876238 -0.1191439 0.6307296	It will now be pretty evident why the little princess had never seen the sky at night.
-0 0 19 18 0.3394035 0.2834246 0.2679074 0.2107736 -0.0006821993 0.6718175	They were much too afraid of the goblins to let her out of the house then, even in company with ever so many attendants; and they had good reason, as we shall see by and by.
-0 0 1 0 0.07374752 0.1278585 0.06806386 0.3048152 -0.2633152 0.7238525	And this is how it begins.
-0 0 13 0 0.2037862 0.3308161 0.2173401 0.1547627 0.2709579 0.559863	One very wet day, when the mountain was covered with mist which was constantly gathering itself together into raindrops, and pouring down on the roofs of the great old house,
-0 0 13 1 0.8205397 0.3844172 0.397446 0.278478 -0.01052566 0.6456429	whence it fell in a fringe of water from the eaves all round about it, the princess could not of course go out.
-0 0 13 2 1.038125 0.4218418 0.4737784 0.3785343 -0.07715162 0.6513238	She got very tired, so tired that even her toys could no longer amuse her.
-0 0 13 3 1.16082 0.4025113 0.4219716 0.2439251 0.0404753 0.6586979	You would wonder at that if I had time to describe to you one half of the toys she had.
-0 0 13 4 1.103727 0.3840985 0.3927554 0.3484909 0.0418933 0.6941268	But then, you wouldn't have the toys themselves, and that makes all the difference: you can't get tired of a thing before you have it.
-0 0 13 5 0.6044438 0.3506918 0.3484375 0.3030539 -0.0554373 0.6853129	It was a picture, though, worth seeing—the princess sitting in the nursery with the sky ceiling over her head, at a great table covered with her toys.
-0 0 13 6 1.345145 0.3102569 0.1276256 0.005186185 0.07978492 0.6919479	If the artist would like to draw this, I should advise him not to meddle with the toys.
-0 0 13 7 1.365364 0.4897486 0.553772 0.295574 0.02212747 0.5895637	I am afraid of attempting to describe them, and I think he had better not try to draw them.
-0 0 13 8 2.420706 0.5164856 0.7344301 0.0735687 0.02163145 0.5646355	He had better not.
-0 0 13 9 0.9449519 0.3134257 0.4367627 0.2016132 -0.1006396 0.6548815	He can do a thousand things I can't, but I don't think he could draw those toys.
-0 0 13 10 0.2783044 0.2661739 0.5521941 0.3434887 0.1545799 0.5423788	No man could better make the princess herself than he could, though—leaning with her back bowed into the back of the chair, her head hanging down, and her hands in her lap, very miserable as she would say herself,
-0 0 13 11 0.07179789 0.2366767 0.3121108 0.2026717 0.0004512278 0.6363026	not even knowing what she would like, except it were to go out and get thoroughly wet, and catch a particularly nice cold, and have to go to bed and take gruel.
-0 0 13 12 1.008963 0.3188756 0.4419464 0.08187231 0.05492617 0.6880108	The next moment after you see her sitting there, her nurse goes out of the room.
-0 0 3 0 0.585007 0.004605241 0.1516597 0.1724633 -0.1219749 0.6467325	Even that is a change, and the princess wakes up a little, and looks about her.
-0 0 3 1 0.356589 0.2540267 0.3791331 0.2049525 0.1222116 0.553919	Then she tumbles off her chair and runs out of the door, not the same door the nurse went out of, but one which opened at the foot of a curious old stair of worm-eaten oak, which looked as if never anyone had set foot upon it.
-0 0 3 2 0.4115325 0.1500986 0.2623274 0.3516665 -0.04542967 0.7107731	She had once before been up six steps, and that was sufficient reason, in such a day, for trying to find out what was at the top of it.
-0 0 13 0 0.4057064 0.1257041 0.2769859 0.3306621 -0.1630158 0.6298364	Up and up she ran—such a long way it seemed to her!—until she came to the top of the third flight.
-0 0 13 1 1.303557 0.1519774 0.2429112 0.1174604 0.04198007 0.6586214	There she found the landing was the end of a long passage.
-0 0 13 2 0.7741512 0.1321114 -0.2339979 -0.1660272 -0.1960744 0.5937248	Into this she ran.
-0 0 13 3 0.3779191 0.3402356 0.1023908 0.001492091 0.02254582 0.6707938	It was full of doors on each side.
-0 0 13 4 0.4907421 0.1169367 0.05760633 0.1388696 -0.1058204 0.6311542	There were so many that she did not care to open any, but ran on to the end, where she turned into another passage, also full of doors.
-0 0 13 5 0.5300509 0.4274125 0.1134331 0.1397274 0.01744002 0.6826287	When she had turned twice more, and still saw doors and only doors about her, she began to get frightened.
-0 0 13 6 0.05971231 0.5003408 0.647131 -0.07579701 0.4258621 0.5596192	It was so silent!
-0 0 13 7 0.06123167 0.9080096 0.7019712 -0.03604259 0.5874124 0.5626053	And all those doors must hide rooms with nobody in them!
-0 0 13 8 1.36727 -0.2436986 -0.3000867 -0.3035798 -0.1392204 0.6657093	That was dreadful.
-0 0 13 9 1.057134 0.2406594 0.07088745 -0.127389 0.06948997 0.6808393	Also the rain made a great trampling noise on the roof.
-0 0 13 10 0.3738421 0.1042423 0.1358957 0.07633346 -0.1695238 0.6789492	She turned and started at full speed, her little footsteps echoing through the sounds of the rain—back for the stairs and her safe nursery.
-0 0 13 11 0.6373479 0.4166004 0.4590074 0.1395929 -0.02174782 0.6605839	So she thought, but she had lost herself long ago.
-0 0 13 12 1.107517 0.1580882 0.1827381 0.05011728 -0.01372655 0.7575324	It doesn't follow that she was lost, because she had lost herself, though.
-0 0 8 0 0.6925105 0.2585019 0.1032272 0.1075225 -0.03425553 0.6652908	She ran for some distance, turned several times, and then began to be afraid.
-0 0 8 1 1.803571 0.2346413 0.388318 0.2029887 0.0115874 0.6472538	Very soon she was sure that she had lost the way back.
-0 0 8 2 0.1076234 0.7563596 0.7082865 0.2659818 0.2228943 0.5366458	Rooms everywhere, and no stair!
-0 0 8 3 0.4566508 0.3065461 0.5014688 0.2042623 -0.01925463 0.6210177	Her little heart beat as fast as her little feet ran, and a lump of tears was growing in her throat.
-0 0 8 4 1.054224 0.08657364 0.1172535 0.1338532 -0.04898513 0.6421458	But she was too eager and perhaps too frightened to cry for some time.
-0 0 8 5 1.242154 0.346748 0.4150219 -0.08336582 0.1215258 0.6106601	At last her hope failed her.
-0 0 8 6 0.8259252 0.6759167 0.5479859 -0.08949812 0.7210768 0.5685198	Nothing but passages and doors everywhere!
-0 0 8 7 0.2676367 0.03495827 -0.01125475 -0.04016876 0.01728686 0.7640599	She threw herself on the floor, and burst into a wailing cry broken by sobs.
-0 0 11 0 0.5334908 0.006263547 0.16506 0.1302793 -0.070521 0.6410246	She did not cry long, however, for she was as brave as could be expected of a princess of her age.
-0 0 11 1 0.3672829 0.03980408 0.1283263 0.06181622 -0.1294889 0.7329341	After a good cry, she got up, and brushed the dust from her frock.
-0 0 11 2 0.4170949 0.5000741 0.3885389 0.01433992 0.5021386 0.6200041	Oh, what old dust it was!
-0 0 11 3 0.7189457 0.2450309 0.3377511 0.2005261 0.00895681 0.674049	Then she wiped her eyes with her hands, for princesses don't always have their handkerchiefs in their pockets, any more than some other little girls I know of.
-0 0 11 4 0.6290879 -0.04307254 0.2789905 0.3257201 -0.0674433 0.6874992	Next, like a true princess, she resolved on going wisely to work to find her way back: she would walk through the passages, and look in every direction for the stair.
-0 0 11 5 0.7541111 0.1679293 0.2021158 0.2516614 -0.01902767 0.6922345	This she did, but without success.
-0 0 11 6 0.4211391 0.2297627 0.2366094 0.1537644 -0.02092472 0.649371	She went over the same ground again an again without knowing it, for the passages and doors were all alike.
-0 0 11 7 0.6933242 0.08729329 0.05196703 0.06499442 0.06918097 0.6263526	At last, in a corner, through a half-open door, she did see a stair.
-0 0 11 8 0.9416176 0.08014917 0.1718676 0.205088 -0.06334208 0.6838285	But alas! it went the wrong way: instead of going down, it went up.
-0 0 11 9 0.6766269 0.03753709 0.1234611 0.1234952 -0.07050071 0.6639881	Frightened as she was, however, she could not help wishing to see where yet further the stair could lead.
-0 0 11 10 -0.008436691 0.2148008 0.3034266 0.2093444 -0.03363742 0.7716294	It was very narrow, and so steep that she went on like a four-legged creature on her hands and feet.
-0 0 14 0 0.3179941 0.04542091 0.2063073 0.3217833 -0.08387923 0.6481589	When she came to the top, she found herself in a little square place, with three doors, two opposite each other, and one opposite the top of the stair.
-0 0 14 1 0.944075 0.1709621 0.378941 0.2901445 -0.1406269 0.6558141	She stood for a moment, without an idea in her little head what to do next.
-0 0 14 2 0.9588932 0.1186982 0.3201327 0.1288252 -0.05731494 0.6571521	But as she stood, she began to hear a curious humming sound.
-0 0 14 3 0.9527766 0.6614972 0.8586308 0.3480272 0.5609518 0.5324811	Could it be the rain?
-0 0 14 4 0.7099628 0.1646664 0.1262832 0.08522055 0.05995594 0.6599339	No. It was much more gentle, and even monotonous than the sound of the rain, which now she scarcely heard.
-0 0 14 5 -0.009485062 0.1194836 0.1189358 0.1948752 -0.1556028 0.6541821	The low sweet humming sound went on, sometimes stopping for a little while and then beginning again.
-0 0 14 6 0.7587349 0.1679167 0.3363031 0.2220867 0.07274506 0.6421562	It was more like the hum of a very happy bee that had found a rich well of honey in some globular flower, than anything else I can think of at this moment.
-0 0 14 7 0.7586331 0.5929214 0.955314 0.2722782 0.5964861 0.4879806	Where could it come from?
-0 0 14 8 1.04382 0.1696852 0.3414082 0.3056939 -0.2071082 0.6232455	She laid her ear first to one of the doors to hearken if it was there—then to another.
-0 0 14 9 0.7821542 0.1874865 0.2130955 0.1530368 -0.0409904 0.6343783	When she laid her ear against the third door, there could be no doubt where it came from: it must be from something in that room.
-0 0 14 10 0.345116 0.8062932 1.060919 0.03372089 0.8594663 0.4942718	What could it be?
-0 0 14 11 0.9881928 0.09678011 0.1310905 0.02721759 0.1158079 0.6507912	She was rather afraid, but her curiosity was stronger than her fear, and she opened the door very gently and peeped in.
-0 0 14 12 1.001879 0.413891 1.02834 0.4671301 0.3321839 0.5598654	What do you think she saw?
-0 0 14 13 0.2038498 0.01805136 0.1762556 0.007681489 0.1223684 0.7374738	A very old lady who sat spinning.
-0 0 8 0 0.6329064 -0.1057588 0.2185695 0.1994144 0.02063488 0.656842	Perhaps you will wonder how the princess could tell that the old lady was an old lady, when I inform you that not only was she beautiful, but her skin was smooth and white.
-0 0 8 1 -0.1578934 -0.02347764 0.3225192 0.1078849 -0.01883426 0.5926611	I will tell you more.
-0 0 8 2 0.5386899 -0.06769639 0.1944237 0.121101 -0.09897771 0.6243276	Her hair was combed back from her forehead and face, and hung loose far down and all over her back.
-0 0 8 3 0.03765755 0.1260015 0.7511994 0.3012969 0.3952157 0.5334345	That is not much like an old lady—is it?
-0 0 8 4 0.3474715 -0.1017476 0.09718806 -0.02941818 0.09498213 0.6621752	Ah! but it was white almost as snow.
-0 0 8 5 0.2088042 -0.06451415 0.2308363 0.1400998 -0.09356298 0.6174773	And although her face was so smooth, her eyes looked so wise that you could not have helped seeing she must be old.
-0 0 8 6 0.1740126 -0.2421789 0.08068903 0.1902866 -0.1628132 0.6580365	The princess, though she could not have told you why, did think her very old indeed—quite fifty, she said to herself.
-0 0 8 7 0.1868508 -0.1265463 0.2653508 0.2026912 -0.03063201 0.741304	But she was rather older than that, as you shall hear.
-0 0 1 0 -0.501744 -0.3394428 0.06893823 0.2563505 0.1664885 0.6052561	While the princess stared bewildered, with her head just inside the door, the old lady lifted hers, and said, in a sweet, but old and rather shaky voice, which mingled very pleasantly with the continued hum of her wheel:
-1 0 1 0 -0.322507 -0.4303671 0.3048204 0.5463835 -0.3526929 0.5708861	'Come in, my dear; come in. I am glad to see you.'
-0 0 3 0 0.5065203 -0.1806477 0.15354 0.2043425 0.1117394 0.4665052	That the princess was a real princess you might see now quite plainly; for she didn't hang on to the handle of the door, and stare without moving,
-0 0 3 1 0.138616 -0.07384473 0.1894942 0.06724379 -0.02361645 0.5632239	as I have known some do who ought to have been princesses but were only rather vulgar little girls.
-0 0 3 2 -0.0579458 -0.06071183 0.006993584 -0.02132563 0.1783423 0.7029113	She did as she was told, stepped inside the door at once, and shut it gently behind her.
-1 0 1 0 0.2648139 -0.168826 0.1535896 0.4764834 -0.1901178 0.6178771	'Come to me, my dear,' said the old lady.
-0 0 2 0 0.1303084 0.005070746 -0.06465271 -0.09836698 0.1469743 0.6241552	And again the princess did as she was told.
-0 0 2 1 -0.439091 0.05357107 0.08071053 0.1179272 0.00504428 0.6859267	She approached the old lady—rather slowly, I confess—but did not stop until she stood by her side, and looked up in her face with her blue eyes and the two melted stars in them.
-1 0 1 0 -0.3493912 0.001459692 -0.06150106 0.3598641 -0.2026401 0.5501976	'Why, what have you been doing with your eyes, child?' asked the old lady.
-1 0 1 0 -0.3002057 -0.3486314 -0.6666935 -0.3743505 -0.05722241 0.625527	'Crying,' answered the princess.
-1 0 1 0 -0.1818764 0.114205 0.04556428 0.2667619 -0.1531443 0.6481345	'Because I couldn't find my way down again.'
-1 0 1 0 -0.07389845 -0.01272666 -0.007764962 0.3313951 -0.1342594 0.6617219	'But you could find your way up.'
-1 0 1 0 -0.7964213 0.1288088 0.01991845 0.2225015 -0.1481752 0.6642372	'Not at first—not for a long time.'
-1 0 1 0 -0.2135766 0.5599752 0.8382317 0.6553813 0.341619 0.4442577	'But your face is streaked like the back of a zebra. Hadn't you a handkerchief to wipe your eyes with?'
-1 0 1 0 0.1093074 0.648473 1.025545 0.8085188 0.356133 0.42691	'Then why didn't you come to me to wipe them for you?'
-1 0 1 0 0.008494638 0.2474259 0.2885381 0.4841681 -0.172673 0.5211384	'Please, I didn't know you were here. I will next time.'
-1 0 1 0 0.2004761 0.2119521 -0.1304611 0.2769467 -0.124948 0.6496824	'There's a good child!' said the old lady.
-0 0 2 0 0.02333925 0.3843825 0.02352028 0.256403 -0.008385969 0.5258467	Then she stopped her wheel, and rose, and, going out of the room, returned with a little silver basin and a soft white towel, with which she washed and wiped the bright little face.
-0 0 2 1 -0.5563476 0.8140773 0.2445923 -0.02275066 0.4390378 0.6629301	And the princess thought her hands were so smooth and nice!
-0 0 6 0 0.237163 0.5370615 0.0918404 0.2758084 0.01305802 0.5782569	When she carried away the basin and towel, the little princess wondered to see how straight and tall she was, for, although she was so old, she didn't stoop a bit.
-0 0 6 1 0.8439027 0.567709 0.3453887 0.4081412 -0.08202374 0.6052216	She was dressed in black velvet with thick white heavy-looking lace about it; and on the black dress her hair shone like silver.
-0 0 6 2 1.095127 0.7304472 0.353769 0.2052854 0.1023564 0.587678	There was hardly any more furniture in the room than there might have been in that of the poorest old woman who made her bread by her spinning.
-0 0 6 3 0.6229818 0.6645035 0.2004213 0.250724 -0.04849922 0.6240375	There was no carpet on the floor—no table anywhere—nothing but the spinning-wheel and the chair beside it.
-0 0 6 4 -0.136371 0.7127351 0.298402 0.1930149 0.06822011 0.5545379	When she came back, she sat down and without a word began her spinning once more, while Irene, who had never seen a spinning-wheel, stood by her side and looked on.
-0 0 6 5 0.9425803 0.695776 0.2053389 0.1743641 0.3007625 0.5978412	When the old lady had got her thread fairly going again, she said to the princess, but without looking at her:
-1 0 1 0 0.3048369 0.8355269 0.8992147 0.6161072 0.5464801 0.5433816	'Do you know my name, child?'
-1 0 1 0 0.01826918 0.4542829 0.06058798 0.4130208 -0.1597419 0.5875756	'No, I don't know it,' answered the princess.
-1 0 1 0 0.1722523 0.1463166 -0.1853404 0.02527315 -0.24957 0.5589715	'My name is Irene.'
-1 0 1 0 0.1576927 0.3321457 -0.0746614 0.1550148 -0.2483832 0.5793394	'That's my name!' cried the princess.
-1 0 1 0 -0.02850854 0.5460156 0.2050489 0.4766723 -0.2673427 0.5750903	'I know that. I let you have mine. I haven't got your name. You've got mine.'
-1 0 2 0 0.4342755 0.7247209 0.1223166 0.3818993 -0.1445468 0.479969	'How can that be?' asked the princess, bewildered.
-1 0 2 1 -0.4780908 0.7187937 0.4983301 0.6198554 -0.2334688 0.5751524	'I've always had my name.'
-1 0 1 0 -0.3114042 0.594601 0.2783557 0.7149111 -0.2854626 0.5354146	'Your papa, the king, asked me if I had any objection to your having it; and, of course, I hadn't. I let you have it with pleasure.'
-1 0 1 0 -0.06241603 0.4869848 0.3005345 0.5596066 -0.2144813 0.6158103	'It was very kind of you to give me your name—and such a pretty one,' said the princess.
-1 0 2 0 0.2752545 0.5444007 0.1983081 0.5503523 -0.314799 0.45632	'Oh, not so very kind!' said the old lady.
-1 0 2 1 -0.1187307 1.309228 1.105693 0.6982168 0.5332062 0.4601389	'A name is one of those things one can give away and keep all the same. I have a good many such things. Wouldn't you like to know who I am, child?'
-1 0 1 0 0.07769117 0.5998104 0.3192022 0.6572775 -0.384027 0.6187848	'Yes, that I should—very much.'
-1 0 1 0 0.007816643 0.4980088 0.05418671 0.3086244 -0.102323 0.5566589	'I'm your great-great-grandmother,' said the lady.
-1 0 1 0 0.4510514 0.5910114 0.008659054 0.4392885 -0.3944825 0.5465895	'What's that?' asked the princess.
-1 0 1 0 -0.4466859 0.898469 0.4116364 0.4472686 -0.04957962 0.5777987	'I'm your father's mother's father's mother.'
-1 0 1 0 -0.1352381 0.6447911 0.06627111 0.4754175 -0.353535 0.6125515	'Oh, dear! I can't understand that,' said the princess.
-1 0 1 0 -0.4377992 0.8298988 0.5890289 0.7371839 -0.2960224 0.4943774	'I dare say not. I didn't expect you would. But that's no reason why I shouldn't say it.'
-1 0 1 0 -0.3880617 0.387922 -0.2734412 0.3282375 -0.3799156 0.5967645	'Oh, no!' answered the princess.
-1 0 2 0 -0.05859036 1.030283 0.4657779 0.6293267 -0.1702739 0.3771284	'I will explain it all to you when you are older,' the lady went on.
-1 0 2 1 0.2832267 1.011186 0.207144 0.2415069 -0.01967136 0.5921614	'But you will be able to understand this much now: I came here to take care of you.'
-1 0 1 0 0.1449288 1.277171 1.03283 0.8358406 0.3312247 0.4388534	'Is it long since you came? Was it yesterday? Or was it today, because it was so wet that I couldn't get out?'
-1 0 1 0 0.3176359 0.774968 0.4546556 0.5476367 -0.1645958 0.6266109	'I've been here ever since you came yourself.'
-1 0 2 0 0.2948822 0.8904828 -0.01009277 0.2512601 -0.1296093 0.5192698	'What a long time!' said the princess.
-1 0 2 1 -0.5025776 1.1746 0.4306004 0.599584 -0.2601478 0.5403544	'I don't remember it at all.'
-1 0 1 0 -0.8329616 1.103886 0.4570074 0.2602657 -0.1714688 0.5362925	'No. I suppose not.'
-1 0 1 0 -0.3664448 1.081367 0.2644512 0.496843 -0.3882004 0.5612381	'But I never saw you before.'
-1 0 1 0 -0.6903278 1.231226 0.5407127 0.6168836 -0.2323187 0.5096899	'No. But you shall see me again.'
-1 0 1 0 -0.02231692 1.512868 0.8900821 0.623603 0.3527884 0.469966	'Do you live in this room always?'
-1 0 1 0 0.4275281 1.171109 0.4100948 0.4789109 -0.1355552 0.5517974	'I don't sleep in it. I sleep on the opposite side of the landing. I sit here most of the day.'
-1 0 1 0 -0.1206447 1.135714 0.373555 0.4833002 -0.1982874 0.509162	'I shouldn't like it. My nursery is much prettier. You must be a queen too, if you are my great big grand-mother.'
-1 0 1 0 -0.338943 1.020069 0.2874435 0.6854941 -0.5076324 0.4966957	'Yes, I am a queen.'
-1 0 2 0 0.435824 1.651234 0.9486523 0.6275127 0.3075624 0.3743022	'Where is your crown, then?'
-1 0 2 1 -0.4149112 1.315201 0.2392319 -0.04426259 -0.1344383 0.6023418	'In my bedroom.'
-1 0 1 0 -0.367355 0.8795009 0.07096952 0.5229112 -0.3866058 0.5134737	'I should like to see it.'
-1 0 1 0 -0.9734585 1.179335 0.6841429 0.5369608 -0.2507095 0.6064546	'You shall some day—not today.'
-1 0 1 0 0.1851098 1.215638 0.3179974 0.4012449 -0.2126156 0.5622732	'I wonder why nursie never told me.'
-1 0 1 0 -0.07385567 1.223845 0.09653535 0.337348 -0.3555054 0.5087429	'Nursie doesn't know. She never saw me.'
-1 0 1 0 0.695096 1.564191 0.9499229 0.7341115 0.4010442 0.5124317	'But somebody knows that you are in the house?'
-1 0 1 0 0.4198085 1.75483 1.22426 0.9648634 0.30803 0.4836362	'How do you get your dinner, then?'
-1 0 1 0 -0.011279 1.201184 0.3690343 0.4802195 -0.2825812 0.6023809	'I keep poultry—of a sort.'
-1 0 1 0 0.4364795 1.753276 1.39137 0.9665967 0.3705366 0.5174685	'Where do you keep them?'
-1 0 1 0 -0.1465798 1.239792 0.4670724 0.2969098 0.09116507 0.6007068	'I will show you.'
-1 0 1 0 0.7678055 1.557379 1.184481 0.8210632 0.5196792 0.5339324	'And who makes the chicken broth for you?'
-1 0 1 0 0.4415369 1.357664 0.5102689 0.4455953 -0.1317939 0.5565481	'I never kill any of MY chickens.'
-1 0 1 0 0.05414857 1.220302 0.3835603 0.1553354 -0.08382121 0.625461	'Then I can't understand.'
-1 0 1 0 0.317108 1.306248 0.4520208 0.5367448 -0.1501874 0.5581168	'What did you have for breakfast this morning?' asked the lady.
-1 0 1 0 -0.2706757 1.237632 0.373514 0.5070806 -0.2524413 0.5859792	'Oh! I had bread and milk, and an egg—I dare say you eat their eggs.'
-1 0 1 0 -0.3786953 1.33535 0.4933939 0.6627713 -0.2723628 0.4688644	'Yes, that's it. I eat their eggs.'
-1 0 1 0 0.3757667 1.546079 1.23439 0.9042054 0.1283318 0.4854755	'Is that what makes your hair so white?'
-1 0 1 0 -0.6891155 1.637319 0.5847532 0.523085 0.01874114 0.4763706	'No, my dear. It's old age. I am very old.'
-1 0 1 0 0.7922912 1.667611 1.18135 0.6829336 0.4122283 0.4846764	'I thought so. Are you fifty?'
-1 0 1 0 0.2084795 1.647687 1.117033 0.302887 0.7425609 0.4380176	'Are you a hundred?'
-1 0 1 0 -0.1047387 1.278139 0.3843793 0.4634811 -0.14699 0.5460517	'Yes—more than that. I am too old for you to guess. Come and see my chickens.'
-0 0 5 0 0.2011361 1.779988 0.5146472 0.2138338 0.1222256 0.4787188	Again she stopped her spinning.
-0 0 5 1 0.6424665 1.32465 0.2267468 0.141414 0.08155763 0.5282994	She rose, took the princess by the hand, led her out of the room, and opened the door opposite the stair.
-0 0 5 2 0.04904162 1.429556 0.4356128 0.3022213 0.3036948 0.4586686	The princess expected to see a lot of hens and chickens, but instead of that, she saw the blue sky first, and then the roofs of the house, with a multitude of the loveliest pigeons, mostly white, but of all colours, walking about,
-0 0 5 3 0.8269783 1.522439 0.4502036 0.1808138 0.07575933 0.5445554	making bows to each other, and talking a language she could not understand.
-0 0 5 4 0.344433 1.550627 0.4039326 0.1678629 0.0773085 0.6302763	She clapped her hands with delight, and up rose such a flapping of wings that she in her turn was startled.
-1 0 1 0 0.2313225 1.089182 -0.0177875 0.2316719 -0.1828324 0.658098	'You've frightened my poultry,' said the old lady, smiling.
-1 0 2 0 0.07414675 0.9350718 0.04835037 0.4867413 -0.3998417 0.5599318	'And they've frightened me,' said the princess, smiling too.
-1 0 2 1 0.3226302 1.617906 1.039584 0.5354251 0.4064804 0.5731996	'But what very nice poultry! Are the eggs nice?'
-1 0 2 0 0.4364459 1.252446 0.2074214 0.1278181 -0.1915883 0.4455831	'Yes, very nice.'
-1 0 2 1 -0.06159664 1.721392 1.13484 0.60954 0.4802157 0.4713558	'What a small egg-spoon you must have! Wouldn't it be better to keep hens, and get bigger eggs?'
-1 0 1 0 0.915733 1.56565 0.8585957 0.6332241 0.446833 0.4819027	'How should I feed them, though?'
-1 0 2 0 0.413096 1.047164 0.00329886 0.2679653 -0.1706635 0.4514616	'I see,' said the princess.
-1 0 2 1 0.07823111 1.391016 0.3665754 0.2027415 -0.05851753 0.5116956	'The pigeons feed themselves. They've got wings.'
-1 0 1 0 0.4577256 1.191761 0.3200456 0.4144385 -0.2536517 0.5021852	'Just so. If they couldn't fly, I couldn't eat their eggs.'
-1 0 1 0 0.3096195 1.631595 1.086053 0.8353887 0.2112997 0.4798401	'But how do you get at the eggs? Where are their nests?'
-0 0 3 0 0.1999722 1.29276 0.4538731 0.3494442 0.05486133 0.4866898	The lady took hold of a little loop of string in the wall at the side of the door and, lifting a shutter, showed a great many pigeon-holes with nests, some with young ones and some with eggs in them.
-0 0 3 1 0.6620462 1.558106 0.3025608 0.1268948 0.1384462 0.5279791	The birds came in at the other side, and she took out the eggs on this side.
-0 0 3 2 0.6765515 1.276003 0.1746281 0.1817517 -0.09217823 0.6849726	She closed it again quickly, lest the young ones should be frightened.
-1 0 2 0 0.2032929 1.076605 0.2439295 0.4584849 -0.3071033 0.4590054	'Oh, what a nice way!' cried the princess.
-1 0 2 1 0.5602401 1.576083 0.6823605 0.6682106 -0.3035768 0.4999394	'Will you give me an egg to eat? I'm rather hungry.'
-1 0 1 0 -0.4631041 1.275687 0.67382 0.6688995 -0.1389365 0.5535479	'I will some day, but now you must go back, or nursie will be miserable about you. I dare say she's looking for you everywhere.'
-1 0 2 0 0.1616881 0.9604436 -0.08271266 0.04735862 -0.008398948 0.5152349	'Except here,' answered the princess.
-1 0 2 1 -0.1616139 1.762485 0.7503504 0.3308553 0.3143791 0.4649023	'Oh, how surprised she will be when I tell her about my great big grand-grand-mother!'
-1 0 2 0 0.6734467 1.176724 0.2276002 0.4466059 -0.3338649 0.4377369	'Yes, that she will!' said the old lady with a curious smile.
-1 0 2 1 -0.220033 1.493959 0.4199173 0.2827215 -0.1200184 0.48771	'Mind you tell her all about it exactly.'
-1 0 1 0 0.1945075 1.577615 1.271774 0.7936172 0.2766763 0.4111608	'That I will. Please will you take me back to her?'
-1 0 1 0 0.1661726 1.24119 0.5768068 0.670745 -0.09279158 0.5186477	'I can't go all the way, but I will take you to the top of the stair, and then you must run down quite fast into your own room.'
-0 0 2 0 0.4564867 1.221682 0.3978539 0.477893 0.016826 0.478985	The little princess put her hand in the old lady's, who, looking this way and that, brought her to the top of the first stair, and thence to the bottom of the second, and did not leave her till she saw her half-way down the third.
-0 0 2 1 0.2219565 1.463192 0.4177758 0.2842388 0.1522692 0.5726463	When she heard the cry of her nurse's pleasure at finding her, she turned and walked up the stairs again, very fast indeed for such a very great grandmother, and sat down to her spinning with another strange smile on her sweet old face.
-0 0 1 0 0.09919798 1.340181 0.4784702 0.4116588 -0.1095493 0.5677485	About this spinning of hers I will tell you more another time.
-0 0 1 0 0.5756494 1.375068 0.01917664 0.1462521 0.01403448 0.6682375	Guess what she was spinning.
+0 0 4 0 0.1531699 -0.08162678 -0.08413962 -0.170942 0.1338542 0.3853012	There was once a little princess whose father was king over a great country full of mountains and valleys.
+0 0 4 1 0.04741715 -0.4973218 -0.4396184 -0.02689994 -0.2091949 0.5807747	His palace was built upon one of the mountains, and was very grand and beautiful.
+0 0 4 2 -0.4586842 -0.0363669 -0.002648257 0.08316426 0.2113423 0.3564573	The princess, whose name was Irene, was born there, but she was sent soon after her birth, because her mother was not very strong, to be brought up by country people in a large house, half castle, half farmhouse,
+0 0 4 3 0.1048605 0.3378558 0.1735584 -0.1935659 0.187107 0.6773375	on the side of another mountain, about half-way between its base and its peak.
+0 0 5 0 -0.6286286 0.0134681 0.03970915 0.09993623 -0.0525245 0.5865581	The princess was a sweet little creature, and at the time my story begins was about eight years old, I think, but she got older very fast.
+0 0 5 1 -0.84856 -0.005370483 -0.1515078 -0.07412739 -0.04595187 0.6335114	Her face was fair and pretty, with eyes like two bits of night sky, each with a star dissolved in the blue.
+0 0 5 2 0.6823362 0.3729927 0.2851658 0.1586483 0.1090027 0.6136472	Those eyes you would have thought must have known they came from there, so often were they turned up in that direction.
+0 0 5 3 0.3040415 0.3610837 0.1751728 0.1491077 0.1193745 0.6091272	The ceiling of her nursery was blue, with stars in it, as like the sky as they could make it.
+0 0 5 4 0.3908026 0.1108185 0.1973447 0.2735851 -0.1193492 0.7468937	But I doubt if ever she saw the real sky with the stars in it, for a reason which I had better mention at once.
+0 0 4 0 -0.5182389 0.2491563 -0.07449411 -0.02544784 -0.08237787 0.6044595	These mountains were full of hollow places underneath; huge caverns, and winding ways, some with water running through them, and some shining with all colours of the rainbow when a light was taken in.
+0 0 4 1 0.2449 0.3805613 -0.05492147 -0.044515 0.03301977 0.6001281	There would not have been much known about them, had there not been mines there, great deep pits, with long galleries and passages running off from them, which had been dug to get at the ore of which the mountains were full.
+0 0 4 2 0.09212723 0.3277168 -0.03750465 0.04322432 -0.07741925 0.6339923	In the course of digging, the miners came upon many of these natural caverns.
+0 0 4 3 0.569345 0.5110732 0.3150012 0.2320649 0.06684916 0.7287525	A few of them had far-off openings out on the side of a mountain, or into a ravine.
+0 0 20 0 -1.122594 0.5587327 0.2942854 0.1652613 -0.01672347 0.6047409	Now in these subterranean caverns lived a strange race of beings, called by some gnomes, by some kobolds, by some goblins.
+0 0 20 1 0.2627342 0.8254997 0.4742412 0.1115522 0.1938804 0.6252086	There was a legend current in the country that at one time they lived above ground, and were very like other people.
+0 0 20 2 0.545684 0.6860035 0.4314215 0.3020296 0.1687258 0.5238118	But for some reason or other, concerning which there were different legendary theories, the king had laid what they thought too severe taxes upon them, or had required observances of them they did not like,
+0 0 20 4 0.02940984 0.7407326 0.6735753 0.3448784 0.4766693 0.4305382	According to the legend, however, instead of going to some other country, they had all taken refuge in the subterranean caverns, whence they never came out but at night, and then seldom showed themselves in any numbers,
+0 0 20 5 -0.3075347 0.06268628 -0.1984624 0.01788181 -0.1457059 0.6710644	and never to many people at once.
+0 0 20 6 0.266289 0.4617878 0.1501086 0.1329755 0.2319868 0.6287344	It was only in the least frequented and most difficult parts of the mountains that they were said to gather even at night in the open air.
+0 0 20 7 0.1278602 0.5689573 0.1818734 0.03194759 0.1979037 0.6410995	Those who had caught sight of any of them said that they had greatly altered in the course of generations; and no wonder, seeing they lived away from the sun, in cold and wet and dark places.
+0 0 20 8 -0.358107 0.6306088 0.4558155 0.2331757 0.1112773 0.6524061	They were now, not ordinarily ugly, but either absolutely hideous, or ludicrously grotesque both in face and form.
+0 0 20 9 -0.1213421 0.5781119 0.3030823 0.2448741 -0.01235558 0.6535633	There was no invention, they said, of the most lawless imagination expressed by pen or pencil, that could surpass the extravagance of their appearance.
+0 0 20 10 -0.131097 0.3540662 -0.003935114 -0.05084844 0.007839773 0.6991911	But I suspect those who said so had mistaken some of their animal companions for the goblins themselves—of which more by and by.
+0 0 20 11 -0.01177327 0.8592203 0.1242105 -0.2470974 0.2324889 0.6409807	The goblins themselves were not so far removed from the human as such a description would imply.
+0 0 20 12 0.04864302 0.5586967 0.1707145 -0.02282025 0.1324658 0.6873109	And as they grew misshapen in body they had grown in knowledge and cleverness, and now were able to do things no mortal could see the possibility of.
+0 0 20 13 0.8735888 0.4618267 0.1179096 0.1363813 0.1583935 0.702719	But as they grew in cunning, they grew in mischief, and their great delight was in every way they could think of to annoy the people who lived in the open-air storey above them.
+0 0 20 14 1.176008 0.6271277 0.4994427 0.4417095 0.0333632 0.5513121	They had enough of affection left for each other to preserve them from being absolutely cruel for cruelty's sake to those that came in their way;
+0 0 20 15 0.8014163 0.7115 0.2838555 0.1035326 0.4731532 0.493169	but still they so heartily cherished the ancestral grudge against those who occupied their former possessions and especially against the descendants of the king who had caused their expulsion,
+0 0 20 16 0.4675902 0.4645548 0.5329583 0.4340015 -0.1232156 0.6758241	that they sought every opportunity of tormenting them in ways that were as odd as their inventors; and although dwarfed and misshapen, they had strength equal to their cunning.
+0 0 20 17 0.5026295 0.4446121 0.2265784 0.2883668 -0.009402893 0.660691	In the process of time they had got a king and a government of their own, whose chief business, beyond their own simple affairs, was to devise trouble for their neighbours.
+0 0 20 18 0.2556369 0.2868962 0.1403517 0.2873302 -0.06293415 0.6428567	It will now be pretty evident why the little princess had never seen the sky at night.
+0 0 20 19 0.2303812 0.3326977 0.198318 0.2410735 -0.0295804 0.7089347	They were much too afraid of the goblins to let her out of the house then, even in company with ever so many attendants; and they had good reason, as we shall see by and by.
+0 0 2 1 0.2504561 0.2688975 0.1809762 0.2501681 -0.183642 0.7509034	And this is how it begins.
+0 0 13 0 0.01371107 0.5045088 0.2973992 0.178718 0.2621631 0.4861833	One very wet day, when the mountain was covered with mist which was constantly gathering itself together into raindrops, and pouring down on the roofs of the great old house,
+0 0 13 1 0.300477 0.4456152 0.4852023 0.2394916 0.0687526 0.6594968	whence it fell in a fringe of water from the eaves all round about it, the princess could not of course go out.
+0 0 13 2 0.7949948 0.4205961 0.5143281 0.5478147 -0.2018137 0.6582131	She got very tired, so tired that even her toys could no longer amuse her.
+0 0 13 3 0.8540112 0.4672061 0.5147517 0.4608521 -0.0889212 0.6598738	You would wonder at that if I had time to describe to you one half of the toys she had.
+0 0 13 4 0.5714666 0.5198306 0.6303885 0.4927407 -0.01864029 0.6616381	But then, you wouldn't have the toys themselves, and that makes all the difference: you can't get tired of a thing before you have it.
+0 0 13 5 0.6802165 0.331771 0.3896904 0.309848 -0.01872632 0.7017478	It was a picture, though, worth seeing—the princess sitting in the nursery with the sky ceiling over her head, at a great table covered with her toys.
+0 0 13 6 1.020332 0.2311682 -0.001936182 0.03332135 0.2071892 0.6877524	If the artist would like to draw this, I should advise him not to meddle with the toys.
+0 0 13 7 0.9816681 0.3492902 0.5382626 0.4496894 -0.0193367 0.596051	I am afraid of attempting to describe them, and I think he had better not try to draw them.
+0 0 13 8 2.277628 0.5772637 0.7275066 0.3840745 -0.03567309 0.4997374	He had better not.
+0 0 13 9 0.365602 0.1684393 0.4018088 0.3792878 -0.1779274 0.6856735	He can do a thousand things I can't, but I don't think he could draw those toys.
+0 0 13 10 -0.003939947 0.2674447 0.4668032 0.3323508 0.1998916 0.5276905	No man could better make the princess herself than he could, though—leaning with her back bowed into the back of the chair, her head hanging down, and her hands in her lap, very miserable as she would say herself,
+0 0 13 11 -0.4620142 0.1410417 0.3455389 0.2236754 0.02588224 0.6045253	not even knowing what she would like, except it were to go out and get thoroughly wet, and catch a particularly nice cold, and have to go to bed and take gruel.
+0 0 13 12 0.9896045 0.2619112 0.3412266 0.2132151 -0.1127444 0.671918	The next moment after you see her sitting there, her nurse goes out of the room.
+0 0 3 0 0.2882366 0.05098263 0.2478023 0.2083545 -0.187826 0.6299031	Even that is a change, and the princess wakes up a little, and looks about her.
+0 0 3 1 -0.08849099 0.284016 0.302256 0.1530294 0.0137302 0.5723543	Then she tumbles off her chair and runs out of the door, not the same door the nurse went out of, but one which opened at the foot of a curious old stair of worm-eaten oak, which looked as if never anyone had set foot upon it.
+0 0 3 2 0.03471951 0.1657919 0.2723939 0.1648139 -0.004765242 0.6660367	She had once before been up six steps, and that was sufficient reason, in such a day, for trying to find out what was at the top of it.
+0 0 13 0 0.09409668 0.1757366 0.4699631 0.3944901 -0.05472765 0.5768224	Up and up she ran—such a long way it seemed to her!—until she came to the top of the third flight.
+0 0 13 1 1.124181 0.3133654 0.4272417 0.1336914 0.07853585 0.5839818	There she found the landing was the end of a long passage.
+0 0 13 2 0.6193547 0.1084956 -0.1809776 -0.0133757 0.06248542 0.5710987	Into this she ran.
+0 0 13 3 -0.2444129 0.587835 0.4305117 0.09829091 0.1043232 0.6469945	It was full of doors on each side.
+0 0 13 4 0.1935878 0.3107 0.2890081 0.3128415 -0.1235757 0.6642472	There were so many that she did not care to open any, but ran on to the end, where she turned into another passage, also full of doors.
+0 0 13 5 0.2630916 0.733395 0.4388233 0.1239751 0.2120145 0.6343264	When she had turned twice more, and still saw doors and only doors about her, she began to get frightened.
+0 0 13 6 -0.7997125 0.5292495 0.9218462 0.1760294 -0.05025825 0.6243462	It was so silent!
+0 0 13 7 -0.006941913 0.7468632 0.6683667 -0.1816641 0.4345004 0.617934	And all those doors must hide rooms with nobody in them!
+0 0 13 8 0.9212422 -0.4507939 -0.1253878 -0.1826152 -0.1456778 0.733663	That was dreadful.
+0 0 13 9 0.6459836 0.3545661 0.2951691 0.08834054 0.031996 0.7227581	Also the rain made a great trampling noise on the roof.
+0 0 13 10 0.3908835 0.03112654 0.4213071 0.3008218 -0.2207422 0.7589247	She turned and started at full speed, her little footsteps echoing through the sounds of the rain—back for the stairs and her safe nursery.
+0 0 13 11 1.015398 0.5381737 0.8577503 0.3786373 -0.3399321 0.6427869	So she thought, but she had lost herself long ago.
+0 0 13 12 1.711405 0.2917272 0.7042274 0.4489344 -0.2229872 0.74888	It doesn't follow that she was lost, because she had lost herself, though.
+0 0 8 0 0.463838 0.4056508 0.4478384 0.1841666 0.02110392 0.6153246	She ran for some distance, turned several times, and then began to be afraid.
+0 0 8 1 2.317839 0.4237732 0.7768776 0.2530578 0.03539073 0.6306868	Very soon she was sure that she had lost the way back.
+0 0 8 2 -0.3686526 0.5193505 0.3300665 -0.1264174 -0.04125762 0.6050252	Rooms everywhere, and no stair!
+0 0 8 3 0.3974061 0.4435901 0.656134 0.02326291 -0.0629888 0.6434289	Her little heart beat as fast as her little feet ran, and a lump of tears was growing in her throat.
+0 0 8 4 -0.05116636 0.05533983 0.499982 0.02631032 -0.1789359 0.6424	But she was too eager and perhaps too frightened to cry for some time.
+0 0 8 5 1.060524 0.2012961 -0.06858689 -0.3079838 -0.03910714 0.6248753	At last her hope failed her.
+0 0 8 6 0.3686551 0.619135 0.3413521 -0.2608571 0.1521015 0.5954932	Nothing but passages and doors everywhere!
+0 0 8 7 -0.3873685 -0.05780055 0.1197117 -0.3179206 -0.02349005 0.797628	She threw herself on the floor, and burst into a wailing cry broken by sobs.
+0 0 11 0 0.6339096 0.1436935 0.4868006 0.07337445 -0.1431148 0.6441007	She did not cry long, however, for she was as brave as could be expected of a princess of her age.
+0 0 11 1 -0.08374421 -0.009279702 0.2166769 -0.1980062 -0.05400363 0.7029644	After a good cry, she got up, and brushed the dust from her frock.
+0 0 11 2 -0.7504771 0.4405887 0.6865505 -0.1494267 0.07263523 0.6580448	Oh, what old dust it was!
+0 0 11 3 0.6229078 0.2135008 0.5045515 -0.01176294 -0.03489796 0.6787252	Then she wiped her eyes with her hands, for princesses don't always have their handkerchiefs in their pockets, any more than some other little girls I know of.
+0 0 11 4 0.2983395 -0.1435658 0.4140756 0.2027595 -0.2499348 0.7242509	Next, like a true princess, she resolved on going wisely to work to find her way back: she would walk through the passages, and look in every direction for the stair.
+0 0 11 5 0.5996683 0.2287612 0.5455141 0.07142149 -0.07380967 0.6350307	This she did, but without success.
+0 0 11 6 0.2398547 0.1398181 0.3053344 -0.03417967 -0.1728046 0.6401122	She went over the same ground again an again without knowing it, for the passages and doors were all alike.
+0 0 11 7 0.5596715 0.0423883 0.09623519 0.06731713 -0.1294896 0.6703685	At last, in a corner, through a half-open door, she did see a stair.
+0 0 11 8 -0.06158331 0.2423859 0.8299648 0.3182273 -0.08282778 0.6625808	But alas! it went the wrong way: instead of going down, it went up.
+0 0 11 9 0.4016583 -0.02107663 0.3635758 0.1790189 -0.2305444 0.659831	Frightened as she was, however, she could not help wishing to see where yet further the stair could lead.
+0 0 11 10 -0.150211 0.1667664 0.4786496 0.001857411 -0.09503819 0.7191796	It was very narrow, and so steep that she went on like a four-legged creature on her hands and feet.
+0 0 14 0 0.1676241 0.2664965 0.7122312 0.4199003 -0.07364787 0.6099127	When she came to the top, she found herself in a little square place, with three doors, two opposite each other, and one opposite the top of the stair.
+0 0 14 1 0.6986746 0.2961148 0.7678386 0.233062 -0.1617957 0.6448131	She stood for a moment, without an idea in her little head what to do next.
+0 0 14 2 0.5622822 0.2981054 0.7914793 0.3126334 -0.1091497 0.647747	But as she stood, she began to hear a curious humming sound.
+0 0 14 3 0.7584448 0.3566173 0.8666112 0.1460504 0.3040178 0.5778408	Could it be the rain?
+0 0 14 4 0.2441307 0.198484 0.2658654 -0.1113798 0.04912437 0.6462591	No. It was much more gentle, and even monotonous than the sound of the rain, which now she scarcely heard.
+0 0 14 5 -0.3596708 0.1293462 0.5046169 0.09505166 -0.01379174 0.6469164	The low sweet humming sound went on, sometimes stopping for a little while and then beginning again.
+0 0 14 6 0.4125934 0.236987 0.5962704 0.1828886 -0.04412338 0.6378685	It was more like the hum of a very happy bee that had found a rich well of honey in some globular flower, than anything else I can think of at this moment.
+0 0 14 7 0.4034757 0.2793991 0.817404 0.1967911 0.1329488 0.574094	Where could it come from?
+0 0 14 8 0.6165731 0.1568041 0.6613092 0.2760595 -0.1490869 0.6474888	She laid her ear first to one of the doors to hearken if it was there—then to another.
+0 0 14 9 0.04817807 0.179155 0.3118418 0.01896362 0.01807769 0.6304283	When she laid her ear against the third door, there could be no doubt where it came from: it must be from something in that room.
+0 0 14 10 -0.3986239 0.6035025 1.39363 -0.28454 0.5778241 0.5284871	What could it be?
+0 0 14 11 0.9833297 -0.2687877 0.07218736 -0.02753616 -0.01716529 0.7042249	She was rather afraid, but her curiosity was stronger than her fear, and she opened the door very gently and peeped in.
+0 0 14 12 1.234275 0.1020591 1.182663 0.3021045 0.01790079 0.5723878	What do you think she saw?
+0 0 14 13 -0.05645701 -0.5782344 -0.1484581 -0.1912911 -0.1901583 0.7655871	A very old lady who sat spinning.
+0 0 8 0 0.3367832 -0.1333098 0.3423649 -0.02536348 -0.1451085 0.6163852	Perhaps you will wonder how the princess could tell that the old lady was an old lady, when I inform you that not only was she beautiful, but her skin was smooth and white.
+0 0 8 1 -0.4050504 0.1705944 0.6513984 0.07190411 -0.2607525 0.581416	I will tell you more.
+0 0 8 2 0.4304414 -0.08285756 0.1537397 -0.2704693 0.05816123 0.6361091	Her hair was combed back from her forehead and face, and hung loose far down and all over her back.
+0 0 8 3 0.07742468 -0.2223793 0.8287414 0.2338891 -0.1598798 0.6157633	That is not much like an old lady—is it?
+0 0 8 4 -0.5453812 0.1145699 0.6201657 -0.20833 0.03387955 0.6145072	Ah! but it was white almost as snow.
+0 0 8 5 -0.3173907 -0.03346016 0.5003146 -0.03065491 -0.1386363 0.5979758	And although her face was so smooth, her eyes looked so wise that you could not have helped seeing she must be old.
+0 0 8 6 0.4370516 -0.3592736 0.3273013 0.2576024 -0.3096868 0.6785232	The princess, though she could not have told you why, did think her very old indeed—quite fifty, she said to herself.
+0 0 8 7 0.4681117 0.1829878 0.7739069 0.182307 -0.1815554 0.6556731	But she was rather older than that, as you shall hear.
+0 0 1 0 -0.1502596 0.122841 0.397541 -0.1737061 0.3243885 0.5081483	While the princess stared bewildered, with her head just inside the door, the old lady lifted hers, and said, in a sweet, but old and rather shaky voice, which mingled very pleasantly with the continued hum of her wheel:
+1 0 1 0 -0.9384682 -0.1710302 0.500097 0.2069618 -0.3327761 0.5932918	'Come in, my dear; come in. I am glad to see you.'
+0 0 3 0 0.4560666 0.08440098 0.4558081 0.002118796 0.1179224 0.4010434	That the princess was a real princess you might see now quite plainly; for she didn't hang on to the handle of the door, and stare without moving,
+0 0 3 1 0.09750141 0.1274789 0.4128917 -0.08990951 -0.2254012 0.5791545	as I have known some do who ought to have been princesses but were only rather vulgar little girls.
+0 0 3 2 0.31323 0.322247 0.5349462 -0.07232571 0.08923395 0.6412437	She did as she was told, stepped inside the door at once, and shut it gently behind her.
+1 0 1 0 0.1084965 0.3547482 0.799598 0.3385831 -0.2504047 0.5692242	'Come to me, my dear,' said the old lady.
+0 0 2 0 0.8833692 0.4287937 0.2418504 -0.3234797 0.1040519 0.553596	And again the princess did as she was told.
+0 0 2 1 -0.3399682 0.3338488 0.380317 -0.2837364 0.06115432 0.6884242	She approached the old lady—rather slowly, I confess—but did not stop until she stood by her side, and looked up in her face with her blue eyes and the two melted stars in them.
+1 0 1 0 -0.159731 0.4168777 0.2966886 -0.1271888 -0.1409873 0.5368574	'Why, what have you been doing with your eyes, child?' asked the old lady.
+1 0 1 0 0.2667269 -0.3591349 -0.7422291 -0.7849225 0.1606639 0.6944413	'Crying,' answered the princess.
+1 0 1 0 0.2745975 1.067655 0.918559 -0.1635678 0.2532483 0.5897456	'Because I couldn't find my way down again.'
+1 0 1 0 -0.04437637 0.58833 0.6855793 0.1166795 -0.08018498 0.6413406	'But you could find your way up.'
+1 0 1 0 -0.5743357 0.6882528 0.7752659 -0.1156339 0.0005420968 0.6831269	'Not at first—not for a long time.'
+1 0 1 0 -0.2331454 0.947985 1.375036 0.4089462 0.2087962 0.5839505	'But your face is streaked like the back of a zebra. Hadn't you a handkerchief to wipe your eyes with?'
+1 0 1 0 0.155829 0.9056401 1.545208 0.5693282 0.1590908 0.5145271	'Then why didn't you come to me to wipe them for you?'
+1 0 1 0 0.2822381 0.7591476 0.7576315 0.3743774 -0.2689038 0.5576654	'Please, I didn't know you were here. I will next time.'
+1 0 1 0 -0.04871243 0.4047659 0.230048 0.01084717 -0.06421067 0.6947763	'There's a good child!' said the old lady.
+0 0 2 0 0.2267426 0.7178183 0.4203399 0.03013577 -0.08148476 0.5409182	Then she stopped her wheel, and rose, and, going out of the room, returned with a little silver basin and a soft white towel, with which she washed and wiped the bright little face.
+0 0 2 1 -0.425184 0.7313907 0.2264601 -0.5731804 0.2881498 0.7169498	And the princess thought her hands were so smooth and nice!
+0 0 6 0 0.09628494 0.8933447 0.6207668 0.06779063 -0.005253632 0.5649407	When she carried away the basin and towel, the little princess wondered to see how straight and tall she was, for, although she was so old, she didn't stoop a bit.
+0 0 6 1 0.4945311 0.7280268 0.6967161 0.1301505 -0.2243619 0.6084253	She was dressed in black velvet with thick white heavy-looking lace about it; and on the black dress her hair shone like silver.
+0 0 6 2 1.030566 0.9603689 0.4396571 -0.1022719 -0.04816754 0.5829101	There was hardly any more furniture in the room than there might have been in that of the poorest old woman who made her bread by her spinning.
+0 0 6 3 0.1505033 0.8051215 0.4910918 -0.03849087 -0.05185537 0.6391326	There was no carpet on the floor—no table anywhere—nothing but the spinning-wheel and the chair beside it.
+0 0 6 4 -0.4948421 0.7743098 0.5249852 -0.1408821 -0.1262993 0.5673551	When she came back, she sat down and without a word began her spinning once more, while Irene, who had never seen a spinning-wheel, stood by her side and looked on.
+0 0 6 5 1.282394 0.6850035 0.2653012 -0.04967888 0.1886743 0.5734224	When the old lady had got her thread fairly going again, she said to the princess, but without looking at her:
+1 0 1 0 0.5307069 1.186233 1.347999 0.2358561 0.3074316 0.5532366	'Do you know my name, child?'
+1 0 1 0 0.3066897 0.3521014 0.1139699 0.1120268 -0.09534176 0.682669	'No, I don't know it,' answered the princess.
+1 0 1 0 -0.1510289 0.2005813 0.1293495 -0.220874 -0.04000023 0.6718023	'My name is Irene.'
+1 0 1 0 0.5652816 0.386249 0.2287054 0.04076185 -0.2058565 0.712773	'That's my name!' cried the princess.
+1 0 1 0 -0.2384632 0.8400024 0.7359422 0.06707618 -0.02153696 0.6170401	'I know that. I let you have mine. I haven't got your name. You've got mine.'
+1 0 2 0 0.7957077 0.9056273 0.4232093 0.05255836 -0.02832518 0.5493409	'How can that be?' asked the princess, bewildered.
+1 0 2 1 0.372818 1.149184 1.083706 0.4208324 -0.4240169 0.6621213	'I've always had my name.'
+1 0 1 0 -0.204848 0.9529951 0.743921 0.427045 -0.09845676 0.6055476	'Your papa, the king, asked me if I had any objection to your having it; and, of course, I hadn't. I let you have it with pleasure.'
+1 0 1 0 0.2315018 0.9003318 0.9462065 0.3595793 -0.2166226 0.6714329	'It was very kind of you to give me your name—and such a pretty one,' said the princess.
+1 0 2 0 -0.169402 0.7278166 0.5248121 0.3988439 -0.5076272 0.5196727	'Oh, not so very kind!' said the old lady.
+1 0 2 1 0.3549922 1.308093 1.271503 0.2775636 0.4309571 0.5418216	'A name is one of those things one can give away and keep all the same. I have a good many such things. Wouldn't you like to know who I am, child?'
+1 0 1 0 0.3925414 0.8359929 0.7691834 0.2749765 -0.143457 0.6304696	'Yes, that I should—very much.'
+1 0 1 0 -0.1414569 0.9004709 0.6046853 0.09935571 0.06752928 0.599654	'I'm your great-great-grandmother,' said the lady.
+1 0 1 0 0.4754772 0.4352285 0.07496071 0.1007073 -0.3156191 0.6663693	'What's that?' asked the princess.
+1 0 1 0 -0.6760193 1.363667 0.9200438 0.1217662 0.05639445 0.5571939	'I'm your father's mother's father's mother.'
+1 0 1 0 -0.3827235 1.093426 0.6337521 0.1019966 -0.1780312 0.6597134	'Oh, dear! I can't understand that,' said the princess.
+1 0 1 0 -0.3729789 1.442593 1.211404 0.4554491 -0.1924772 0.5153372	'I dare say not. I didn't expect you would. But that's no reason why I shouldn't say it.'
+1 0 1 0 -0.4043058 0.313056 -0.1977751 -0.1157388 -0.1987125 0.7004082	'Oh, no!' answered the princess.
+1 0 2 0 -0.2582006 1.628909 1.13144 0.4973462 -0.2102647 0.4258236	'I will explain it all to you when you are older,' the lady went on.
+1 0 2 1 0.08201692 1.502322 0.6886736 0.04623248 -0.09404817 0.6747347	'But you will be able to understand this much now: I came here to take care of you.'
+1 0 1 0 0.2499325 1.688772 1.431194 0.4748456 0.3373286 0.5251942	'Is it long since you came? Was it yesterday? Or was it today, because it was so wet that I couldn't get out?'
+1 0 1 0 0.4100644 1.521127 1.21945 0.4071103 -0.1495045 0.6111327	'I've been here ever since you came yourself.'
+1 0 2 0 0.3708018 1.72142 0.6667546 -0.04500056 -0.01480293 0.5179852	'What a long time!' said the princess.
+1 0 2 1 -0.4157695 2.06196 1.30227 0.3333068 0.05268628 0.5701168	'I don't remember it at all.'
+1 0 1 0 -0.5125145 1.889277 1.35333 0.04200097 0.001411017 0.5353891	'No. I suppose not.'
+1 0 1 0 -0.07397343 1.735379 0.9043337 0.02417064 -0.05097393 0.6156464	'But I never saw you before.'
+1 0 1 0 -0.8013149 1.910642 1.261039 0.3438983 -0.2888609 0.5482981	'No. But you shall see me again.'
+1 0 1 0 0.1074072 1.717091 1.083275 0.0847422 0.143157 0.5871763	'Do you live in this room always?'
+1 0 1 0 0.5322948 1.710468 0.9442551 0.05932989 -0.06463195 0.5950575	'I don't sleep in it. I sleep on the opposite side of the landing. I sit here most of the day.'
+1 0 1 0 -0.04896522 1.839846 1.001593 0.2399944 -0.1233208 0.5483835	'I shouldn't like it. My nursery is much prettier. You must be a queen too, if you are my great big grand-mother.'
+1 0 1 0 -0.5987102 1.406312 0.8381878 0.3612388 -0.4896596 0.5894155	'Yes, I am a queen.'
+1 0 2 0 0.4893112 2.057752 1.638437 0.4322444 0.2075313 0.4343533	'Where is your crown, then?'
+1 0 2 1 0.07403842 1.73416 0.7847762 -0.7097735 0.3848576 0.6336948	'In my bedroom.'
+1 0 1 0 -0.01699719 1.192825 0.539222 0.3014283 -0.5079309 0.5869696	'I should like to see it.'
+1 0 1 0 -1.159642 1.6765 1.257497 -0.1179755 -0.1925455 0.5988911	'You shall some day—not today.'
+1 0 1 0 0.5568192 1.844776 1.151341 0.0823535 0.008640926 0.537586	'I wonder why nursie never told me.'
+1 0 1 0 0.6599936 1.371679 0.1916635 -0.07672748 -0.1353542 0.5962448	'Nursie doesn't know. She never saw me.'
+1 0 1 0 0.8919117 2.041848 1.338575 0.145598 0.4416487 0.5308222	'But somebody knows that you are in the house?'
+1 0 1 0 0.4690023 2.176471 1.902045 0.4729892 0.3179535 0.4863873	'How do you get your dinner, then?'
+1 0 1 0 -0.1170514 1.514102 0.8546047 0.03007013 -0.04104201 0.6751773	'I keep poultry—of a sort.'
+1 0 1 0 0.8159564 2.167648 2.05935 0.5431584 0.2647696 0.5202273	'Where do you keep them?'
+1 0 1 0 0.01244336 2.160244 1.712268 0.0001832582 0.08394943 0.5098867	'I will show you.'
+1 0 1 0 0.6725009 1.851183 1.67223 0.3637924 0.2699192 0.5696329	'And who makes the chicken broth for you?'
+1 0 1 0 0.9396858 1.960618 0.9527717 0.03120728 -0.02913586 0.5272251	'I never kill any of MY chickens.'
+1 0 1 0 0.2554998 1.43853 0.8621044 -0.1463037 0.03362155 0.6673598	'Then I can't understand.'
+1 0 1 0 0.6025896 1.678217 0.7567569 0.08839262 -0.1501825 0.5709023	'What did you have for breakfast this morning?' asked the lady.
+1 0 1 0 -0.1150304 1.673158 0.8588285 -0.04390592 0.03246957 0.639321	'Oh! I had bread and milk, and an egg—I dare say you eat their eggs.'
+1 0 1 0 0.2428376 2.027599 1.031657 0.4590031 -0.1567913 0.5710805	'Yes, that's it. I eat their eggs.'
+1 0 1 0 -0.01545758 1.931986 1.472538 0.1390654 0.01727611 0.5708627	'Is that what makes your hair so white?'
+1 0 1 0 -0.5740191 2.489343 1.155185 0.0801657 0.02993149 0.5422194	'No, my dear. It's old age. I am very old.'
+1 0 1 0 0.5488441 2.249884 1.767177 0.4459504 0.03360011 0.5209429	'I thought so. Are you fifty?'
+1 0 1 0 -0.04318601 1.991844 1.164729 -0.3805976 0.3668209 0.5120087	'Are you a hundred?'
+1 0 1 0 -0.04685801 1.820565 0.7958941 -0.08917975 -0.1219089 0.6277726	'Yes—more than that. I am too old for you to guess. Come and see my chickens.'
+0 0 5 0 0.6321566 2.074102 0.5497916 0.06731445 -0.3168319 0.5173233	Again she stopped her spinning.
+0 0 5 1 1.175298 1.49818 0.2287559 -0.1066294 -0.1813021 0.6912667	She rose, took the princess by the hand, led her out of the room, and opened the door opposite the stair.
+0 0 5 2 0.4384048 1.751776 0.7298713 0.08564225 0.1141409 0.4752686	The princess expected to see a lot of hens and chickens, but instead of that, she saw the blue sky first, and then the roofs of the house, with a multitude of the loveliest pigeons, mostly white, but of all colours, walking about,
+0 0 5 3 1.40965 2.101137 1.015766 0.1410858 -0.05838322 0.5276007	making bows to each other, and talking a language she could not understand.
+0 0 5 4 0.5751565 2.103749 0.7312636 -0.1854265 0.07896391 0.6217808	She clapped her hands with delight, and up rose such a flapping of wings that she in her turn was startled.
+1 0 1 0 0.3183804 1.494502 0.1349562 -0.2637601 -0.1439716 0.7179945	'You've frightened my poultry,' said the old lady, smiling.
+1 0 2 0 0.170303 1.646323 0.7154953 0.3096446 -0.4165864 0.6012937	'And they've frightened me,' said the princess, smiling too.
+1 0 2 1 0.2967787 2.288059 1.575447 0.1524707 0.4342105 0.5528776	'But what very nice poultry! Are the eggs nice?'
+1 0 2 0 0.1232285 1.567568 -0.06350989 -0.4553696 -0.3603143 0.4393583	'Yes, very nice.'
+1 0 2 1 -0.2391178 1.95565 1.581714 0.3014428 0.3377554 0.5564265	'What a small egg-spoon you must have! Wouldn't it be better to keep hens, and get bigger eggs?'
+1 0 1 0 1.190632 2.035596 1.123029 -0.1204068 0.5958 0.4805191	'How should I feed them, though?'
+1 0 2 0 0.6972943 1.451367 0.08577049 -0.2550083 -0.2583617 0.5472209	'I see,' said the princess.
+1 0 2 1 0.03717715 1.586327 0.2668563 -0.3197459 -0.1740209 0.6175155	'The pigeons feed themselves. They've got wings.'
+1 0 1 0 0.7521162 1.639575 0.5441169 -0.08807464 -0.00238524 0.6106514	'Just so. If they couldn't fly, I couldn't eat their eggs.'
+1 0 1 0 0.6128457 2.0083 1.421487 0.2663676 0.2077053 0.5577422	'But how do you get at the eggs? Where are their nests?'
+0 0 3 0 0.4255442 1.826028 0.5791249 -0.1996497 -0.1393609 0.5418741	The lady took hold of a little loop of string in the wall at the side of the door and, lifting a shutter, showed a great many pigeon-holes with nests, some with young ones and some with eggs in them.
+0 0 3 1 0.7433497 1.974339 0.3785279 -0.3583667 0.1470626 0.5642635	The birds came in at the other side, and she took out the eggs on this side.
+0 0 3 2 0.6749357 1.919815 0.4577359 -0.3997084 0.04659281 0.6994349	She closed it again quickly, lest the young ones should be frightened.
+1 0 2 0 0.1136937 1.647 0.6491898 0.1357128 -0.2341135 0.563116	'Oh, what a nice way!' cried the princess.
+1 0 2 1 0.6230432 2.405679 1.25698 0.5531539 -0.5264785 0.5878397	'Will you give me an egg to eat? I'm rather hungry.'
+1 0 1 0 -0.7788482 2.211374 1.257731 0.07387128 0.004422609 0.54781	'I will some day, but now you must go back, or nursie will be miserable about you. I dare say she's looking for you everywhere.'
+1 0 2 0 0.6694368 1.458055 -0.2317065 -0.3162715 -0.1323333 0.58955	'Except here,' answered the princess.
+1 0 2 1 0.3083933 2.183586 0.9993131 0.02550161 -0.02864913 0.5706747	'Oh, how surprised she will be when I tell her about my great big grand-grand-mother!'
+1 0 2 0 1.008096 1.604584 0.6130105 0.06043908 -0.4470182 0.5265017	'Yes, that she will!' said the old lady with a curious smile.
+1 0 2 1 0.05036089 2.233032 0.8722243 -0.04816023 -0.1992208 0.5680912	'Mind you tell her all about it exactly.'
+1 0 1 0 0.3308106 2.150692 1.656133 0.4788091 -0.179381 0.5694401	'That I will. Please will you take me back to her?'
+1 0 1 0 0.3260143 2.087102 1.081344 0.2376485 -0.065102 0.5788452	'I can't go all the way, but I will take you to the top of the stair, and then you must run down quite fast into your own room.'
+0 0 2 0 0.5638095 2.086429 0.7170525 -0.01773426 -0.01847679 0.4997715	The little princess put her hand in the old lady's, who, looking this way and that, brought her to the top of the first stair, and thence to the bottom of the second, and did not leave her till she saw her half-way down the third.
+0 0 2 1 0.6813018 2.213785 0.6906492 -0.1283449 0.04148823 0.6084211	When she heard the cry of her nurse's pleasure at finding her, she turned and walked up the stairs again, very fast indeed for such a very great grandmother, and sat down to her spinning with another strange smile on her sweet old face.
+0 0 1 0 0.1464321 2.281841 0.9990776 -0.03600557 -0.04829475 0.4985349	About this spinning of hers I will tell you more another time.
+0 0 1 0 0.5601541 1.819342 0.4039333 -0.3163472 -0.02290278 0.6702271	Guess what she was spinning.
 chapter 2
-1 0 2 0 0.09257376 -0.2669598 -0.2230204 0.2721388 -0.3594013 0.270472	'Why, where can you have been, princess?' asked the nurse, taking her in her arms.
-1 0 2 1 0.138551 0.07748029 0.1694856 0.2349968 -0.07330303 0.464519	'It's very unkind of you to hide away so long. I began to be afraid—' Here she checked herself.
-1 0 1 0 -0.145414 -0.3432355 -0.1432475 0.3724806 -0.3538242 0.4888534	'What were you afraid of, nursie?' asked the princess.
-1 1 2 0 -0.3187553 -0.2726154 -0.2175051 0.0698304 -0.3017578 0.3911787	'Never mind,' she answered.
-1 1 2 1 -0.2549364 -0.07006536 -0.04388167 0.2155868 -0.3193206 0.4951726	'Perhaps I will tell you another day. Now tell me where you have been.'
-1 0 1 0 -0.5385396 -0.2556745 -0.1124348 0.2857011 -0.2423703 0.5124655	'I've been up a long way to see my very great, huge, old grandmother,' said the princess.
-1 0 1 0 0.55505 -0.2786198 -0.005014535 0.3883989 -0.4388394 0.5549883	'What do you mean by that?' asked the nurse, who thought she was making fun.
-0 1 2 0 0.01378623 0.06345411 0.1289749 0.09974748 0.213725 0.3970801	'I mean that I've been a long way up and up to see my great grandmother. Ah, nursie, you don't know what a beautiful mother of grandmothers I've got upstairs. She is such an old lady,
-0 1 2 1 0.0423623 0.1424755 0.3169201 0.3304093 -0.08424866 0.585888	with such lovely white hair—as white as my silver cup. Now, when I think of it, I think her hair must be silver.'
-1 0 1 0 0.7602431 -0.3514081 -0.07431381 0.3904012 -0.2270719 0.6585156	'What nonsense you are talking, princess!' said the nurse.
-1 1 2 0 -0.04648594 -0.02613212 0.1463084 0.384449 -0.2134329 0.4865709	'I'm not talking nonsense,' returned Irene, rather offended.
-1 1 2 1 -0.6178195 0.101351 -0.02401892 0.1432219 -0.1750558 0.5063721	'I will tell you all about her. She's much taller than you, and much prettier.'
-1 0 1 0 0.223607 0.04033176 -0.1010889 0.3546829 -0.3962995 0.5736022	'Oh, I dare say!' remarked the nurse.
-1 1 1 0 -0.2156807 0.03743526 0.06882076 0.3640484 -0.1722932 0.6067718	'And she lives upon pigeons' eggs.'
-1 0 1 0 0.1241864 -0.08947138 -0.3024243 0.2178198 -0.3502351 0.666447	'Most likely,' said the nurse.
-1 1 1 0 -0.05527752 0.2556509 0.1043611 0.3544358 -0.1437611 0.5817305	'And she sits in an empty room, spin-spinning all day long.'
-1 0 1 0 -0.2886221 -0.1134657 -0.1865446 0.3799872 -0.4945174 0.5641779	'Not a doubt of it,' said the nurse.
-1 1 1 0 -0.3972421 0.2545923 0.09814779 0.5454717 -0.4688012 0.5407099	'And she keeps her crown in her bedroom.'
-1 0 1 0 -0.4240453 0.06936148 0.08035342 0.5187641 -0.5602792 0.5508003	'Of course—quite the proper place to keep her crown in. She wears it in bed, I'll be bound.'
-1 1 1 0 -0.2404974 0.6148522 0.8400935 0.7945076 0.04061377 0.4194342	'She didn't say that. And I don't think she does. That wouldn't be comfortable—would it? I don't think my papa wears his crown for a night-cap. Does he, nursie?'
-1 0 1 0 0.5499227 0.4411774 0.3152287 0.4600319 -0.3394293 0.5154657	'I never asked him. I dare say he does.'
-1 1 1 0 -0.4386559 0.4295091 0.1640601 0.4621975 -0.4410863 0.5211806	'And she's been there ever since I came here—ever so many years.'
-1 0 1 0 -0.06751941 0.3845403 0.1395368 0.4798431 -0.293722 0.5942736	'Anybody could have told you that,' said the nurse, who did not believe a word Irene was saying.
-1 1 1 0 0.05591949 1.072398 0.9784995 0.7677372 0.2839371 0.4589957	'Why didn't you tell me, then?'
-1 0 1 0 -0.1273962 0.6822042 0.4683437 0.7175405 -0.2624555 0.544176	'There was no necessity. You could make it all up for yourself.'
-1 0 1 0 -0.438999 0.4006678 0.07642131 0.4382529 -0.2808677 0.5848002	'You don't believe me, then!' exclaimed the princess, astonished and angry, as she well might be.
-1 0 2 0 0.9240067 0.6638433 0.2855218 0.5858243 -0.3284393 0.4406659	'Did you expect me to believe you, princess?' asked the nurse coldly.
-1 0 2 1 0.3708765 0.7229791 0.3983167 0.5394046 -0.1111189 0.5302016	'I know princesses are in the habit of telling make-believes, but you are the first I ever heard of who expected to have them believed,' she added, seeing that the child was strangely in earnest.
-0 0 1 0 0.1416078 0.4678143 0.04913167 0.2399513 -0.4233122 0.6018101	The princess burst into tears.
-1 0 1 0 -0.2669619 0.5601989 0.3345447 0.6527134 -0.2617496 0.5396339	'Well, I must say,' remarked the nurse, now thoroughly vexed with her for crying, 'it is not at all becoming in a princess to tell stories and expect to be believed just because she is a princess.'
-1 0 1 0 -0.8246441 0.3479146 0.1200094 0.4671281 -0.3259694 0.5039598	'But it's quite true, I tell you.'
-1 1 1 0 -0.03706127 0.5842329 -0.1121733 0.4167573 -0.3669226 0.575904	'You've dreamt it, then, child.'
-1 0 1 0 -0.6060744 0.535674 0.3205545 0.6118153 -0.3045675 0.5458985	'No, I didn't dream it. I went upstairs, and I lost myself, and if I hadn't found the beautiful lady, I should never have found myself.'
-1 1 1 0 -0.7525549 1.132616 0.7612785 0.3012156 0.1790801 0.4843701	'Oh, I dare say!'
-1 0 1 0 -0.29079 0.7787741 0.3936857 0.548816 -0.2972839 0.4948031	'Well, you just come up with me, and see if I'm not telling the truth.'
-1 1 1 0 -0.5441849 0.7769727 0.283278 0.4721711 -0.3004182 0.5266812	'Indeed I have other work to do. It's your dinnertime, and I won't have any more such nonsense.'
-0 0 5 0 0.2803993 0.9214065 0.1346019 0.159492 -0.176561 0.5243167	The princess wiped her eyes, and her face grew so hot that they were soon quite dry.
-0 0 5 1 0.623512 0.9086245 0.1372878 0.2012401 -0.1856458 0.5208299	She sat down to her dinner, but ate next to nothing.
-0 0 5 2 0.5431914 1.118181 0.5422928 0.3575132 -0.1421768 0.5297359	Not to be believed does not at all agree with princesses: for a real princess cannot tell a lie.
-0 0 5 3 0.4248229 1.129235 0.2945195 0.0075275 0.03991555 0.5444828	So all the afternoon she did not speak a word.
-0 0 5 4 0.2158416 1.052709 0.3884297 0.3878839 -0.2101007 0.6933867	Only when the nurse spoke to her, she answered her, for a real princess is never rude—even when she does well to be offended.
-0 0 6 0 0.4043024 0.876936 0.3813519 0.4234509 -0.1586888 0.5884701	Of course the nurse was not comfortable in her mind—not that she suspected the least truth in Irene's story, but that she loved her dearly, and was vexed with herself for having been cross to her.
-0 0 6 1 0.8166755 1.132426 0.3921879 0.2914918 0.02327521 0.5773907	She thought her crossness was the cause of the princess's unhappiness, and had no idea that she was really and deeply hurt at not being believed.
-0 0 6 2 0.2640002 1.029631 0.337242 0.3061805 0.05030458 0.5830417	But, as it became more and more plain during the evening in her every motion and look, that, although she tried to amuse herself with her toys, her heart was too vexed and troubled to enjoy them, her nurse's discomfort grew and grew.
-0 0 6 3 0.4443863 1.052546 0.172498 0.2050962 0.05010249 0.5768123	When bedtime came, she undressed and laid her down, but the child, instead of holding up her little mouth to be kissed, turned away from her and lay still.
-0 0 6 4 0.7615482 1.225175 0.2497528 0.03179953 0.1319663 0.5273129	At the sound of her first sob the princess turned again, and held her face to kiss her as usual.
-0 0 6 5 0.7263353 1.083496 0.2635286 0.1099876 0.06206884 0.6295782	But the nurse had her handkerchief to her eyes, and did not see the movement.
-1 0 1 0 0.09427263 1.090323 0.6814526 0.5925618 0.403747 0.5387362	'Nursie,' said the princess, 'why won't you believe me?'
-1 0 1 0 0.4910639 0.7674817 0.1262435 0.4427536 -0.1469727 0.6412403	'Because I can't believe you,' said the nurse, getting angry again.
-1 1 1 0 -0.2084888 0.8896688 0.2586684 0.4668252 -0.1234493 0.531684	'Ah! then, you can't help it,' said Irene, 'and I will not be vexed with you any more. I will give you a kiss and go to sleep.'
-1 0 1 0 0.09277871 0.8016868 0.1069817 0.4278958 -0.2003564 0.5823579	'You little angel!' cried the nurse, and caught her out of bed, and walked about the room with her in her arms, kissing and hugging her.
-1 0 1 0 0.02598966 0.8137599 0.4682092 0.6477989 -0.1919811 0.5844328	'You will let me take you to see my dear old great big grandmother, won't you?' said the princess, as she laid her down again.
-1 1 2 0 -0.1584877 1.282476 1.006941 0.8784286 0.2319119 0.4257891	'And you won't say I'm ugly, any more—will you, princess?'
-1 1 2 1 0.07920502 1.590484 1.20689 0.7223116 0.4845716 0.4763828	'Nursie, I never said you were ugly. What can you mean?'
-1 0 1 0 0.1274859 0.8527893 0.4142391 0.6566007 -0.3071039 0.4965407	'Well, if you didn't say it, you meant it.'
-1 1 1 0 -0.7126259 1.134312 0.4569169 0.1291105 0.1412262 0.5892221	'Indeed, I never did.'
-1 0 1 0 -0.579941 0.9149158 0.3771395 0.5128552 -0.2362963 0.4962393	'You said I wasn't so pretty as that—'
-1 1 1 0 -0.8289849 0.841296 0.3497014 0.5399157 -0.3044648 0.5030875	'As my beautiful grandmother—yes, I did say that; and I say it again, for it's quite true.'
-1 0 1 0 0.2162784 1.033864 0.4186219 0.487085 -0.210134 0.5178752	'Then I do think you are unkind!' said the nurse, and put her handkerchief to her eyes again.
-1 1 1 0 -0.71855 1.051245 0.4793174 0.4772854 0.07296637 0.4021848	'Nursie, dear, everybody can't be as beautiful as every other body, you know. You are very nice-looking, but if you had been as beautiful as my grandmother—'
-1 0 1 0 0.897113 0.8183005 0.1795151 0.4337657 -0.3162274 0.6117439	'Bother your grandmother!' said the nurse.
-1 1 1 0 0.1840999 1.302709 0.4898576 0.4156458 -0.03633065 0.521838	'Nurse, that's very rude. You are not fit to be spoken to till you can behave better.'
-0 0 1 0 0.8571445 1.010351 0.0503174 -0.003780488 0.05577815 0.6931884	The princess turned away once more, and again the nurse was ashamed of herself.
-1 1 2 0 0.6688308 1.166491 0.2889938 0.4767837 -0.2757314 0.44991	'I'm sure I beg your pardon, princess,' she said, though still in an offended tone.
-0 1 2 1 1.126387 1.218858 0.05659042 0.003027096 0.03106442 0.7248975	But the princess let the tone pass, and heeded only the words.
-1 1 2 0 -0.1638878 1.118919 0.3511205 0.5154271 -0.2690575 0.4357163	'You won't say it again, I am sure,' she answered, once more turning towards her nurse.
-1 1 2 1 0.1255759 1.660878 1.125466 0.6239396 0.5623643 0.4440873	'I was only going to say that if you had been twice as nice-looking as you are, some king or other would have married you, and then what would have become of me?'
-1 0 2 0 0.6466573 1.166169 0.3200467 0.4516093 -0.2970278 0.4322971	'You are an angel!' repeated the nurse, again embracing her.
-1 0 2 1 -0.2094189 1.472907 0.982576 0.5232612 0.4337826 0.498014	'Now,' insisted Irene, 'you will come and see my grandmother—won't you?'
-1 1 1 0 -0.1015805 0.9242892 0.320182 0.6002443 -0.1558642 0.5660867	'I will go with you anywhere you like, my cherub,' she answered; and in two minutes the weary little princess was fast asleep.
-0 0 8 0 0.639389 1.024741 0.07439058 0.2049407 0.02251734 0.5965733	When she woke the next morning, the first thing she heard was the rain still falling.
-0 0 8 1 0.3919951 1.048015 0.2506237 0.2108343 -0.03920471 0.572988	Indeed, this day was so like the last that it would have been difficult to tell where was the use of it.
-0 0 8 2 0.9271203 1.308743 0.4965425 0.3704598 0.3087052 0.5008593	The first thing she thought of, however, was not the rain, but the lady in the tower;
-0 0 8 3 0.8671981 1.218587 0.4151441 0.2630858 0.01882159 0.5368853	and the first question that occupied her thoughts was whether she should not ask the nurse to fulfil her promise this very morning, and go with her to find her grandmother as soon as she had had her breakfast.
-0 0 8 4 1.021387 1.366313 0.6157268 0.2172834 0.2709778 0.4649635	But she came to the conclusion that perhaps the lady would not be pleased if she took anyone to see her without first asking leave;
-0 0 8 5 0.8389059 1.211862 0.2205837 0.09233066 0.1794198 0.5593026	especially as it was pretty evident, seeing she lived on pigeons' eggs, and cooked them herself, that she did not want the household to know she was there.
-0 0 8 6 0.9121528 1.260837 0.3057021 0.1038552 0.0006851648 0.5274256	So the princess resolved to take the first opportunity of running up alone and asking whether she might bring her nurse.
-0 0 8 7 1.436222 1.340449 0.3906249 0.1460291 -0.01046452 0.6092604	She believed the fact that she could not otherwise convince her she was telling the truth would have much weight with her grandmother.
-0 0 1 0 0.9254289 0.9583278 0.04751897 -0.002978884 -0.05376491 0.6510048	The princess and her nurse were the best of friends all dressing-time, and the princess in consequence ate an enormous little breakfast.
-1 1 1 0 0.09739113 0.984962 0.5024715 0.6295264 -0.19031 0.5159863	'I wonder, Lootie'—that was her pet name for her nurse—'what pigeons' eggs taste like?' she said, as she was eating her egg—not quite a common one, for they always picked out the pinky ones for her.
-1 0 1 0 0.479144 0.938093 0.4324656 0.5764021 -0.07363234 0.6298739	'We'll get you a pigeon's egg, and you shall judge for yourself,' said the nurse.
-1 1 1 0 0.2399207 0.8994998 0.3559675 0.6801969 -0.1294328 0.5732297	'Oh, no, no!' returned Irene, suddenly reflecting they might disturb the old lady in getting it, and that even if they did not, she would have one less in consequence.
-1 0 1 0 0.01926887 1.337249 0.9746921 0.6528716 0.3192376 0.5583211	'What a strange creature you are,' said the nurse—'first to want a thing and then to refuse it!'
-0 0 1 0 0.3923354 0.9859471 0.4354493 0.4432103 -0.1573487 0.6858878	But she did not say it crossly, and the princess never minded any remarks that were not unfriendly.
-1 1 2 0 0.05906205 1.003992 0.3500395 0.6488329 -0.1387921 0.433408	'Well, you see, Lootie, there are reasons,' she returned, and said no more, for she did not want to bring up the subject of their former strife, lest her nurse should offer to go before she had had her grandmother's permission to bring her.
-0 1 2 1 0.5752279 1.207445 0.3964715 0.312749 -0.04973209 0.682556	Of course she could refuse to take her, but then she would believe her less than ever.
-0 0 2 0 0.5988819 1.024482 0.3191492 0.389236 -0.1069001 0.5440412	Now the nurse, as she said herself afterwards, could not be every moment in the room; and as never before yesterday had the princess given her the smallest reason for anxiety, it had not yet come into her head to watch her more closely.
-0 0 2 1 0.4505162 1.080562 0.2563261 0.1214574 0.08434068 0.7262772	So she soon gave her a chance, and, the very first that offered, Irene was off and up the stairs again.
-0 0 5 0 -0.2612987 0.8740492 0.2701241 0.4920117 -0.1692761 0.5756076	This day's adventure, however, did not turn out like yesterday's, although it began like it; and indeed to-day is very seldom like yesterday, if people would note the differences—even when it rains.
-0 0 5 1 0.5804603 1.095318 0.1107037 0.1736809 0.05368473 0.606818	The princess ran through passage after passage, and could not find the stair of the tower.
-0 0 5 2 0.9525861 1.152091 0.3680803 0.364111 -0.06107052 0.5232481	My own suspicion is that she had not gone up high enough, and was searching on the second instead of the third floor.
-0 0 5 3 0.8690313 1.376863 0.5142266 0.3006193 -0.01005133 0.509789	When she turned to go back, she failed equally in her search after the stair.
-0 0 5 4 0.7052605 1.253192 0.2538689 -0.04837415 0.2583418 0.7370963	She was lost once more.
-0 0 3 0 0.3904006 1.164724 0.2530145 0.2278823 -0.01407191 0.5742486	Something made it even worse to bear this time, and it was no wonder that she cried again.
-0 0 3 1 0.9206303 1.279385 0.3557834 0.2259475 -0.02473768 0.521971	Suddenly it occurred to her that it was after having cried before that she had found her grandmother's stair.
-0 0 3 2 0.9493722 1.208184 0.2825018 0.122017 0.01520448 0.720342	She got up at once, wiped her eyes, and started upon a fresh quest.
-0 0 6 0 0.1951288 1.034795 0.4200014 0.4912936 -0.07292724 0.5810866	This time, although she did not find what she hoped, she found what was next best: she did not come on a stair that went up, but she came upon one that went down.
-0 0 6 1 0.7175298 1.152635 0.3815074 0.3937156 -0.02304032 0.5711216	It was evidently not the stair she had come up, yet it was a good deal better than none; so down she went, and was singing merrily before she reached the bottom.
-0 0 6 2 0.5611255 1.071592 0.4468037 0.2429813 -0.01182266 0.6174999	There, to her surprise, she found herself in the kitchen.
-0 0 6 3 1.351532 1.247913 0.5284718 0.3718829 -0.007476499 0.5682328	Although she was not allowed to go there alone, her nurse had often taken her, and she was a great favourite with the servants.
-0 0 6 4 0.9164537 1.219774 0.3846926 0.1996444 0.06095473 0.5501129	So there was a general rush at her the moment she appeared, for every one wanted to have her; and the report of where she was soon reached the nurse's ears.
-0 0 6 5 0.9062636 1.094045 0.3824042 0.2568406 -0.08201442 0.7138467	She came at once to fetch her; but she never suspected how she had got there, and the princess kept her own counsel.
-0 0 4 0 0.5786572 1.32431 0.5418755 0.3487461 0.07317045 0.5780227	Her failure to find the old lady not only disappointed her, but made her very thoughtful.
-0 0 4 1 1.044839 1.116651 0.4480562 0.3773986 -0.08202444 0.5969298	Sometimes she came almost to the nurse's opinion that she had dreamed all about her; but that fancy never lasted very long.
-0 0 4 2 0.630904 1.255687 0.4452986 0.2902378 -0.1054907 0.5154832	She wondered much whether she should ever see her again, and thought it very sad not to have been able to find her when she particularly wanted her.
-0 0 4 3 0.9800928 1.246753 0.4744984 0.1509744 -0.02653348 0.6031091	She resolved to say nothing more to her nurse on the subject, seeing it was so little in her power to prove her words.
+1 0 2 0 -0.1591856 -0.07459567 -0.2937586 0.1769035 -0.2439336 0.35014	'Why, where can you have been, princess?' asked the nurse, taking her in her arms.
+1 0 2 1 0.2411628 0.3174221 0.05754307 -0.08925931 -0.0002194494 0.5108224	'It's very unkind of you to hide away so long. I began to be afraid—' Here she checked herself.
+1 0 1 0 -0.2295583 -0.06294871 -0.06104513 0.1367424 -0.09214553 0.5090492	'What were you afraid of, nursie?' asked the princess.
+1 1 2 0 -0.3112291 0.07492405 -0.3424823 -0.3892803 0.04230722 0.4352557	'Never mind,' she answered.
+1 1 2 1 -0.2869085 0.4614379 0.04572807 -0.02279034 -0.06586292 0.5968533	'Perhaps I will tell you another day. Now tell me where you have been.'
+1 0 1 0 -0.4715245 0.5939736 0.2541172 0.1475369 -0.1763863 0.5851991	'I've been up a long way to see my very great, huge, old grandmother,' said the princess.
+1 0 1 0 0.1901602 0.03768691 0.02546921 0.2174306 -0.3111216 0.6226785	'What do you mean by that?' asked the nurse, who thought she was making fun.
+0 1 2 0 -0.1435128 0.6754565 0.07820135 -0.04594049 0.2596991 0.3338714	'I mean that I've been a long way up and up to see my great grandmother. Ah, nursie, you don't know what a beautiful mother of grandmothers I've got upstairs. She is such an old lady,
+0 1 2 1 0.1769364 0.7344335 0.4772716 0.3133393 -0.07276425 0.6098658	with such lovely white hair—as white as my silver cup. Now, when I think of it, I think her hair must be silver.'
+1 0 1 0 0.2721932 0.2569131 0.05007893 0.3565082 -0.1604302 0.6494477	'What nonsense you are talking, princess!' said the nurse.
+1 1 2 0 -0.1183568 1.178232 0.5495797 0.3627795 -0.0900965 0.4319792	'I'm not talking nonsense,' returned Irene, rather offended.
+1 1 2 1 -0.5365191 0.9514815 0.09778792 -0.08322315 -0.09227654 0.5821062	'I will tell you all about her. She's much taller than you, and much prettier.'
+1 0 1 0 -0.3093909 1.096146 0.2527903 0.1250746 -0.1597293 0.5739951	'Oh, I dare say!' remarked the nurse.
+1 1 1 0 -0.3573101 1.158685 0.4001432 -0.04483559 0.02881727 0.5787451	'And she lives upon pigeons' eggs.'
+1 0 1 0 -0.3593366 0.7670473 -0.08790734 -0.05973591 -0.2413651 0.7104303	'Most likely,' said the nurse.
+1 1 1 0 -0.4017428 1.585859 0.5520416 -0.02228056 0.2829742 0.5312099	'And she sits in an empty room, spin-spinning all day long.'
+1 0 1 0 -0.2216565 0.4344134 -0.2872546 0.1734877 -0.497026 0.6624582	'Not a doubt of it,' said the nurse.
+1 1 1 0 0.2076741 1.214966 0.2646845 0.180012 0.03815381 0.5495102	'And she keeps her crown in her bedroom.'
+1 0 1 0 -0.235611 0.9468606 0.1598446 0.2002625 -0.3126242 0.6454524	'Of course—quite the proper place to keep her crown in. She wears it in bed, I'll be bound.'
+1 1 1 0 0.09167817 1.142449 0.7024589 0.206177 0.3357777 0.5482378	'She didn't say that. And I don't think she does. That wouldn't be comfortable—would it? I don't think my papa wears his crown for a night-cap. Does he, nursie?'
+1 0 1 0 0.2970375 1.73894 0.583109 -0.01005341 -0.01863884 0.4929708	'I never asked him. I dare say he does.'
+1 1 1 0 -0.6824218 1.37237 0.4635969 0.04741449 0.07636213 0.5941323	'And she's been there ever since I came here—ever so many years.'
+1 0 1 0 0.1497613 1.423692 0.4760173 0.3342198 -0.1927752 0.6257106	'Anybody could have told you that,' said the nurse, who did not believe a word Irene was saying.
+1 1 1 0 0.5292273 2.349148 1.497328 0.305402 0.5196963 0.4677036	'Why didn't you tell me, then?'
+1 0 1 0 -0.3401884 1.982003 1.026792 0.3007465 -0.04335906 0.5469726	'There was no necessity. You could make it all up for yourself.'
+1 0 1 0 -0.4929577 1.351475 0.2958344 -0.03563352 -0.03599371 0.660169	'You don't believe me, then!' exclaimed the princess, astonished and angry, as she well might be.
+1 0 2 0 0.48553 1.74162 0.4630029 0.2582528 -0.3139445 0.4914533	'Did you expect me to believe you, princess?' asked the nurse coldly.
+1 0 2 1 0.680187 1.721297 0.5688585 0.2332685 -0.06404987 0.5976252	'I know princesses are in the habit of telling make-believes, but you are the first I ever heard of who expected to have them believed,' she added, seeing that the child was strangely in earnest.
+0 0 1 0 0.4255966 1.233359 0.07505038 0.03179826 -0.2397071 0.6613923	The princess burst into tears.
+1 0 1 0 -0.07630569 1.857038 0.8226045 0.3769736 0.01094813 0.5291911	'Well, I must say,' remarked the nurse, now thoroughly vexed with her for crying, 'it is not at all becoming in a princess to tell stories and expect to be believed just because she is a princess.'
+1 0 1 0 -0.9780492 1.474704 0.4134598 0.1893017 -0.2698147 0.5668946	'But it's quite true, I tell you.'
+1 1 1 0 -0.475711 1.851204 0.3505678 0.02937399 0.06358641 0.5869464	'You've dreamt it, then, child.'
+1 0 1 0 -0.1470801 2.058847 1.001765 0.5084717 -0.1114442 0.5429913	'No, I didn't dream it. I went upstairs, and I lost myself, and if I hadn't found the beautiful lady, I should never have found myself.'
+1 1 1 0 -1.259549 2.357079 1.178246 -0.1126577 0.1095849 0.5099489	'Oh, I dare say!'
+1 0 1 0 -0.2919568 1.980561 0.7031119 0.2144197 -0.3649087 0.5707288	'Well, you just come up with me, and see if I'm not telling the truth.'
+1 1 1 0 -0.0005911123 2.234614 0.8476329 0.1828003 -0.09251961 0.5637915	'Indeed I have other work to do. It's your dinnertime, and I won't have any more such nonsense.'
+0 0 5 0 0.232071 2.011124 0.4529739 -0.1207943 0.008605752 0.5210864	The princess wiped her eyes, and her face grew so hot that they were soon quite dry.
+0 0 5 1 0.8351829 1.736696 0.1497178 0.04076736 -0.1724794 0.5722368	She sat down to her dinner, but ate next to nothing.
+0 0 5 2 0.4807909 1.939908 0.8078731 0.349324 -0.3551129 0.5052031	Not to be believed does not at all agree with princesses: for a real princess cannot tell a lie.
+0 0 5 3 0.5986837 2.080031 0.5723971 -0.0003806204 -0.118451 0.5211504	So all the afternoon she did not speak a word.
+0 0 5 4 0.2744551 1.929918 0.6982273 0.2038126 -0.1748297 0.6893376	Only when the nurse spoke to her, she answered her, for a real princess is never rude—even when she does well to be offended.
+0 0 7 0 0.771167 1.765474 0.5379723 0.2031264 -0.1076451 0.5893803	Of course the nurse was not comfortable in her mind—not that she suspected the least truth in Irene's story, but that she loved her dearly, and was vexed with herself for having been cross to her.
+0 0 7 1 0.928157 2.210021 0.5818903 0.0834128 0.05696365 0.5616911	She thought her crossness was the cause of the princess's unhappiness, and had no idea that she was really and deeply hurt at not being believed.
+0 0 7 2 0.3054668 2.041192 0.3634165 -0.05031115 0.09522545 0.5939943	But, as it became more and more plain during the evening in her every motion and look, that, although she tried to amuse herself with her toys, her heart was too vexed and troubled to enjoy them, her nurse's discomfort grew and grew.
+0 0 7 3 0.3929777 2.101597 0.4043982 -0.08266418 0.1385226 0.5709385	When bedtime came, she undressed and laid her down, but the child, instead of holding up her little mouth to be kissed, turned away from her and lay still.
+0 0 7 5 0.8328782 2.250825 0.4200697 -0.01633298 -0.04269717 0.5470777	At the sound of her first sob the princess turned again, and held her face to kiss her as usual.
+0 0 7 6 0.8925871 2.268658 0.5270685 0.1380916 -0.05350589 0.6886326	But the nurse had her handkerchief to her eyes, and did not see the movement.
+1 0 1 0 -0.2642641 2.30463 0.7709124 -0.04040518 0.3964505 0.6219878	'Nursie,' said the princess, 'why won't you believe me?'
+1 0 1 0 0.4841782 2.16664 0.3801103 0.0244948 -0.1088612 0.6991339	'Because I can't believe you,' said the nurse, getting angry again.
+1 1 1 0 -0.2685739 2.483287 0.6331501 0.1560345 0.0898695 0.5670466	'Ah! then, you can't help it,' said Irene, 'and I will not be vexed with you any more. I will give you a kiss and go to sleep.'
+1 0 1 0 0.4824077 2.564897 0.5251822 -0.01823755 0.1322393 0.6375139	'You little angel!' cried the nurse, and caught her out of bed, and walked about the room with her in her arms, kissing and hugging her.
+1 0 1 0 -0.4076244 2.840183 1.156277 0.3706822 -0.1335774 0.5764719	'You will let me take you to see my dear old great big grandmother, won't you?' said the princess, as she laid her down again.
+1 1 2 0 -0.8990053 2.91001 1.481236 0.4450206 0.2561006 0.5529388	'And you won't say I'm ugly, any more—will you, princess?'
+1 1 2 1 -0.1667749 3.330631 1.589477 0.08001508 0.5143701 0.535697	'Nursie, I never said you were ugly. What can you mean?'
+1 0 1 0 0.09777104 2.314258 0.665273 0.7327886 -0.6100969 0.5960262	'Well, if you didn't say it, you meant it.'
+1 1 1 0 -0.8262757 3.026953 1.220118 -0.2853974 0.4012102 0.5625859	'Indeed, I never did.'
+1 0 1 0 -0.4210083 2.734895 0.7484672 -0.09135124 0.2545617 0.524714	'You said I wasn't so pretty as that—'
+1 1 1 0 -0.8088555 2.513023 0.9105725 0.2283934 -0.05802372 0.6337369	'As my beautiful grandmother—yes, I did say that; and I say it again, for it's quite true.'
+1 0 1 0 0.5491804 2.900012 0.7487239 0.07621729 -0.1834442 0.5815988	'Then I do think you are unkind!' said the nurse, and put her handkerchief to her eyes again.
+1 1 1 0 -0.2747647 2.981236 1.046363 0.2103584 0.3341032 0.4476612	'Nursie, dear, everybody can't be as beautiful as every other body, you know. You are very nice-looking, but if you had been as beautiful as my grandmother—'
+1 0 1 0 0.8929003 2.792518 0.8770856 0.12927 -0.2357964 0.5947236	'Bother your grandmother!' said the nurse.
+1 1 1 0 -0.1903173 3.101948 0.8733238 0.0415275 -0.008318152 0.5028157	'Nurse, that's very rude. You are not fit to be spoken to till you can behave better.'
+0 0 1 0 0.7487279 2.784257 0.2688864 -0.4746037 0.1613611 0.7008175	The princess turned away once more, and again the nurse was ashamed of herself.
+1 1 2 0 0.7044522 3.088608 0.8437355 0.1486429 -0.02545784 0.4365349	'I'm sure I beg your pardon, princess,' she said, though still in an offended tone.
+0 1 2 1 1.533627 2.953342 0.5016594 -0.3231685 0.1730412 0.692279	But the princess let the tone pass, and heeded only the words.
+1 1 2 0 0.00347762 2.898336 0.6253964 0.3042928 -0.3188727 0.4800026	'You won't say it again, I am sure,' she answered, once more turning towards her nurse.
+1 1 2 1 0.4344602 3.274632 1.472018 0.2620701 0.6431561 0.5309839	'I was only going to say that if you had been twice as nice-looking as you are, some king or other would have married you, and then what would have become of me?'
+1 0 2 0 0.3262847 2.876166 0.5189149 0.007542286 -0.05302097 0.5112133	'You are an angel!' repeated the nurse, again embracing her.
+1 0 2 1 0.05140609 3.036804 1.191 0.04117039 0.3236208 0.6521401	'Now,' insisted Irene, 'you will come and see my grandmother—won't you?'
+1 1 1 0 -0.02126238 2.606742 0.7127547 0.1870731 -0.02233848 0.5662183	'I will go with you anywhere you like, my cherub,' she answered; and in two minutes the weary little princess was fast asleep.
+0 0 8 0 0.9175521 2.877755 0.5674509 7.610396e-05 0.02160838 0.5199243	When she woke the next morning, the first thing she heard was the rain still falling.
+0 0 8 1 0.4101575 2.439892 0.1314563 -0.0963286 -0.06534269 0.5716552	Indeed, this day was so like the last that it would have been difficult to tell where was the use of it.
+0 0 8 2 1.454249 2.910465 1.122983 0.3189569 0.1613009 0.4250767	The first thing she thought of, however, was not the rain, but the lady in the tower;
+0 0 8 3 1.320495 2.578964 0.4698963 -0.01335787 0.04256717 0.5815303	and the first question that occupied her thoughts was whether she should not ask the nurse to fulfil her promise this very morning, and go with her to find her grandmother as soon as she had had her breakfast.
+0 0 8 4 1.16625 2.697501 0.8401538 0.004928354 0.1524811 0.4438967	But she came to the conclusion that perhaps the lady would not be pleased if she took anyone to see her without first asking leave;
+0 0 8 5 0.8879986 2.466146 0.2965921 -0.1696064 0.1825598 0.6135131	especially as it was pretty evident, seeing she lived on pigeons' eggs, and cooked them herself, that she did not want the household to know she was there.
+0 0 8 6 1.102796 2.457662 0.6393541 0.04028495 -0.06040807 0.5721148	So the princess resolved to take the first opportunity of running up alone and asking whether she might bring her nurse.
+0 0 8 7 1.773537 2.613544 0.5206382 -0.162788 -0.01639805 0.6399625	She believed the fact that she could not otherwise convince her she was telling the truth would have much weight with her grandmother.
+0 0 1 0 0.8483741 2.303242 -0.05931967 -0.5465174 0.1914911 0.7080258	The princess and her nurse were the best of friends all dressing-time, and the princess in consequence ate an enormous little breakfast.
+1 1 1 0 0.4377291 2.518598 0.7992873 0.357826 -0.09895909 0.6342605	'I wonder, Lootie'—that was her pet name for her nurse—'what pigeons' eggs taste like?' she said, as she was eating her egg—not quite a common one, for they always picked out the pinky ones for her.
+1 0 1 0 0.2478045 2.878944 0.9689041 0.2369264 0.06414172 0.6371246	'We'll get you a pigeon's egg, and you shall judge for yourself,' said the nurse.
+1 1 1 0 0.300277 2.90401 0.8423929 0.4329445 0.1886055 0.5761225	'Oh, no, no!' returned Irene, suddenly reflecting they might disturb the old lady in getting it, and that even if they did not, she would have one less in consequence.
+1 0 1 0 0.1560648 3.269159 1.353392 0.2809861 0.1803457 0.6254963	'What a strange creature you are,' said the nurse—'first to want a thing and then to refuse it!'
+0 0 1 0 0.3650062 2.797681 0.7253114 0.1084376 -0.06059762 0.7106401	But she did not say it crossly, and the princess never minded any remarks that were not unfriendly.
+1 1 2 0 0.2995688 3.002645 0.7130513 0.3904874 0.09584022 0.4977307	'Well, you see, Lootie, there are reasons,' she returned, and said no more, for she did not want to bring up the subject of their former strife, lest her nurse should offer to go before she had had her grandmother's permission to bring her.
+0 1 2 1 0.7420999 3.120472 0.6408077 -0.1607124 0.06830011 0.6993561	Of course she could refuse to take her, but then she would believe her less than ever.
+0 0 2 0 0.6507965 2.979297 0.447044 0.01484549 0.01226549 0.5835812	Now the nurse, as she said herself afterwards, could not be every moment in the room; and as never before yesterday had the princess given her the smallest reason for anxiety, it had not yet come into her head to watch her more closely.
+0 0 2 1 0.5333405 3.169375 0.5688921 -0.2709005 0.1010281 0.7034502	So she soon gave her a chance, and, the very first that offered, Irene was off and up the stairs again.
+0 0 5 0 0.01288725 2.905721 0.6094683 0.1217147 -0.02409736 0.582417	This day's adventure, however, did not turn out like yesterday's, although it began like it; and indeed to-day is very seldom like yesterday, if people would note the differences—even when it rains.
+0 0 5 1 0.9442399 3.065189 0.4717669 -0.1124433 0.056915 0.5901005	The princess ran through passage after passage, and could not find the stair of the tower.
+0 0 5 2 1.042802 3.128679 0.755951 0.1191695 -0.008550983 0.5312027	My own suspicion is that she had not gone up high enough, and was searching on the second instead of the third floor.
+0 0 5 3 0.7695481 3.217381 0.8505759 0.269897 -0.2238325 0.4706082	When she turned to go back, she failed equally in her search after the stair.
+0 0 5 4 0.9715028 3.466115 0.9488239 -0.3098991 0.2082984 0.6514533	She was lost once more.
+0 0 3 0 0.2575799 3.023499 0.5980355 -0.02380453 0.01544365 0.5341837	Something made it even worse to bear this time, and it was no wonder that she cried again.
+0 0 3 1 1.59268 3.166761 0.6387053 -0.00153042 -0.1139916 0.5655918	Suddenly it occurred to her that it was after having cried before that she had found her grandmother's stair.
+0 0 3 2 0.7509276 3.336718 0.9316541 -0.01812021 0.05995264 0.6756039	She got up at once, wiped her eyes, and started upon a fresh quest.
+0 0 6 0 0.06114706 3.097978 0.8033386 0.1420283 -0.02258979 0.530101	This time, although she did not find what she hoped, she found what was next best: she did not come on a stair that went up, but she came upon one that went down.
+0 0 6 1 0.6911926 3.308295 0.7602149 0.05630882 0.003460631 0.5615732	It was evidently not the stair she had come up, yet it was a good deal better than none; so down she went, and was singing merrily before she reached the bottom.
+0 0 6 2 0.8013079 3.326105 0.9086894 0.1113546 -0.06561427 0.5663413	There, to her surprise, she found herself in the kitchen.
+0 0 6 3 1.533649 3.498739 1.07595 0.1832608 -0.02619886 0.5226316	Although she was not allowed to go there alone, her nurse had often taken her, and she was a great favourite with the servants.
+0 0 6 4 1.137967 3.276515 0.6870817 -0.04060487 0.1150421 0.5519597	So there was a general rush at her the moment she appeared, for every one wanted to have her; and the report of where she was soon reached the nurse's ears.
+0 0 6 5 1.002444 3.13201 0.85142 -0.02268999 0.09881468 0.6846327	She came at once to fetch her; but she never suspected how she had got there, and the princess kept her own counsel.
+0 0 4 0 0.4743471 3.456551 0.8352044 -0.07735525 0.2228213 0.5079383	Her failure to find the old lady not only disappointed her, but made her very thoughtful.
+0 0 4 1 1.254655 3.251585 0.9046677 0.1080171 -0.1266203 0.6039851	Sometimes she came almost to the nurse's opinion that she had dreamed all about her; but that fancy never lasted very long.
+0 0 4 2 0.6913671 3.191925 0.4771644 -0.1955369 -0.07107036 0.5494687	She wondered much whether she should ever see her again, and thought it very sad not to have been able to find her when she particularly wanted her.
+0 0 4 3 0.9015741 3.202862 0.4402562 -0.139873 -0.06531803 0.659079	She resolved to say nothing more to her nurse on the subject, seeing it was so little in her power to prove her words.
 chapter 2
-0 0 4 0 0.1313226 -0.3355899 -0.3467055 -0.1122151 -0.04904199 0.3842252	The next day the great cloud still hung over the mountain, and the rain poured like water from a full sponge.
-0 0 4 1 0.8691636 -0.3004535 -0.2544658 0.03632133 -0.08842298 0.4817487	The princess was very fond of being out of doors, and she nearly cried when she saw that the weather was no better.
-0 0 4 2 0.412928 -0.08980279 0.1778704 0.1877436 0.198261 0.3509231	But the mist was not of such a dark dingy grey; there was light in it; and as the hours went on it grew brighter and brighter, until it was almost too brilliant to look at;
-0 0 4 3 0.7246742 -0.07290936 0.18122 0.0460041 0.3157209 0.5470687	and late in the afternoon the sun broke out so gloriously that Irene clapped her hands, crying:
-1 0 1 0 -0.3271686 0.06506682 0.5706179 0.4908251 0.3317172 0.4347856	'See, see, Lootie! The sun has had his face washed. Look how bright he is! Do get my hat, and let us go out for a walk. Oh, dear! oh, dear! how happy I am!'
-0 0 8 0 1.227591 -0.2885046 -0.2735784 -0.06648946 -0.169541 0.55299	Lootie was very glad to please the princess.
-0 0 8 1 0.2859747 -0.1049652 0.1322105 0.1650427 0.1064975 0.5588855	She got her hat and cloak, and they set out together for a walk up the mountain; for the road was so hard and steep that the water could not rest upon it, and it was always dry enough for walking a few minutes after the rain ceased.
-0 0 8 2 0.7859232 -0.214434 -0.02291305 0.1144987 0.04298972 0.5822895	The clouds were rolling away in broken pieces, like great, overwoolly sheep, whose wool the sun had bleached till it was almost too white for the eyes to bear.
-0 0 8 3 0.1914422 0.03791784 -0.0836966 -0.1281148 0.1844004 0.5881268	Between them the sky shone with a deeper and purer blue, because of the rain.
-0 0 8 4 0.9512147 -0.05063231 0.1084083 0.1430439 0.01569305 0.571681	The trees on the roadside were hung all over with drops, which sparkled in the sun like jewels.
-0 0 8 5 0.7357142 0.03414438 0.3576443 0.2570265 0.2051824 0.5221161	The only things that were no brighter for the rain were the brooks that ran down the mountain; they had changed from the clearness of crystal to a muddy brown;
-0 0 8 6 0.6081862 0.05868435 0.3857232 0.3512494 -0.1065347 0.5553266	but what they lost in colour they gained in sound—or at least in noise, for a brook when it is swollen is not so musical as before.
-0 0 8 7 0.4274057 -0.168765 0.07609202 0.1411843 -0.01439867 0.7268929	But Irene was in raptures with the great brown streams tumbling down everywhere; and Lootie shared in her delight, for she too had been confined to the house for three days.
-0 0 6 0 0.7496911 -0.1050283 0.07385658 0.2384637 -0.1259218 0.5542077	At length she observed that the sun was getting low, and said it was time to be going back.
-0 0 6 1 0.3378959 -0.1680599 0.1777915 0.1680178 0.128407 0.525584	She made the remark again and again, but, every time, the princess begged her to go on just a little farther and a little farther;
-0 0 6 2 0.3353204 0.1285579 0.2694668 0.2977262 -0.0242356 0.5597209	reminding her that it was much easier to go downhill, and saying that when they did turn they would be at home in a moment.
-0 0 6 3 0.1072409 -0.09720131 0.1539378 0.1882435 0.02103828 0.5715331	So on and on they did go, now to look at a group of ferns over whose tops a stream was pouring in a watery arch, now to pick a shining stone from a rock by the wayside, now to watch the flight of some bird.
-0 0 6 4 0.1199829 0.1366655 0.09331454 0.0143329 0.04320401 0.5577011	Suddenly the shadow of a great mountain peak came up from behind, and shot in front of them.
-0 0 6 5 0.2641427 -0.0009828955 0.001706008 0.02638204 0.008569492 0.6478883	When the nurse saw it, she started and shook, and catching hold of the princess's hand turned and began to run down the hill.
-1 1 1 0 0.3186672 -0.2257217 0.03773877 0.4302303 -0.4125388 0.5408833	'What's all the haste, nursie?' asked Irene, running alongside of her.
-1 1 1 0 0.5970633 0.1991624 0.2398205 0.3134542 -0.1990065 0.5342565	'We must not be out a moment longer.'
-1 0 1 0 -0.06087323 -0.0935511 0.07774782 0.4635722 -0.4065616 0.642487	'But we can't help being out a good many moments longer.'
-0 0 8 0 0.8026386 -0.2131819 -0.2445298 0.03058469 -0.3644041 0.5495718	It was too true.
-0 0 8 1 1.795526 -0.06627087 -0.0145491 -0.2847738 -0.001881068 0.7486053	The nurse almost cried.
-0 0 8 2 0.7298578 0.09704589 0.2434527 0.1158459 -0.159031 0.6513107	They were much too far from home.
-0 0 8 3 0.4361726 0.4861417 0.6313565 0.07321563 0.5606517 0.5838203	It was against express orders to be out with the princess one moment after the sun was down; and they were nearly a mile up the mountain!
-0 0 8 4 0.3816574 0.1027532 0.1645568 0.1465686 -0.06211353 0.6033949	If His Majesty, Irene's papa, were to hear of it, Lootie would certainly be dismissed; and to leave the princess would break her heart.
-0 0 8 5 0.6111591 -0.002375163 0.08970658 0.1675415 -0.2123232 0.5781981	It was no wonder she ran.
-0 0 8 6 0.4881721 0.1569362 0.2569905 0.07028916 -0.06046861 0.6733642	But Irene was not in the least frightened, not knowing anything to be frightened at.
-0 0 8 7 0.2338229 0.1108216 0.2277243 0.09932719 -0.0586424 0.6870953	She kept on chattering as well as she could, but it was not easy.
-1 0 1 0 -0.07834825 0.04476692 0.4144026 0.5257789 -0.4014858 0.5272776	'Lootie! Lootie! why do you run so fast? It shakes my teeth when I talk.'
-1 1 1 0 0.5256069 -0.0166795 0.05984526 0.3544348 -0.4455591 0.5802785	'Then don't talk,' said Lootie.
-1 1 1 0 0.01602505 -0.1410651 0.1218393 0.4280508 -0.3272665 0.5793682	'But the princess went on talking. She was always saying: 'Look, look, Lootie!' but Lootie paid no more heed to anything she said, only ran on.
-1 0 1 0 0.1315724 0.1985191 0.7132527 0.5259902 0.3267123 0.519573	'Look, look, Lootie! Don't you see that funny man peeping over the rock?'
-0 0 2 0 0.4740584 -0.3215873 -0.3527054 -0.03121419 -0.105474 0.5219027	Lootie only ran the faster.
-0 0 2 1 0.4785677 0.03904991 0.01910283 0.1264981 -0.01399611 0.6414271	They had to pass the rock, and when they came nearer, the princess saw it was only a lump of the rock itself that she had taken for a man.
-1 0 1 0 0.08991823 -0.02291976 0.1135914 0.4238303 -0.2257073 0.5509723	'Look, look, Lootie! There's such a curious creature at the foot of that old tree. Look at it, Lootie! It's making faces at us, I do think.'
-0 0 3 0 -0.5320362 0.05182315 0.212189 0.3665836 -0.2272987 0.5829232	Lootie gave a stifled cry, and ran faster still—so fast that Irene's little legs could not keep up with her, and she fell with a crash.
-0 0 3 1 0.1717589 0.2228161 0.1825769 0.3036863 -0.1291861 0.5325782	It was a hard downhill road, and she had been running very fast—so it was no wonder she began to cry.
-0 0 3 2 0.8775727 0.1389076 0.09343734 0.1479419 -0.1326631 0.6808796	This put the nurse nearly beside herself; but all she could do was to run on, the moment she got the princess on her feet again.
-1 0 1 0 -0.2418346 0.02887584 0.09592429 0.4250846 -0.2645471 0.5780142	'Who's that laughing at me?' said the princess, trying to keep in her sobs, and running too fast for her grazed knees.
-1 0 1 0 0.56365 0.04101747 0.1567305 0.5870121 -0.338064 0.6678623	'Nobody, child,' said the nurse, almost angrily.
-1 1 1 0 0.06825399 0.7109274 0.8156462 0.6304435 0.2818978 0.5061033	But that instant there came a burst of coarse tittering from somewhere near, and a hoarse indistinct voice that seemed to say: 'Lies! lies! lies!'
-1 0 1 0 0.1127046 0.04792086 0.2134763 0.5235171 -0.2913944 0.5943666	'Oh!' cried the nurse with a sigh that was almost a scream, and ran on faster than ever.
-1 1 1 0 0.1265469 0.3871536 0.4392426 0.5120072 -0.2195554 0.5621918	'Nursie! Lootie! I can't run any more. Do let us walk a bit.'
-1 0 2 0 0.7815161 0.1688987 0.1426646 0.4565665 -0.4065363 0.4789528	'What am I to do?' said the nurse.
-1 0 2 1 0.8555553 0.5053244 0.4730577 0.3947319 -0.08823679 0.5915282	'Here, I will carry you.'
-0 0 2 0 0.8953456 0.5284538 0.3332602 0.2009769 0.05131165 0.489535	She caught her up; but found her much too heavy to run with, and had to set her down again.
-0 0 2 1 0.2047997 0.3619936 0.1070041 0.2451402 -0.1019866 0.5532146	Then she looked wildly about her, gave a great cry, and said:
-1 0 1 0 -0.2759134 0.7980468 0.7943298 0.4848065 0.4122923 0.5254782	'We've taken the wrong turning somewhere, and I don't know where we are. We are lost, lost!'
-0 0 2 0 1.034021 0.3607106 0.3751814 0.3965907 -0.2009681 0.505859	The terror she was in had quite bewildered her.
-0 0 2 1 0.7891437 0.5389969 0.1943398 0.149215 -0.1401649 0.6700824	They had been running down into a little valley in which there was no house to be seen.
-0 0 5 0 0.7283673 0.5264125 0.2825403 0.2583471 -0.03980428 0.5634424	Now Irene did not know what good reason there was for her nurse's terror, for the servants had all strict orders never to mention the goblins to her, but it was very discomposing to see her nurse in such a fright.
-0 0 5 1 0.4642929 0.5192385 0.09487286 0.2660993 -0.13398 0.5675192	Before, however, she had time to grow thoroughly alarmed like her, she heard the sound of whistling, and that revived her.
-0 0 5 2 1.061169 0.6021432 0.1838633 0.09007046 0.07264899 0.624045	Presently she saw a boy coming up the road from the valley to meet them.
-0 0 5 3 0.996785 0.6037434 0.1735574 0.2412845 -0.2339659 0.5665562	He was the whistler; but before they met his whistling changed to singing.
-0 0 5 4 -0.1333014 0.900523 0.2680689 -0.02357583 0.2754173 0.6172619	And this is something like what he sang:
-0 0 1 0 0.1143486 0.5301071 0.1702015 -0.2517643 0.4253193 0.6499138	Go the hammers' clang!
-0 0 1 0 -0.8709922 1.041553 -0.007191855 -0.379065 0.4503742 0.6248109	Hit and turn and bore!
-0 0 1 0 -1.168187 1.151908 0.2751848 -0.1636346 0.451059 0.5724499	Whizz and puff and roar!
-0 0 1 0 0.8434352 0.878079 0.261054 0.2133253 0.1204246 0.5796189	Thus we rive the rocks,
-0 0 1 0 0.6210847 0.5629217 -0.0366892 -0.2826373 0.2651564 0.6365424	Force the goblin locks.—
-0 0 1 0 0.07503037 1.124689 0.430722 -0.1132092 0.6173107 0.6451747	See the shining ore!
-0 0 1 0 -1.171055 0.9581796 0.6209263 0.1380645 0.3469332 0.596083	One, two, three—
-0 0 1 0 -1.271853 1.318032 0.5593958 -0.02236473 0.6910636 0.6568654	Bright as gold can be!
-0 0 1 0 -0.8363649 1.200195 0.6481719 0.2020094 0.4119544 0.6325257	Four, five, six—
-0 0 1 0 -0.6516674 0.9527363 0.4589497 -0.07288397 0.2864616 0.6589011	Seven, eight, nine—
-0 0 1 0 -0.4467101 1.10661 0.3470534 0.1707062 0.0393322 0.6629384	Light your lamp at mine.
-0 0 1 0 -0.7945431 0.9570553 0.1143381 -0.03096704 0.09205644 0.6105752	Ten, eleven, twelve—
-0 0 1 0 1.077143 1.031342 0.2754818 -0.4509114 0.3808756 0.7428888	Loosely hold the helve.
-0 0 1 0 0.6235368 1.067704 -0.2153544 -0.1824158 -0.04494743 0.7348112	Make the goblins hold their noise.'
-1 0 3 0 -0.126753 0.9775182 0.178696 0.3019962 -0.02425745 0.5568147	'I wish YOU would hold your noise,' said the nurse rudely, for the very word GOBLIN at such a time and in such a place made her tremble.
-0 0 3 1 0.5994693 1.361677 0.4209516 0.3192474 0.04249213 0.5426583	It would bring the goblins upon them to a certainty, she thought, to defy them in that way.
-0 0 3 2 -0.02235686 1.249754 0.1038617 0.01259062 0.1110042 0.6596401	But whether the boy heard her or not, he did not stop his singing.
-0 0 1 0 0.2233229 1.021205 0.3619079 0.06944668 0.1938645 0.6438994	'Thirteen, fourteen, fifteen—
-0 0 1 0 0.523303 0.826738 0.02221453 0.04783115 0.2491828 0.6107582	This is worth the siftin';
-0 0 1 0 -0.1569202 1.230547 0.2451896 -0.002647366 0.2744235 0.6212873	Sixteen, seventeen, eighteen—
-0 0 1 0 0.0653813 1.433899 -0.1127308 -0.1760894 0.367229 0.6820755	There's the match, and lay't in.
-0 0 1 0 0.08691216 1.10835 0.2913966 -0.01340497 0.05606524 0.6840733	Goblins in a plenty.'
-1 0 2 0 0.269725 1.119917 0.2080517 0.4547044 -0.1452237 0.528003	'Do be quiet,' cried the nurse, in a whispered shriek.
-0 0 2 1 -0.1399609 1.295196 0.2942937 0.2770613 0.1614014 0.7300659	But the boy, who was now close at hand, still went on.
-0 0 1 0 -0.7733306 1.619663 0.6486737 0.05394353 0.4193621 0.6766842	'Hush! scush! scurry!
-0 0 1 0 -0.2358486 1.808532 1.106866 0.2524144 0.4925608 0.6163096	There you go in a hurry!
-0 0 1 0 0.2226951 1.603642 0.6610335 0.1167812 0.4243738 0.6429422	There you go a wobblin';
-1 0 1 0 0.3514271 1.170339 0.2443508 0.5334984 -0.2218148 0.6467457	'There!' said the boy, as he stood still opposite them.
-0 0 5 0 0.8138722 1.349359 0.2645637 0.2507264 0.01957606 0.6262618	The boy was dressed in a miner's dress, with a curious cap on his head.
-0 0 5 1 0.7481941 1.410646 0.2026633 -0.01200366 0.1185254 0.5578973	He was a very nice-looking boy, with eyes as dark as the mines in which he worked and as sparkling as the crystals in their rocks.
-0 0 5 2 0.615759 1.511999 0.1180189 0.01605717 -0.01028822 0.5946314	He was about twelve years old.
-0 0 5 3 0.7568141 1.415144 0.5380394 0.2829466 0.2477002 0.5131392	His face was almost too pale for beauty, which came of his being so little in the open air and the sunlight—for even vegetables grown in the dark are white;
-0 0 5 4 0.5980589 1.284523 0.3158807 0.212173 0.02330251 0.6622233	but he looked happy, merry indeed—perhaps at the thought of having routed the goblins; and his bearing as he stood before them had nothing clownish or rude about it.
-1 0 1 0 -0.09725583 1.154227 0.4591673 0.6422375 -0.1432155 0.5070313	'I saw them,' he went on, 'as I came up; and I'm very glad I did. I knew they were after somebody, but I couldn't see who it was. They won't touch you so long as I'm with you.'
-1 0 1 0 0.665962 1.193637 0.3429858 0.4946004 -0.230815 0.4861948	'Why, who are you?' asked the nurse, offended at the freedom with which he spoke to them.
-1 1 1 0 0.009410884 1.287143 0.3432549 -0.03654008 0.0525902 0.5174421	'I'm Peter's son.'
-1 0 1 0 0.7427363 1.317092 0.06229929 0.02855747 -0.03773101 0.5412745	'I don't know him.'
-1 1 1 0 0.7510908 1.448369 0.2804723 -0.02737816 -0.04939845 0.4380365	'I'm his son, though.'
-1 0 1 0 -0.4475359 1.600783 0.8509706 0.568712 0.320294 0.4178247	'And why should the goblins mind you, pray?'
-1 1 1 0 0.1918337 1.402286 0.3396498 0.4492848 -0.2335017 0.4672373	'Because I don't mind them. I'm used to them.'
-1 0 1 0 0.2593971 1.53951 0.977008 0.7949153 0.1872801 0.506616	'What difference does that make?'
-0 1 2 0 0.2268513 1.556461 0.8103405 0.5058173 0.2237475 0.3342794	'If you're not afraid of them, they're afraid of you. I'm not afraid of them. That's all. But it's all that's wanted—up here, that is. It's a different thing down there. They won't always mind that song even,
-0 1 2 1 -0.4420308 1.711303 0.8668987 0.289642 0.5316988 0.5483836	down there. And if anyone sings it, they stand grinning at him awfully; and if he gets frightened, and misses a word, or says a wrong one, they—oh! don't they give it him!'
-1 1 1 0 0.3918042 1.326696 0.577152 0.6447082 -0.2050189 0.4595664	'What do they do to him?' asked Irene, with a trembling voice.
-1 0 1 0 0.8306608 1.050484 0.1195337 0.4085037 -0.2775958 0.6435549	'Don't go frightening the princess,' said the nurse.
-1 0 2 0 0.5934582 1.013949 -0.004683819 0.2888565 -0.2539224 0.5000455	'The princess!' repeated the little miner, taking off his curious cap.
-1 0 2 1 0.06980003 1.386027 0.3907359 0.3872901 -0.05655558 0.5477616	'I beg your pardon; but you oughtn't to be out so late. Everybody knows that's against the law.'
-1 0 2 0 0.5907918 1.240869 0.2704217 0.5069046 -0.2911489 0.4402115	'Yes, indeed it is!' said the nurse, beginning to cry again.
-1 0 2 1 0.5891645 1.218722 0.2837882 0.3539157 -0.2403373 0.6155362	'And I shall have to suffer for it.'
-1 0 2 0 0.6869645 1.101039 0.1938616 0.4823172 -0.3240898 0.4939551	'What does that matter?' said the boy.
-1 0 2 1 0.2533788 1.271078 0.5563834 0.4628134 -0.1084301 0.5134788	'It must be your fault. It is the princess who will suffer for it. I hope they didn't hear you call her the princess. If they did, they're sure to know her again: they're awfully sharp.'
-1 0 2 0 -0.1633747 0.9978101 0.2355795 0.3112524 -0.3471524 0.4560731	'Lootie! Lootie!' cried the princess.
-1 0 2 1 -1.073467 1.222807 0.2982551 0.03297999 -0.1361858 0.4798841	'Take me home.'
-1 0 2 0 0.3410294 1.027461 0.1827126 0.4692679 -0.3160847 0.4402858	'Don't go on like that,' said the nurse to the boy, almost fiercely.
-1 0 2 1 0.2609583 1.316754 0.3268643 0.3661399 -0.1738477 0.547372	'How could I help it? I lost my way.'
-1 0 2 0 0.01222863 1.004615 0.1338557 0.4648867 -0.3930545 0.4123618	'You shouldn't have been out so late. You wouldn't have lost your way if you hadn't been frightened,' said the boy.
-1 0 2 1 -0.0005065911 1.644257 1.055218 0.6110517 0.3387493 0.4487638	'Come along. I'll soon set you right again. Shall I carry your little Highness?'
-1 0 3 0 0.4261718 1.201883 0.488128 0.6384894 -0.08199143 0.4131218	'Impertinence!' murmured the nurse, but she did not say it aloud, for she thought if she made him angry he might take his revenge by telling someone belonging to the house, and then it would be sure to come to the king's ears.
-1 0 3 1 0.4468441 1.170817 0.2350535 0.3977455 -0.2457917 0.499391	'No, thank you,' said Irene.
-1 0 3 2 -0.1263864 1.239336 0.3725009 0.4603102 -0.1446643 0.4991184	'I can walk very well, though I can't run so fast as nursie. If you will give me one hand, Lootie will give me another, and then I shall get on famously.'
-0 0 1 0 0.6117716 1.167514 0.259523 0.2426994 -0.05917561 0.572727	They soon had her between them, holding a hand of each.
-1 0 1 0 0.5366406 1.038732 0.1248323 0.4679497 -0.2581306 0.6130224	'Now let's run,' said the nurse.
-1 0 2 0 0.5713128 0.9518338 -0.1005709 0.4573243 -0.3803008 0.4845315	'No, no!' said the little miner.
-1 0 2 1 0.152792 1.27359 0.57655 0.5509008 -0.08623313 0.5493349	'That's the worst thing you can do. If you hadn't run before, you would not have lost your way. And if you run now, they will be after you in a moment.'
-1 1 1 0 1.128596 1.063451 0.1708747 0.3969457 -0.2295002 0.5528797	'I don't want to run,' said Irene.
-1 0 1 0 0.5027806 0.9848721 0.2021682 0.5459335 -0.4495563 0.6308922	'You don't think of me,' said the nurse.
-1 1 1 0 0.2610612 0.9954052 0.3756681 0.700121 -0.3609137 0.5281281	'Yes, I do, Lootie. The boy says they won't touch us if we don't run.'
-1 0 1 0 0.3566546 1.182901 0.2857395 0.5221823 -0.1657847 0.5257178	'Yes, but if they know at the house that I've kept you out so late I shall be turned away, and that would break my heart.'
-1 1 1 0 0.5803819 1.60048 0.9438899 0.5554223 0.4205324 0.4906804	'Turned away, Lootie! Who would turn you away?'
-1 1 1 0 -0.1606761 1.178602 0.2343709 0.3986802 -0.08396442 0.4917608	'But I'll tell him it was all my fault. And you know it was, Lootie.'
-1 0 1 0 0.6055243 1.198509 0.2257327 0.5182244 -0.3377591 0.5053007	'He won't mind that. I'm sure he won't.'
-1 1 1 0 0.2351649 1.135715 0.2618367 0.4401819 -0.1607168 0.563098	'Then I'll cry, and go down on my knees to him, and beg him not to take away my own dear Lootie.'
-0 0 2 0 0.5618415 1.16223 -0.01640566 0.3643682 -0.2349 0.5280503	The nurse was comforted at hearing this, and said no more.
-0 0 2 1 0.7987037 1.405358 0.2053739 0.1650438 0.03669243 0.6811039	They went on, walking pretty fast, but taking care not to run a step.
-1 1 1 0 0.2009017 1.065274 0.2041657 0.565127 -0.2620507 0.561541	'I want to talk to you,' said Irene to the little miner; 'but it's so awkward! I don't know your name.'
-1 1 1 0 -1.016375 0.9057 -0.09240802 0.3547429 -0.3103683 0.5027875	'My name's Curdie, little princess.'
-1 0 1 0 -0.7360635 1.459719 0.7109746 0.7114562 0.1118125 0.4722957	'What a funny name! Curdie! What more?'
-1 1 1 0 -0.2929412 1.791417 1.028243 0.7709285 0.4518857 0.4394638	'Curdie Peterson. What's your name, please?'
-1 0 1 0 0.1148737 1.74366 1.127427 0.7974653 0.3989831 0.4601686	'I don't know what more. What more is my name, Lootie?'
-1 1 1 0 0.4693331 1.533727 0.4734711 0.5326521 -0.1590564 0.561333	'Princesses haven't got more than one name. They don't want it.'
-1 0 1 0 -0.5493801 1.236225 0.3729031 0.6673743 -0.2800721 0.5091476	'Oh, then, Curdie, you must call me just Irene and no more.'
-1 0 2 0 0.3897902 1.264671 0.1823249 0.629038 -0.4917815 0.4584712	'No, indeed,' said the nurse indignantly.
-1 0 2 1 -0.09267087 1.417209 0.5510188 0.6720394 -0.2863986 0.5589759	'He shall do no such thing.'
-1 1 1 0 0.05299388 1.870217 1.148066 0.8850025 0.2690207 0.3944866	'What shall he call me, then, Lootie?'
-1 0 1 0 0.5462044 1.265848 0.4100056 0.4093083 -0.3234185 0.5753559	'Your Royal Highness.'
-1 1 1 0 -0.3922276 1.311946 0.5737897 0.6497499 -0.1747373 0.4933648	'My Royal Highness! What's that? No, no, Lootie. I won't be called names. I don't like them. You told me once yourself it's only rude children that call names; and I'm sure Curdie wouldn't be rude. Curdie, my name's Irene.'
-1 1 1 0 -0.0144211 1.330131 0.5797644 0.6826018 -0.1948806 0.4749638	'Well, Irene,' said Curdie, with a glance at the nurse which showed he enjoyed teasing her; 'it is very kind of you to let me call you anything. I like your name very much.'
-0 0 2 0 1.634625 1.286456 0.2679541 0.4023417 -0.2763303 0.520362	He expected the nurse to interfere again; but he soon saw that she was too frightened to speak.
-0 0 2 1 0.759949 1.443552 0.5628838 0.3607512 0.02264308 0.6338705	She was staring at something a few yards before them in the middle of the path, where it narrowed between rocks so that only one could pass at a time.
-1 1 1 0 0.3446334 1.290576 0.6024743 0.6138414 -0.1411582 0.6002049	'It is very much kinder of you to go out of your way to take us home,' said Irene.
-1 1 2 0 0.6622534 1.344012 0.5854189 0.5833223 -0.2600749 0.5017356	'I'm not going out of my way yet,' said Curdie.
-1 1 2 1 0.8188206 1.635206 0.5986142 0.4285451 -0.08050935 0.5699061	'It's on the other side of those rocks the path turns off to my father's.'
-1 0 1 0 0.1244535 1.393898 0.5467179 0.4816251 -0.07030969 0.600761	'You wouldn't think of leaving us till we're safe home, I'm sure,' gasped the nurse.
-1 1 1 0 -0.2503543 1.177893 0.5421875 0.6021129 -0.3283681 0.5796444	'Of course not,' said Curdie.
-1 0 1 0 -0.5816151 1.113956 0.4247539 0.6615063 -0.3459722 0.5864322	'You dear, good, kind Curdie! I'll give you a kiss when we get home,' said the princess.
-0 0 5 0 0.9601773 1.197964 0.01770155 -0.03468598 -0.07916258 0.5841345	The nurse gave her a great pull by the hand she held.
-0 0 5 1 0.7883698 1.240578 0.3808515 0.2513306 -0.01719486 0.5820822	But at that instant the something in the middle of the way, which had looked like a great lump of earth brought down by the rain, began to move.
-0 0 5 2 0.3715461 1.509224 0.3755315 0.3022287 -0.003176427 0.5239364	One after another it shot out four long things, like two arms and two legs, but it was now too dark to tell what they were.
-0 0 5 3 1.018916 1.425445 0.2901583 0.02633299 -0.03413785 0.6003068	The nurse began to tremble from head to foot.
-0 0 5 4 0.05369038 1.482551 0.4808612 -0.02218975 0.2549849 0.5528494	Irene clasped Curdie's hand yet faster, and Curdie began to sing again:
-0 0 1 0 0.2714441 1.844102 0.3511556 -0.1106789 0.4246191 0.6169767	Blast and bore!
-0 0 1 0 0.457498 1.839412 1.123577 0.1383242 0.6352091 0.6953944	There's a fix!
-0 0 1 0 -0.3143302 1.568522 0.8361652 0.1316746 0.2830812 0.6438285	Hold it straight!
-0 0 1 0 0.3993683 1.325564 0.6605404 -0.1501949 0.3425235 0.6817775	There's a toad
-0 0 1 0 1.226515 1.88412 1.044904 -0.1935297 0.8207107 0.6472046	In the road!
-0 0 1 0 -0.2786354 1.842883 0.5607732 -0.3844872 0.7521762 0.7063527	Up and off!
-0 0 5 0 0.3758445 1.327866 0.305143 0.04955033 0.1182115 0.6170776	As he uttered the last words, Curdie let go his hold of his companion, and rushed at the thing in the road as if he would trample it under his feet.
-0 0 5 1 -0.09036201 1.3662 0.424446 0.1582726 0.03696911 0.5979656	It gave a great spring, and ran straight up one of the rocks like a huge spider.
-0 0 5 2 0.08345743 1.403237 0.2570024 -0.1136978 0.1131673 0.5525054	Curdie turned back laughing, and took Irene's hand again.
-0 0 5 3 1.105338 1.622186 0.3289593 0.1094545 -0.008430259 0.5588892	She grasped his very tight, but said nothing till they had passed the rocks.
-0 0 5 4 0.3885837 1.472125 0.5347296 0.1802762 0.08520946 0.698976	A few yards more and she found herself on a part of the road she knew, and was able to speak again.
-1 1 1 0 -0.3660763 1.118643 0.4344037 0.6963196 -0.2980792 0.6072091	'Do you know, Curdie, I don't quite like your song: it sounds to me rather rude,' she said.
-1 1 2 0 0.07978803 0.8819005 0.2053277 0.3356498 -0.06850965 0.5374619	'Well, perhaps it is,' answered Curdie.
-1 1 2 1 0.4867015 1.261831 0.617435 0.628441 -0.3151574 0.5307513	'I never thought of that; it's a way we have. We do it because they don't like it.'
-1 1 1 0 -0.2093219 1.383379 1.028188 0.5134325 0.2358381 0.4681695	'Who don't like it?'
-1 1 1 0 0.1808805 1.330383 0.3571797 0.1607354 -0.08957674 0.5079774	'The cobs, as we call them.'
-1 0 1 0 1.110507 1.086146 0.02439331 0.06765186 -0.1879488 0.6741711	'Don't!' said the nurse.
-1 1 1 0 0.196376 1.032925 0.5936435 0.3592261 -0.2035636 0.630784	'Why not?' said Curdie.
-1 0 1 0 0.5988304 1.239394 0.5162766 0.4773389 -0.2446886 0.5592649	'I beg you won't. Please don't.'
-1 1 1 0 -0.1625231 1.211618 0.4820472 0.5359997 -0.2210339 0.5462254	'Oh! if you ask me that way, of course, I won't; though I don't a bit know why. Look! there are the lights of your great house down below. You'll be at home in five minutes now.'
-0 0 4 0 1.372894 1.411406 0.2998368 -0.228641 0.1114323 0.4972408	Nothing more happened.
-0 0 4 1 1.090431 1.376807 0.7668407 0.3650536 -0.001216556 0.6182485	They reached home in safety.
-0 0 4 2 1.178234 1.263121 0.3611362 0.2399454 -0.06764543 0.5717098	Nobody had missed them, or even known they had gone out; and they arrived at the door belonging to their part of the house without anyone seeing them.
-0 0 4 3 0.594147 1.352906 0.5301739 0.2094384 0.04823243 0.6474966	The nurse was rushing in with a hurried and not over-gracious good night to Curdie; but the princess pulled her hand from hers, and was just throwing her arms round Curdie's neck, when she caught her again and dragged her away.
-1 1 1 0 -0.1512129 1.098804 0.4850435 0.5253993 -0.3470231 0.5601465	'Lootie! Lootie! I promised a kiss,' cried Irene.
-1 1 1 0 0.04805283 1.093215 0.4405312 0.4558316 -0.2689715 0.5473624	'A princess mustn't give kisses. It's not at all proper,' said Lootie.
-1 0 1 0 0.234541 0.8019397 -0.02380512 0.3421094 -0.3056863 0.647696	'But I promised,' said the princess.
-1 1 1 0 -0.5751079 0.9967252 0.05800224 0.3283827 -0.1604045 0.5692048	'There's no occasion; he's only a miner-boy.'
-1 0 1 0 -0.03762654 1.110645 0.265222 0.2745413 -0.1322549 0.5525066	'He's a good boy, and a brave boy, and he has been very kind to us. Lootie! Lootie! I promised.'
-1 1 1 0 0.8153331 1.177829 0.2739861 0.2258356 -0.1815321 0.5893683	'Then you shouldn't have promised.'
-1 0 1 0 -0.2451505 1.17109 0.3905501 0.5575098 -0.2685093 0.5730195	'Lootie, I promised him a kiss.'
-1 1 1 0 0.2241107 1.101861 0.3395224 0.6162162 -0.3161882 0.5686664	'Your Royal Highness,' said Lootie, suddenly grown very respectful, 'must come in directly.'
-1 1 1 0 -0.09021176 1.23023 0.3661238 0.491232 -0.2530617 0.6256459	'Nurse, a princess must not break her word,' said Irene, drawing herself up and standing stock-still.
-0 0 5 0 -0.1947309 1.206461 0.09976998 0.1470808 -0.1110951 0.5984332	Lootie did not know which the king might count the worst—to let the princess be out after sunset, or to let her kiss a miner-boy.
-0 0 5 1 0.4985732 1.447147 0.3087882 0.1337499 0.06325132 0.5615363	She did not know that, being a gentleman, as many kings have been, he would have counted neither of them the worse.
-0 0 5 2 0.9602292 1.459728 0.2992431 0.1266086 0.08441293 0.5555111	However much he might have disliked his daughter to kiss the miner-boy, he would not have had her break her word for all the goblins in creation.
-0 0 5 3 0.07679953 1.342333 0.2426017 0.3060519 0.04431074 0.5323169	But, as I say, the nurse was not lady enough to understand this, and so she was in a great difficulty, for, if she insisted, someone might hear the princess cry and run to see, and then all would come out.
-0 0 5 4 0.6473603 1.207792 0.1899509 0.03161676 0.05315367 0.6537803	But here Curdie came again to the rescue.
-1 0 2 0 0.6226749 1.11091 -0.192198 0.3812896 -0.446299 0.4894828	'Never mind, Princess Irene,' he said.
-1 0 2 1 -0.1693214 1.381958 0.3665494 0.3497324 -0.02283893 0.5673015	'You mustn't kiss me tonight. But you shan't break your word. I will come another time. You may be sure I will.'
-1 0 1 0 -0.2638878 1.035904 -0.04477795 0.3250003 -0.2143508 0.5853732	'Oh, thank you, Curdie!' said the princess, and stopped crying.
-1 1 1 0 -0.467784 1.049975 0.09994981 0.5121338 -0.3028623 0.5397579	'Good night, Irene; good night, Lootie,' said Curdie, and turned and was out of sight in a moment.
-1 0 1 0 0.3737721 0.86399 0.09405179 0.3926083 -0.283164 0.6289296	'I should like to see him!' muttered the nurse, as she carried the princess to the nursery.
-1 1 2 0 0.2650713 1.074692 0.2631694 0.4899303 -0.3393646 0.4712203	'You will see him,' said Irene.
-1 1 2 1 -0.2841989 1.388129 0.2713425 0.3008369 -0.1005272 0.5242008	'You may be sure Curdie will keep his word. He's sure to come again.'
-1 0 5 0 0.03294592 1.009273 -0.07951669 0.4060198 -0.4609053 0.4878005	'I should like to see him!' repeated the nurse, and said no more.
-0 0 5 1 0.4678104 1.286004 0.1045856 0.01468059 0.005886255 0.5757579	She did not want to open a new cause of strife with the princess by saying more plainly what she meant.
-0 0 5 2 0.6826078 1.276539 0.3113755 0.2887873 -0.08091443 0.5682608	Glad enough that she had succeeded both in getting home unseen, and in keeping the princess from kissing the miner's boy, she resolved to watch her far better in future.
-0 0 5 3 1.481578 1.405792 0.2417785 0.07322273 0.06976566 0.5584925	Her carelessness had already doubled the danger she was in.
-0 0 5 4 0.8115777 1.351127 0.2580726 0.02783934 0.09765995 0.6355681	Formerly the goblins were her only fear; now she had to protect her charge from Curdie as well.
+0 0 4 0 -0.1083262 -0.4163047 -0.5088375 -0.2959561 0.1066886 0.4532907	The next day the great cloud still hung over the mountain, and the rain poured like water from a full sponge.
+0 0 4 1 0.9669775 -0.2605464 -0.2741106 -0.02937563 0.08904544 0.5488909	The princess was very fond of being out of doors, and she nearly cried when she saw that the weather was no better.
+0 0 4 2 -0.2378713 -0.260094 -0.06195261 0.1514106 0.04914426 0.3856514	But the mist was not of such a dark dingy grey; there was light in it; and as the hours went on it grew brighter and brighter, until it was almost too brilliant to look at;
+0 0 4 3 0.3503909 0.06993403 0.1242297 -0.1418136 0.3872907 0.543919	and late in the afternoon the sun broke out so gloriously that Irene clapped her hands, crying:
+1 0 1 0 -0.4455239 -0.02320321 0.4690564 0.3266604 0.03372471 0.5829054	'See, see, Lootie! The sun has had his face washed. Look how bright he is! Do get my hat, and let us go out for a walk. Oh, dear! oh, dear! how happy I am!'
+0 0 8 0 0.7685052 -0.61511 -0.4978812 0.02010428 -0.1444959 0.6334281	Lootie was very glad to please the princess.
+0 0 8 1 -0.01366246 -0.2796252 -0.06783502 -0.04285323 0.09594747 0.6060536	She got her hat and cloak, and they set out together for a walk up the mountain; for the road was so hard and steep that the water could not rest upon it, and it was always dry enough for walking a few minutes after the rain ceased.
+0 0 8 2 -0.02025447 -0.3941395 -0.04081768 0.1283029 -0.1220612 0.5861543	The clouds were rolling away in broken pieces, like great, overwoolly sheep, whose wool the sun had bleached till it was almost too white for the eyes to bear.
+0 0 8 3 0.001104886 -0.2381611 -0.4549659 -0.2842189 0.1224376 0.6406556	Between them the sky shone with a deeper and purer blue, because of the rain.
+0 0 8 4 0.3922997 -0.09494507 0.06238735 0.2353883 -0.05644228 0.6549631	The trees on the roadside were hung all over with drops, which sparkled in the sun like jewels.
+0 0 8 5 0.4448805 0.01235374 0.26076 0.2142478 0.1515144 0.5315478	The only things that were no brighter for the rain were the brooks that ran down the mountain; they had changed from the clearness of crystal to a muddy brown;
+0 0 8 6 0.05381127 -0.05730779 0.4213882 0.3356158 -0.04468833 0.6135687	but what they lost in colour they gained in sound—or at least in noise, for a brook when it is swollen is not so musical as before.
+0 0 8 7 -0.130398 -0.3191274 0.02706468 0.1060924 0.0731366 0.7423975	But Irene was in raptures with the great brown streams tumbling down everywhere; and Lootie shared in her delight, for she too had been confined to the house for three days.
+0 0 6 0 0.502205 -0.01827427 0.3512067 0.4961239 -0.1875929 0.5824214	At length she observed that the sun was getting low, and said it was time to be going back.
+0 0 6 1 0.3530614 -0.08106442 0.3520193 0.3517362 0.08705898 0.5093008	She made the remark again and again, but, every time, the princess begged her to go on just a little farther and a little farther;
+0 0 6 2 0.2916821 0.3265193 0.4138671 0.3108717 -0.07857765 0.5892799	reminding her that it was much easier to go downhill, and saying that when they did turn they would be at home in a moment.
+0 0 6 3 -0.1922177 -0.04815962 0.07684901 0.01893986 0.04565522 0.6078219	So on and on they did go, now to look at a group of ferns over whose tops a stream was pouring in a watery arch, now to pick a shining stone from a rock by the wayside, now to watch the flight of some bird.
+0 0 6 4 -0.3779062 0.1892757 0.13556 -0.0676005 0.01222962 0.5962151	Suddenly the shadow of a great mountain peak came up from behind, and shot in front of them.
+0 0 6 5 0.4090467 0.2798517 0.1782969 0.0925637 -0.00521915 0.6758483	When the nurse saw it, she started and shook, and catching hold of the princess's hand turned and began to run down the hill.
+1 1 1 0 -0.02379985 0.187271 0.2687966 0.3872584 -0.1774013 0.6008138	'What's all the haste, nursie?' asked Irene, running alongside of her.
+1 1 1 0 0.6187621 0.7041554 0.5519019 0.2778336 -0.08202274 0.5608437	'We must not be out a moment longer.'
+1 0 1 0 -0.1671174 0.3993158 0.4651143 0.2211362 0.05539845 0.6284282	'But we can't help being out a good many moments longer.'
+0 0 8 0 -0.03913417 0.2193452 0.5325813 0.4016471 -0.1825338 0.5042687	It was too true.
+0 0 8 1 0.828775 -0.03762304 0.4135205 0.01946176 -0.1229852 0.6802043	The nurse almost cried.
+0 0 8 2 0.700055 0.551102 0.5146091 0.06891122 0.01408268 0.5940515	They were much too far from home.
+0 0 8 3 0.02900464 0.5572543 0.5494359 -0.0389344 0.1911818 0.6119953	It was against express orders to be out with the princess one moment after the sun was down; and they were nearly a mile up the mountain!
+0 0 8 4 -0.1026676 0.2158956 0.2086342 -0.04664519 0.03581375 0.6156909	If His Majesty, Irene's papa, were to hear of it, Lootie would certainly be dismissed; and to leave the princess would break her heart.
+0 0 8 5 0.2678067 0.1303611 0.2573036 0.3318133 -0.2309225 0.6197665	It was no wonder she ran.
+0 0 8 6 -0.3136302 0.3531463 0.4029846 -0.159721 0.04391027 0.5984936	But Irene was not in the least frightened, not knowing anything to be frightened at.
+0 0 8 7 0.1615107 0.4282616 0.7152172 0.416754 -0.09426667 0.6914259	She kept on chattering as well as she could, but it was not easy.
+1 0 1 0 -0.5303524 0.811558 0.9969144 0.5349932 -0.1565262 0.5590761	'Lootie! Lootie! why do you run so fast? It shakes my teeth when I talk.'
+1 1 1 0 -0.4104253 0.2344989 0.159717 0.06199465 -0.01703605 0.6053863	'Then don't talk,' said Lootie.
+1 1 1 0 -0.337863 0.4377002 0.4783393 0.3580811 -0.2114217 0.6354657	'But the princess went on talking. She was always saying: 'Look, look, Lootie!' but Lootie paid no more heed to anything she said, only ran on.
+1 0 1 0 0.4746908 0.4741631 0.5620838 0.1687158 0.1525517 0.6093167	'Look, look, Lootie! Don't you see that funny man peeping over the rock?'
+0 0 2 0 0.06525625 0.1386575 0.048042 0.2119589 0.04051917 0.6079926	Lootie only ran the faster.
+0 0 2 1 0.627556 0.5259661 0.3033512 0.07253264 -0.05236074 0.7058856	They had to pass the rock, and when they came nearer, the princess saw it was only a lump of the rock itself that she had taken for a man.
+1 0 1 0 0.2393814 0.786119 0.5231409 0.3588412 -0.09202708 0.6025007	'Look, look, Lootie! There's such a curious creature at the foot of that old tree. Look at it, Lootie! It's making faces at us, I do think.'
+0 0 3 0 -0.7590678 0.6354025 0.4081854 0.05696178 -0.1967177 0.5673877	Lootie gave a stifled cry, and ran faster still—so fast that Irene's little legs could not keep up with her, and she fell with a crash.
+0 0 3 1 0.2762736 0.8298948 0.5772226 0.1951594 -0.07310742 0.5694925	It was a hard downhill road, and she had been running very fast—so it was no wonder she began to cry.
+0 0 3 2 0.8617253 0.8999719 0.5216942 0.1992794 -0.1337689 0.6587374	This put the nurse nearly beside herself; but all she could do was to run on, the moment she got the princess on her feet again.
+1 0 1 0 0.09840281 0.9050416 0.3851865 0.2029429 -0.1416687 0.6028644	'Who's that laughing at me?' said the princess, trying to keep in her sobs, and running too fast for her grazed knees.
+1 0 1 0 -0.1276272 1.377361 1.054909 0.488885 -0.09901309 0.5997148	'Nobody, child,' said the nurse, almost angrily.
+1 1 1 0 -0.3397147 1.777875 1.314825 0.4839838 0.2877122 0.5255362	But that instant there came a burst of coarse tittering from somewhere near, and a hoarse indistinct voice that seemed to say: 'Lies! lies! lies!'
+1 0 1 0 0.2143155 0.8334319 0.4472111 0.2888322 -0.2710254 0.6551846	'Oh!' cried the nurse with a sigh that was almost a scream, and ran on faster than ever.
+1 1 1 0 -0.0574959 1.745376 1.191571 0.3798676 0.1502011 0.5261438	'Nursie! Lootie! I can't run any more. Do let us walk a bit.'
+1 0 2 0 0.6422195 1.076857 0.5025338 0.1659015 -0.3258471 0.5157686	'What am I to do?' said the nurse.
+1 0 2 1 0.7680315 1.711714 1.258465 0.5102705 -0.2291477 0.5642141	'Here, I will carry you.'
+0 0 2 0 0.9328736 1.571584 0.7261245 0.02888932 0.007703289 0.4995692	She caught her up; but found her much too heavy to run with, and had to set her down again.
+0 0 2 1 0.2770134 1.210288 0.5280012 0.02933406 -0.05996681 0.5808457	Then she looked wildly about her, gave a great cry, and said:
+1 0 1 0 -0.5492991 1.49586 1.091183 0.2360214 0.1578175 0.5677388	'We've taken the wrong turning somewhere, and I don't know where we are. We are lost, lost!'
+0 0 3 0 1.701479 1.094181 0.803375 0.3312925 -0.2281463 0.5222103	The terror she was in had quite bewildered her.
+0 0 3 2 0.8874583 1.154748 0.4685848 -0.01213029 -0.2286669 0.6920785	They had been running down into a little valley in which there was no house to be seen.
+0 0 5 0 0.4290359 1.279173 0.4418857 -0.1234994 0.09779584 0.5508133	Now Irene did not know what good reason there was for her nurse's terror, for the servants had all strict orders never to mention the goblins to her, but it was very discomposing to see her nurse in such a fright.
+0 0 5 1 0.8544725 1.191789 0.4580696 0.1681178 -0.1962149 0.607479	Before, however, she had time to grow thoroughly alarmed like her, she heard the sound of whistling, and that revived her.
+0 0 5 2 0.9602064 1.318119 0.450123 -0.2860216 0.2229044 0.5992836	Presently she saw a boy coming up the road from the valley to meet them.
+0 0 5 3 1.027494 1.113531 0.5637815 0.3074443 -0.2483126 0.6132197	He was the whistler; but before they met his whistling changed to singing.
+0 0 5 4 0.5292364 1.628976 0.8504654 -0.1201885 0.5430692 0.5164174	And this is something like what he sang:
+0 0 1 0 0.4528316 0.8580886 0.7856282 0.01292555 -0.1509418 0.702792	Go the hammers' clang!
+0 0 1 0 -1.246927 1.499351 0.2321785 -0.987727 0.6411981 0.6622814	Hit and turn and bore!
+0 0 1 0 -0.8481022 1.534226 0.5807866 -0.5221971 0.1760708 0.6811244	Whizz and puff and roar!
+0 0 1 0 0.4356989 1.679178 1.10312 -0.06731161 0.09108447 0.4722172	Thus we rive the rocks,
+0 0 1 0 0.850516 0.4354451 0.1296872 -0.5193207 0.2923282 0.5852353	Force the goblin locks.—
+0 0 1 0 0.4448796 1.340923 0.600845 -0.4200704 0.1221986 0.6032832	See the shining ore!
+0 0 1 0 -0.8528794 1.392253 1.590755 0.2227346 0.1735471 0.4820765	One, two, three—
+0 0 1 0 -1.068258 1.519287 0.9374491 -0.2414593 0.09826685 0.7335037	Bright as gold can be!
+0 0 1 0 -1.338729 1.263575 1.123206 -0.4259099 0.3474224 0.5389215	Four, five, six—
+0 0 1 0 -0.8475288 1.150177 1.348463 -0.1973655 0.1105916 0.5838127	Seven, eight, nine—
+0 0 1 0 -1.276727 1.306142 0.893158 -0.4681566 0.1138577 0.6159605	Light your lamp at mine.
+0 0 1 0 -0.8982581 0.6602141 0.7539762 -0.2406736 0.03016845 0.5549479	Ten, eleven, twelve—
+0 0 1 0 2.077265 1.451324 0.7209301 -1.021673 0.1733036 0.5550266	Loosely hold the helve.
+0 0 1 0 0.2893046 1.224902 -0.2748386 -1.082391 0.2527218 0.6603823	Make the goblins hold their noise.'
+1 0 3 0 -0.2871743 1.261492 0.5185332 -0.2309287 -0.04764617 0.5350929	'I wish YOU would hold your noise,' said the nurse rudely, for the very word GOBLIN at such a time and in such a place made her tremble.
+0 0 3 1 0.7731456 1.486904 0.6871977 0.03242524 -0.3218788 0.5573733	It would bring the goblins upon them to a certainty, she thought, to defy them in that way.
+0 0 3 2 0.3702228 1.13881 0.3129435 -0.1856199 -0.03639778 0.6786749	But whether the boy heard her or not, he did not stop his singing.
+0 0 1 0 -0.5195755 1.177399 1.020721 -0.2694474 0.1012214 0.5605852	'Thirteen, fourteen, fifteen—
+0 0 1 0 0.9444071 0.8415713 0.4854292 0.1272489 0.1153227 0.5411675	This is worth the siftin';
+0 0 1 0 -0.7679232 1.602253 1.167721 -0.3329746 0.2355704 0.4626184	Sixteen, seventeen, eighteen—
+0 0 1 0 -0.2418746 1.575947 0.1339386 -0.898162 0.471329 0.5848587	There's the match, and lay't in.
+0 0 1 0 -0.3041674 1.338496 0.7182328 -0.6618232 0.1827288 0.6479876	Goblins in a plenty.'
+1 0 2 0 0.2975351 1.39046 0.7181073 0.1965032 -0.4579291 0.5860561	'Do be quiet,' cried the nurse, in a whispered shriek.
+0 0 2 1 -0.5663499 1.440264 0.7461278 -0.03415387 0.005890805 0.7352146	But the boy, who was now close at hand, still went on.
+0 0 1 0 -1.137945 2.106337 1.583495 -0.3126643 0.1292474 0.6021038	'Hush! scush! scurry!
+0 0 1 0 -0.08073247 1.658127 1.180464 -0.02110172 -0.2748907 0.6673151	There you go in a hurry!
+0 0 1 0 -0.2298318 2.252766 1.478045 -0.354459 0.4823441 0.5096403	There you go a wobblin';
+1 0 2 0 -0.1917363 1.374285 0.8761873 0.179184 -0.1745139 0.5649641	'There!' said the boy, as he stood still opposite them.
+0 0 5 0 0.6601548 1.368235 0.5533942 -0.1910303 -0.09645897 0.5931314	The boy was dressed in a miner's dress, with a curious cap on his head.
+0 0 5 1 0.5694835 1.36578 0.3560288 -0.5237094 0.08195411 0.5911315	He was a very nice-looking boy, with eyes as dark as the mines in which he worked and as sparkling as the crystals in their rocks.
+0 0 5 2 0.1621106 1.454241 0.4547165 -0.1565881 -0.4588942 0.6114415	He was about twelve years old.
+0 0 5 3 0.7163261 1.255537 0.8136212 -0.101741 0.145217 0.5048165	His face was almost too pale for beauty, which came of his being so little in the open air and the sunlight—for even vegetables grown in the dark are white;
+0 0 5 4 0.8597528 1.044456 0.4547323 -0.06330515 -0.06618087 0.7699814	but he looked happy, merry indeed—perhaps at the thought of having routed the goblins; and his bearing as he stood before them had nothing clownish or rude about it.
+1 0 1 0 0.03202788 1.395855 0.9395993 0.1902058 -0.04708708 0.6067123	'I saw them,' he went on, 'as I came up; and I'm very glad I did. I knew they were after somebody, but I couldn't see who it was. They won't touch you so long as I'm with you.'
+1 0 1 0 0.8483597 1.27985 0.4766159 0.1244434 -0.3089597 0.6005382	'Why, who are you?' asked the nurse, offended at the freedom with which he spoke to them.
+1 1 1 0 -0.9392155 1.338787 0.6121862 -0.2032856 -0.04411518 0.6053443	'I'm Peter's son.'
+1 0 1 0 1.439434 1.338945 0.2377361 -0.6400393 0.1796326 0.5121035	'I don't know him.'
+1 1 1 0 0.8375137 1.944577 0.9209992 -0.03875903 -0.1383802 0.5011123	'I'm his son, though.'
+1 0 1 0 -0.3086819 2.016327 1.244479 -0.1445787 0.3515546 0.5306985	'And why should the goblins mind you, pray?'
+1 1 1 0 -0.0690645 1.395209 0.4233232 -0.1129294 -0.008494239 0.5974296	'Because I don't mind them. I'm used to them.'
+1 0 1 0 0.009953076 1.66035 1.208289 0.1274142 0.1743684 0.6074602	'What difference does that make?'
+0 1 2 0 0.6833153 2.043287 1.058288 0.2012065 -0.02830516 0.3671444	'If you're not afraid of them, they're afraid of you. I'm not afraid of them. That's all. But it's all that's wanted—up here, that is. It's a different thing down there. They won't always mind that song even,
+0 1 2 1 -0.4570723 1.794299 1.162497 0.02427441 0.2815477 0.6880388	down there. And if anyone sings it, they stand grinning at him awfully; and if he gets frightened, and misses a word, or says a wrong one, they—oh! don't they give it him!'
+1 1 1 0 0.8544439 1.634998 0.9030429 0.3144971 -0.1975674 0.5249692	'What do they do to him?' asked Irene, with a trembling voice.
+1 0 1 0 1.318806 1.255509 0.3061605 -0.101298 -0.1069937 0.6900406	'Don't go frightening the princess,' said the nurse.
+1 0 2 0 0.6474729 1.471741 0.3994481 -0.04960125 -0.06341182 0.5512553	'The princess!' repeated the little miner, taking off his curious cap.
+1 0 2 1 -0.2160951 1.772123 0.650448 -0.1681639 0.02524431 0.6446644	'I beg your pardon; but you oughtn't to be out so late. Everybody knows that's against the law.'
+1 0 2 0 0.256883 1.772912 0.7965311 0.2494984 -0.2791751 0.5160791	'Yes, indeed it is!' said the nurse, beginning to cry again.
+1 0 2 1 1.201433 1.733608 0.8479277 0.3607028 -0.341117 0.679413	'And I shall have to suffer for it.'
+1 0 2 0 0.6556529 1.532278 0.4846226 0.01204963 -0.150626 0.5265279	'What does that matter?' said the boy.
+1 0 2 1 0.8554097 1.875709 1.004723 0.3972935 -0.2527967 0.6208336	'It must be your fault. It is the princess who will suffer for it. I hope they didn't hear you call her the princess. If they did, they're sure to know her again: they're awfully sharp.'
+1 0 2 0 -0.09761187 1.55498 0.7629514 0.3514028 -0.3614066 0.5365382	'Lootie! Lootie!' cried the princess.
+1 0 2 1 -0.455133 1.995716 0.5322355 -0.4280395 0.0599712 0.590382	'Take me home.'
+1 0 2 0 0.4718038 1.756744 0.8347207 0.3450933 -0.3144967 0.5296271	'Don't go on like that,' said the nurse to the boy, almost fiercely.
+1 0 2 1 0.8646283 2.489388 1.333116 0.1719296 -0.004563589 0.5848673	'How could I help it? I lost my way.'
+1 0 2 0 0.1388222 1.725362 0.5529276 0.1463473 -0.451205 0.5305788	'You shouldn't have been out so late. You wouldn't have lost your way if you hadn't been frightened,' said the boy.
+1 0 2 1 0.1711866 2.444875 1.583912 0.1720038 0.1927131 0.5855802	'Come along. I'll soon set you right again. Shall I carry your little Highness?'
+1 0 3 0 0.8065706 2.218292 1.093686 0.3712693 -0.008025844 0.5176244	'Impertinence!' murmured the nurse, but she did not say it aloud, for she thought if she made him angry he might take his revenge by telling someone belonging to the house, and then it would be sure to come to the king's ears.
+1 0 3 1 0.4228143 2.12162 0.7979255 0.07598166 -0.2262028 0.5635116	'No, thank you,' said Irene.
+1 0 3 2 0.1512801 1.908319 0.9613831 0.2828093 -0.08945383 0.6165308	'I can walk very well, though I can't run so fast as nursie. If you will give me one hand, Lootie will give me another, and then I shall get on famously.'
+0 0 1 0 1.585611 1.90017 0.6968632 0.1266805 0.01672339 0.6081884	They soon had her between them, holding a hand of each.
+1 0 1 0 0.472264 2.106165 0.832936 0.1799777 -0.08370711 0.635681	'Now let's run,' said the nurse.
+1 0 2 0 0.139825 1.690989 0.2148346 -0.1280942 -0.04551839 0.5444302	'No, no!' said the little miner.
+1 0 2 1 0.3853701 2.345444 1.283704 0.4105612 -0.1542375 0.6157873	'That's the worst thing you can do. If you hadn't run before, you would not have lost your way. And if you run now, they will be after you in a moment.'
+1 1 1 0 0.6554692 2.421244 1.112524 0.2071414 0.09663177 0.5121249	'I don't want to run,' said Irene.
+1 0 1 0 0.5190903 1.701479 0.4040233 0.0861343 -0.2437032 0.6874129	'You don't think of me,' said the nurse.
+1 1 1 0 -0.1339055 2.095692 1.210374 0.6296393 -0.1381109 0.5553625	'Yes, I do, Lootie. The boy says they won't touch us if we don't run.'
+1 0 1 0 0.3911378 2.322201 0.7825768 0.04846866 0.001625903 0.596463	'Yes, but if they know at the house that I've kept you out so late I shall be turned away, and that would break my heart.'
+1 1 1 0 -0.1095648 2.47865 1.169323 -0.2811206 0.6838343 0.5963725	'Turned away, Lootie! Who would turn you away?'
+1 1 1 0 -0.1717917 2.392131 0.8574132 0.04777138 0.1045021 0.5776291	'But I'll tell him it was all my fault. And you know it was, Lootie.'
+1 0 1 0 0.5452881 2.249499 0.6957272 0.0839538 -0.05526143 0.6172147	'He won't mind that. I'm sure he won't.'
+1 1 1 0 0.06727716 2.296627 0.7896928 -0.08602113 0.1441637 0.6017662	'Then I'll cry, and go down on my knees to him, and beg him not to take away my own dear Lootie.'
+0 0 2 0 0.3981743 2.150829 0.4201571 -0.2558995 0.08145976 0.5368146	The nurse was comforted at hearing this, and said no more.
+0 0 2 1 0.5172896 2.392195 0.5524386 -0.2813304 0.2386191 0.6998586	They went on, walking pretty fast, but taking care not to run a step.
+1 1 1 0 -0.24009 2.320948 0.8182603 0.08208112 -0.02893556 0.5950819	'I want to talk to you,' said Irene to the little miner; 'but it's so awkward! I don't know your name.'
+1 1 1 0 -0.9383664 1.765291 0.1801535 -0.2227655 -0.09959461 0.670382	'My name's Curdie, little princess.'
+1 0 1 0 -0.7818127 2.43226 1.042407 -0.1521393 0.1552699 0.6240625	'What a funny name! Curdie! What more?'
+1 1 1 0 -0.01131387 3.062739 1.840416 0.2192465 0.3756368 0.5585541	'Curdie Peterson. What's your name, please?'
+1 0 1 0 -0.1391972 3.084713 1.714087 0.03904353 0.4262407 0.5452705	'I don't know what more. What more is my name, Lootie?'
+1 1 1 0 0.1782182 2.916503 0.920252 -0.07339118 0.01366666 0.5808272	'Princesses haven't got more than one name. They don't want it.'
+1 0 1 0 -0.4328317 2.595028 0.9820414 0.1343747 -0.1134827 0.5972707	'Oh, then, Curdie, you must call me just Irene and no more.'
+1 0 2 0 0.4882112 2.315314 0.5369499 0.191883 -0.4799076 0.5384387	'No, indeed,' said the nurse indignantly.
+1 0 2 1 0.3947778 2.718126 1.191812 0.2580546 -0.044597 0.6081397	'He shall do no such thing.'
+1 1 1 0 0.5451338 2.767614 1.673132 0.4668566 0.4021183 0.4922432	'What shall he call me, then, Lootie?'
+1 0 1 0 -0.3151695 1.917701 0.4534418 -0.4852566 -0.05458009 0.5918111	'Your Royal Highness.'
+1 1 1 0 -0.3714201 2.506049 1.026951 0.09335658 0.03746223 0.570221	'My Royal Highness! What's that? No, no, Lootie. I won't be called names. I don't like them. You told me once yourself it's only rude children that call names; and I'm sure Curdie wouldn't be rude. Curdie, my name's Irene.'
+1 1 1 0 0.005685182 2.407456 1.021919 0.2914994 -0.1458958 0.5311548	'Well, Irene,' said Curdie, with a glance at the nurse which showed he enjoyed teasing her; 'it is very kind of you to let me call you anything. I like your name very much.'
+0 0 2 0 1.939245 2.189806 0.5122567 0.09540184 -0.3218953 0.5684689	He expected the nurse to interfere again; but he soon saw that she was too frightened to speak.
+0 0 2 1 0.7461997 2.461566 0.9888453 0.06544071 -0.09609687 0.6024927	She was staring at something a few yards before them in the middle of the path, where it narrowed between rocks so that only one could pass at a time.
+1 1 1 0 0.5210291 2.583128 1.07648 0.2136878 -0.08523268 0.5550138	'It is very much kinder of you to go out of your way to take us home,' said Irene.
+1 1 2 0 0.8760918 2.840608 1.301903 0.2704309 -0.2564159 0.4143897	'I'm not going out of my way yet,' said Curdie.
+1 1 2 1 0.9996346 3.055886 1.05113 0.01551272 0.07584998 0.5448233	'It's on the other side of those rocks the path turns off to my father's.'
+1 0 1 0 0.4333203 2.914304 1.046153 -0.05045493 0.1221322 0.5696334	'You wouldn't think of leaving us till we're safe home, I'm sure,' gasped the nurse.
+1 1 1 0 0.04584265 2.346785 0.9148231 0.204218 -0.1269631 0.6045137	'Of course not,' said Curdie.
+1 0 1 0 -0.3943268 2.262362 0.7664696 0.09983964 -0.401018 0.6295381	'You dear, good, kind Curdie! I'll give you a kiss when we get home,' said the princess.
+0 0 5 0 1.23489 2.284808 0.2126499 -0.4574076 0.01071941 0.6260714	The nurse gave her a great pull by the hand she held.
+0 0 5 1 0.9766137 2.398088 0.7406209 -0.01251307 -0.05188664 0.606521	But at that instant the something in the middle of the way, which had looked like a great lump of earth brought down by the rain, began to move.
+0 0 5 2 0.2213878 2.729072 1.02747 -0.04445091 0.06654085 0.5302441	One after another it shot out four long things, like two arms and two legs, but it was now too dark to tell what they were.
+0 0 5 3 1.326636 2.408515 0.5856522 -0.4134744 -0.04850019 0.6215283	The nurse began to tremble from head to foot.
+0 0 5 4 -0.2814131 2.476515 0.6503427 -0.5355524 0.265944 0.4986712	Irene clasped Curdie's hand yet faster, and Curdie began to sing again:
+0 0 1 0 0.480803 2.640937 0.6934369 -0.8049578 0.7769947 0.5229179	Blast and bore!
+0 0 1 0 1.149334 2.757526 1.930079 -0.1701903 0.1689852 0.5597178	There's a fix!
+0 0 1 0 0.1707957 2.111061 1.468894 -0.1648928 -0.2175089 0.6153429	Hold it straight!
+0 0 1 0 0.8036201 2.396583 1.678338 -0.318217 -0.007049818 0.5035254	There's a toad
+0 0 1 0 0.9809885 2.654369 1.282474 -0.7241609 0.2186185 0.5795071	In the road!
+0 0 1 0 -0.481749 2.277041 0.8819345 -1.099429 0.538741 0.6402389	Up and off!
+0 0 5 0 0.9201856 1.935263 0.545848 -0.4777506 -0.03468398 0.6399164	As he uttered the last words, Curdie let go his hold of his companion, and rushed at the thing in the road as if he would trample it under his feet.
+0 0 5 1 -0.03836863 2.134713 1.072276 -0.2111585 -0.2550739 0.6195815	It gave a great spring, and ran straight up one of the rocks like a huge spider.
+0 0 5 2 0.1380118 1.541761 0.06992117 -0.5063199 -0.2845021 0.6556994	Curdie turned back laughing, and took Irene's hand again.
+0 0 5 3 1.929743 2.104127 0.6607352 -0.07814939 -0.3379929 0.5824437	She grasped his very tight, but said nothing till they had passed the rocks.
+0 0 5 4 0.8032787 2.166665 1.001815 -0.1296916 -0.12409 0.6707256	A few yards more and she found herself on a part of the road she knew, and was able to speak again.
+1 1 1 0 -0.1265809 1.781953 0.8042557 0.333504 -0.4184881 0.6185284	'Do you know, Curdie, I don't quite like your song: it sounds to me rather rude,' she said.
+1 1 2 0 0.4400054 1.591183 0.5811342 0.1427894 -0.3790146 0.5520384	'Well, perhaps it is,' answered Curdie.
+1 1 2 1 0.9477835 2.174965 1.198391 0.5716667 -0.3419516 0.5838782	'I never thought of that; it's a way we have. We do it because they don't like it.'
+1 1 1 0 -0.1568036 2.222518 1.574757 -0.06227149 0.1855629 0.4871371	'Who don't like it?'
+1 1 1 0 0.6717514 2.232121 0.610949 -0.308198 0.2245993 0.5825683	'The cobs, as we call them.'
+1 0 1 0 0.7594191 2.320149 1.027951 -0.3043595 0.04109082 0.6140892	'Don't!' said the nurse.
+1 1 1 0 -0.3280636 2.260434 1.492372 -0.1200027 -0.1121603 0.5769702	'Why not?' said Curdie.
+1 0 1 0 -0.2306082 2.305744 1.024223 -0.05472561 -0.267154 0.6172707	'I beg you won't. Please don't.'
+1 1 1 0 -0.1230243 1.789494 0.877804 0.04811909 -0.1725921 0.5833488	'Oh! if you ask me that way, of course, I won't; though I don't a bit know why. Look! there are the lights of your great house down below. You'll be at home in five minutes now.'
+0 0 4 0 2.760554 2.01364 0.234485 -0.4340646 -0.2394962 0.4778941	Nothing more happened.
+0 0 4 1 1.656729 2.09226 1.412257 0.4050619 -0.4853284 0.5514386	They reached home in safety.
+0 0 4 2 1.618635 1.719711 0.5114146 -0.1125032 -0.1433606 0.6094931	Nobody had missed them, or even known they had gone out; and they arrived at the door belonging to their part of the house without anyone seeing them.
+0 0 4 3 0.7968715 1.99259 0.6715106 -0.3122116 0.03128776 0.6677034	The nurse was rushing in with a hurried and not over-gracious good night to Curdie; but the princess pulled her hand from hers, and was just throwing her arms round Curdie's neck, when she caught her again and dragged her away.
+1 1 1 0 -0.5405658 1.925047 1.031674 0.1999187 -0.2943081 0.5928138	'Lootie! Lootie! I promised a kiss,' cried Irene.
+1 1 1 0 -0.0725925 2.026438 0.9679316 0.1595773 -0.04981239 0.5801588	'A princess mustn't give kisses. It's not at all proper,' said Lootie.
+1 0 1 0 0.3277294 1.718418 0.2650178 -0.3164985 -0.1149141 0.6804441	'But I promised,' said the princess.
+1 1 1 0 -0.5828654 1.724087 0.4084999 -0.2504563 0.1453065 0.6607109	'There's no occasion; he's only a miner-boy.'
+1 0 1 0 -0.1356633 2.027071 0.6264099 -0.2540371 0.01565919 0.6330549	'He's a good boy, and a brave boy, and he has been very kind to us. Lootie! Lootie! I promised.'
+1 1 1 0 1.546543 2.197623 0.68884 -0.1023049 -0.2377439 0.605686	'Then you shouldn't have promised.'
+1 0 1 0 0.295196 2.348776 0.814011 -0.07321921 -0.1955191 0.5801069	'Lootie, I promised him a kiss.'
+1 1 1 0 -0.07794853 2.284848 0.9452357 0.142975 -0.07216066 0.5628617	'Your Royal Highness,' said Lootie, suddenly grown very respectful, 'must come in directly.'
+1 1 1 0 -0.01252883 2.545871 1.129734 0.0407435 -0.08455895 0.5747271	'Nurse, a princess must not break her word,' said Irene, drawing herself up and standing stock-still.
+0 0 5 0 0.3014819 1.974262 0.2024646 -0.5612097 -0.007588644 0.6447784	Lootie did not know which the king might count the worst—to let the princess be out after sunset, or to let her kiss a miner-boy.
+0 0 5 1 0.9435908 2.315524 0.6832737 -0.2180804 -0.04620552 0.5903864	She did not know that, being a gentleman, as many kings have been, he would have counted neither of them the worse.
+0 0 5 2 1.49888 2.388318 0.5443343 -0.2627703 -0.009304438 0.6223559	However much he might have disliked his daughter to kiss the miner-boy, he would not have had her break her word for all the goblins in creation.
+0 0 5 3 0.1738809 2.221065 0.7516401 0.02523563 -0.05052729 0.5683849	But, as I say, the nurse was not lady enough to understand this, and so she was in a great difficulty, for, if she insisted, someone might hear the princess cry and run to see, and then all would come out.
+0 0 5 4 0.5584193 1.812146 0.3226876 -0.1956277 -0.07810952 0.7415635	But here Curdie came again to the rescue.
+1 0 2 0 0.7639382 2.0427 0.0889861 -0.08467098 -0.05392464 0.560835	'Never mind, Princess Irene,' he said.
+1 0 2 1 -0.1639159 2.638168 1.084345 -0.05691535 -0.000102248 0.5850382	'You mustn't kiss me tonight. But you shan't break your word. I will come another time. You may be sure I will.'
+1 0 1 0 0.1961704 2.136711 0.1717581 -0.432541 -0.03208275 0.6620211	'Oh, thank you, Curdie!' said the princess, and stopped crying.
+1 1 1 0 -0.5870293 2.285317 0.8163117 0.06907076 0.05658638 0.5909666	'Good night, Irene; good night, Lootie,' said Curdie, and turned and was out of sight in a moment.
+1 0 1 0 0.8465611 2.168182 0.6974221 0.008762557 -0.1227544 0.6547987	'I should like to see him!' muttered the nurse, as she carried the princess to the nursery.
+1 1 2 0 0.2109414 2.611626 1.186881 0.2867662 -0.2256476 0.4266288	'You will see him,' said Irene.
+1 1 2 1 0.5963552 2.930867 1.032212 0.07957843 -0.01078678 0.5598009	'You may be sure Curdie will keep his word. He's sure to come again.'
+1 0 5 0 -0.004647909 2.292115 0.5502832 -0.05794484 -0.1564581 0.4965893	'I should like to see him!' repeated the nurse, and said no more.
+0 0 5 1 0.7782032 2.559668 0.6231015 -0.4055953 -0.06307724 0.601396	She did not want to open a new cause of strife with the princess by saying more plainly what she meant.
+0 0 5 2 1.114577 2.239948 0.6120743 -0.09166835 -0.1371621 0.5703111	Glad enough that she had succeeded both in getting home unseen, and in keeping the princess from kissing the miner's boy, she resolved to watch her far better in future.
+0 0 5 3 2.241825 2.430557 0.5810707 -0.1551794 0.04947198 0.5291308	Her carelessness had already doubled the danger she was in.
+0 0 5 4 1.206973 2.188114 0.3905349 -0.5019888 0.108863 0.6681978	Formerly the goblins were her only fear; now she had to protect her charge from Curdie as well.

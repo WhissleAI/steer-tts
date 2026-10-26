@@ -63,7 +63,7 @@ steertts_director_plan(d, s, 2, "children", plans, err, sizeof err);   /* genre 
 for (int i = 0; i < 2; i++) {
   const float* p = plans + i * STEERTTS_PLAN_DIMS;
   char ctrl[160];
-  steertts_plan_ctrl(p, 1.0f, ctrl, sizeof ctrl);       /* "rate=0.12,loud=-0.30,f0_med=0.41,f0_iqr=0.22,f0_end=0.10" */
+  steertts_plan_ctrl(d, p, 1.0f, ctrl, sizeof ctrl);    /* "rate=0.12,loud=-0.30,f0_med=0.61,f0_iqr=0.52,f0_end=0.34" */
   steertts_options o;
   steertts_default_options(&o);
   o.ctrl = ctrl;
@@ -80,8 +80,8 @@ steertts_director_free(d);
 | `steertts_director_from_memory(data, n, err, len)` | The same from bytes in memory (e.g. an Android asset). |
 | `steertts_director_plan(d, sentences, n, genre, plans, err, len)` | Plan a whole text: `n × STEERTTS_PLAN_DIMS` floats. |
 | `steertts_reading_begin(d, genre)` / `steertts_reading_next(r, s, next, plan)` / `steertts_reading_free(r)` | Plan sentence by sentence, keeping the context (messages arriving one by one, a reader that cannot see the whole text). `next` is the following sentence when known, else NULL. |
-| `steertts_plan_controls(plan, strength, out[5])` | The plan as control z-scores (rate, loud, f0_med, f0_iqr, f0_end), clamped to ±3. Add them to a voice's own style controls. |
-| `steertts_plan_ctrl(plan, strength, buf, len)` | The same as a `ctrl` string, independent of the C locale. |
+| `steertts_plan_controls(d, plan, strength, out[5])` | The plan as request controls (rate, loud, f0_med, f0_iqr, f0_end), calibrated for the director's voice (below), clamped to ±3. Add them to a voice's own style controls. |
+| `steertts_plan_ctrl(d, plan, strength, buf, len)` | The same as a `ctrl` string, independent of the C locale. |
 | `steertts_plan_pause_ms(plan, pace)` | The pause after the sentence in ms (80–1500), shorter at a faster pace. |
 | `steertts_director_genre(i)` | The genre names: `children`, `adventure`, `fantasy`, `mystery`, `scifi`, `gothic`, `literary`, `humour`, `nonfiction`, `poetry`. |
 
@@ -89,6 +89,27 @@ Notes:
 - **Thread safety:** a director is read-only after loading and can be shared across threads. A reading belongs to one
   thread.
 - **NULL arguments** are errors, not crashes, as in the rest of the API.
+
+## Calibration: asking the voice for what the plan means
+
+The voice doesn't deliver a requested control change in full. Measured on the edge voice (226 random requests,
+`steertts/measure.py`), it delivers this share of the change:
+
+| rate | loudness | pitch level | pitch range | ending |
+|---|---|---|---|---|
+| 75% | 96% | 64% | 43% | 29% |
+
+The cross-effects between controls are small. `director.bin` carries the inverse of this response for its paired
+voice, so `steertts_plan_controls` and `steertts_plan_ctrl` ask for what makes the voice perform the plan (pass the
+director; with NULL the plan is requested as is).
+
+Rendering 161 held-out sentences with and without their plans, the measured change follows the plan for:
+- rate: r = 0.94
+- loudness: r = 0.92
+- endings: r = 0.54 (0.10 uncalibrated)
+- pitch range: r = 0.39 (0.20 uncalibrated)
+
+Small pitch-level plans (a spread of about 0.3 z) stay below the voice's own sentence-to-sentence variation (r ≈ 0.1).
 
 ## Using it well
 
@@ -111,10 +132,11 @@ sentences is the ceiling:
 | Correlation with the narrator | rate | loud | f0_med | f0_iqr | end | gap |
 |---|---|---|---|---|---|---|
 | Rule-based moods (no director) | 0.01 | 0.05 | 0.09 | 0.05 | −0.01 | −0.01 |
-| Director | 0.28 | 0.01 | 0.23 | 0.21 | 0.13 | 0.35 |
+| Director | 0.39 | −0.04 | 0.21 | 0.18 | 0.12 | 0.47 |
 | Two narrators, same sentence | 0.61 | 0.33 | 0.36 | 0.21 | 0.26 | 0.48 |
 
-These numbers are from the first 25 hours of training data and will be updated with the full set. Loudness is
-carried by the scene: the director predicts it from the narrator's real history, not yet from its own.
+The training data is 50 hours: 30 recordings, 28 books, 10 genres, with 5 books read by two or three narrators. Six
+books are held out. Pauses reach the narrators' own agreement. Loudness is carried by the scene: the director
+predicts it from the narrator's real history (r = 0.60), not yet from its own.
 
 The C implementation is checked against the trained PyTorch model on 525 held-out sentences in `c/tests/test_director.c`.

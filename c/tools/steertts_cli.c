@@ -627,7 +627,6 @@ static int perform(const char* model, const steertts_config* cfg, const steertts
     fprintf(stderr, "steertts: %s\n", err);
     return 1;
   }
-  steertts_director_free(d);
   int rc = 0;
   if (plan_only) {
     printf("sentence\tdialogue\tpara\trate\tloud\tf0_med\tf0_iqr\tend\tpause_ms\ttext\n");
@@ -648,7 +647,7 @@ static int perform(const char* model, const steertts_config* cfg, const steertts
     for (size_t i = 0; i < v.n && !rc; i++) {
       const float* p = plans + i * STEERTTS_PLAN_DIMS;
       char ctrl[640], pc[160];
-      steertts_plan_ctrl(p, strength, pc, sizeof pc);
+      steertts_plan_ctrl(d, p, strength, pc, sizeof pc);
       snprintf(ctrl, sizeof ctrl, "%s%s%s", strength > 0 ? pc : "", user_ctrl && strength > 0 ? "," : "",
                user_ctrl ? user_ctrl : "");   /* the user's own controls last: they win */
       steertts_options o = *base;
@@ -680,6 +679,7 @@ static int perform(const char* model, const steertts_config* cfg, const steertts
   free(v.text);
   free(v.s);
   free(plans);
+  steertts_director_free(d);
   return rc;
 }
 
