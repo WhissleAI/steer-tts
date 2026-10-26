@@ -81,9 +81,11 @@ struct Feature<Trailing: View>: View {
     enum State { case ready, needs(String), off(String) }
     let icon: String, title: String, keys: String?, detail: String
     let state: State
+    var footer: AnyView? = nil     // more options, inside the card under the description
     @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon).font(.system(size: 18)).foregroundStyle(Theme.accent)
                 .frame(width: 38, height: 38).background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 9))
@@ -100,6 +102,8 @@ struct Feature<Trailing: View>: View {
             }
             Spacer(minLength: 12)
             trailing()
+        }
+            if let footer { footer.padding(.leading, 52) }
         }
         .padding(16)
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))

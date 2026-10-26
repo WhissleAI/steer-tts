@@ -7,7 +7,10 @@ import PackageDescription
 let package = Package(
     name: "SteerTTSMac",
     platforms: [.macOS(.v14)],
-    products: [.executable(name: "SteerTTS", targets: ["SteerTTSApp"])],
+    products: [
+        .executable(name: "SteerTTS", targets: ["SteerTTSApp"]),
+        .executable(name: "steer", targets: ["SteerCLI"]),
+    ],
     targets: [
         .target(
             name: "CSteerTTS",
@@ -21,6 +24,9 @@ let package = Package(
         .target(name: "SteerText", path: "Sources/SteerText"),
         .target(name: "SteerEngine", dependencies: ["CSteerTTS", "SteerText"], path: "Sources/SteerEngine"),
         .executableTarget(name: "SteerTTSApp", dependencies: ["SteerEngine", "SteerText"], path: "Sources/SteerTTSApp"),
+        // the `steer` command inside the app: Claude Code hooks, the shell integration and scripts tell the app what
+        // happened (Contents/MacOS/steer)
+        .executableTarget(name: "SteerCLI", path: "Sources/SteerCLI"),
         .testTarget(name: "SteerTextTests", dependencies: ["SteerText"], path: "Tests/SteerTextTests"),
     ]
 )

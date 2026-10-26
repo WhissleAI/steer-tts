@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.servicesProvider = ServiceProvider()
         NSUpdateDynamicServices()
-        MainActor.assumeIsolated { registerHotkeys(); DevHooks.install() }
+        MainActor.assumeIsolated { registerHotkeys(); DevHooks.install(); Assistant.shared.start() }
     }
 
     func application(_ sender: NSApplication, open urls: [URL]) {

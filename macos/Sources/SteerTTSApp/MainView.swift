@@ -17,6 +17,7 @@ struct MainView: View {
                     Label("Free Books", systemImage: "building.columns").tag(AppModel.Section.freeBooks)
                 }
                 Section("SteerTTS") {
+                    Label("Assistant", systemImage: "bell.and.waves.left.and.right").tag(AppModel.Section.assistant)
                     Label("Voices", systemImage: "person.wave.2").tag(AppModel.Section.voices)
                     Label("Read Anywhere", systemImage: "text.viewfinder").tag(AppModel.Section.anywhere)
                 }
@@ -27,6 +28,7 @@ struct MainView: View {
                 switch app.section ?? .library {
                 case .library: LibraryView()
                 case .freeBooks: FreeBooksView()
+                case .assistant: AssistantView()
                 case .voices: VoicesView()
                 case .anywhere: AnywhereView()
                 }

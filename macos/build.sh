@@ -15,14 +15,17 @@ APP=dist/SteerTTS.app
 rm -rf "$APP"
 if [[ "$MODE" == "--dev" ]]; then
   swift build -c release --product SteerTTS
+  swift build -c release --product steer
   BIN=.build/release/SteerTTS
 else
   swift build -c release --product SteerTTS --arch arm64 --arch x86_64
+  swift build -c release --product steer --arch arm64 --arch x86_64
   BIN=.build/apple/Products/Release/SteerTTS
 fi
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/SteerTTS"
+cp "$(dirname "$BIN")/steer" "$APP/Contents/MacOS/steer"   # the command Claude Code hooks and the shell use
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD/" Resources/Info.plist > "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
@@ -35,6 +38,7 @@ if [[ "$MODE" == "--dev" ]]; then
   echo "$APP (ad-hoc signed)"
   exit 0
 fi
+codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP/Contents/MacOS/steer"
 codesign --force --options runtime --timestamp --entitlements Resources/SteerTTS.entitlements --sign "$IDENTITY" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

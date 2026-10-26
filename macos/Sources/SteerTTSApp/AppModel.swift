@@ -24,7 +24,7 @@ final class AppModel: ObservableObject {
 
     @Published var sheet: Sheet?
 
-    enum Section: Hashable { case library, freeBooks, voices, anywhere }
+    enum Section: Hashable { case library, freeBooks, assistant, voices, anywhere }
     enum Sheet: String, Identifiable { case link, text; var id: String { rawValue } }
 
     private let engineQueue = DispatchQueue(label: "steertts.engine", qos: .userInitiated)
