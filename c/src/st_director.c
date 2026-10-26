@@ -22,6 +22,7 @@ typedef struct {
 
 struct steertts_director {
   int buckets, emb, hid, nfeat, ngenre, ntarget;
+  int scene;   /* version 2: the mean of the last `scene` sentence encodings is part of the GRU input */
   mat embm, enc, wih, whh, head;
   float *enc_b, *bih, *bhh, *head_b;
   float cal[25];   /* request = want x cal (rate loud f0_med f0_iqr f0_end): how to ask the paired voice for a change */
@@ -34,6 +35,8 @@ struct steertts_reading {
   float genre[ST_DIRECTOR_GENRES];
   float* h;      /* hid */
   float* prev;   /* ntarget */
+  float* past;   /* the last `scene` sentence encodings (a ring), for the scene mean */
+  int npast, next_past;
   char* ahead;   /* the last look-ahead sentence and its encoding, reused when it becomes the current one */
   float ahead_s[64];
 };
@@ -81,10 +84,14 @@ steertts_director* steertts_director_from_memory(const void* data, size_t n, cha
   d->blob = blob;
   const uint8_t* p = (const uint8_t*)blob + 4;
   const uint8_t* end = (const uint8_t*)blob + n;
-  uint32_t h[7];
-  memcpy(h, p, sizeof h);
-  p += sizeof h;
-  if (h[0] != 1) {
+  uint32_t h[8] = {0};
+  memcpy(h, p, sizeof(uint32_t) * 7);
+  p += sizeof(uint32_t) * 7;
+  if (h[0] == 2) {   /* version 2: scene memory */
+    memcpy(&h[7], p, sizeof(uint32_t));
+    p += sizeof(uint32_t);
+  }
+  if (h[0] != 1 && h[0] != 2) {
     set_err(err, err_len, "unsupported director model version");
     steertts_director_free(d);
     return NULL;
@@ -95,12 +102,18 @@ steertts_director* steertts_director_from_memory(const void* data, size_t n, cha
   d->nfeat = (int)h[4];
   d->ngenre = (int)h[5];
   d->ntarget = (int)h[6];
+  d->scene = (int)h[7];
   if (d->nfeat != ST_DIRECTOR_FEATURES || d->ngenre != ST_DIRECTOR_GENRES || d->ntarget != STEERTTS_PLAN_DIMS) {
     set_err(err, err_len, "director model shape does not match this build");
     steertts_director_free(d);
     return NULL;
   }
-  int H = d->hid, in_enc = d->emb + d->nfeat + d->ngenre, in_cell = 2 * H + d->ntarget;
+  int H = d->hid, in_enc = d->emb + d->nfeat + d->ngenre, in_cell = (d->scene ? 3 : 2) * H + d->ntarget;
+  if (d->scene < 0 || d->scene > 64 || H > 64 || d->emb > 64) {
+    set_err(err, err_len, "director model shape is out of range");
+    steertts_director_free(d);
+    return NULL;
+  }
   /* floats must be 4-byte aligned: the header is 32 bytes and every block is a multiple of 4 except int8 runs,
    * whose lengths (rows * cols) are multiples of 4 for this architecture */
   if (!read_mat(&d->embm, d->buckets, d->emb, &p, end) || !read_mat(&d->enc, H, in_enc, &p, end) ||
@@ -359,7 +372,8 @@ static steertts_reading* reading_begin(const steertts_director* d, const float* 
   if (genre) memcpy(r->genre, genre, sizeof r->genre);
   r->h = (float*)calloc((size_t)d->hid, sizeof(float));
   r->prev = (float*)calloc((size_t)d->ntarget, sizeof(float));
-  if (!r->h || !r->prev) {
+  r->past = d->scene ? (float*)calloc((size_t)d->scene * (size_t)d->hid, sizeof(float)) : NULL;
+  if (!r->h || !r->prev || (d->scene && !r->past)) {
     steertts_reading_free(r);
     return NULL;
   }
@@ -371,6 +385,7 @@ void steertts_reading_free(steertts_reading* r) {
   free(r->ahead);
   free(r->h);
   free(r->prev);
+  free(r->past);
   free(r);
 }
 
@@ -379,7 +394,7 @@ static int reading_next(steertts_reading* r, const char* text, const float* feat
   if (!r || !text || !features || !plan) return 1;
   const steertts_director* d = r->d;
   int H = d->hid, T = d->ntarget;
-  float s[64], nx[64], x[2 * 64 + STEERTTS_PLAN_DIMS], hn[64], hs[2 * 64];
+  float s[64], nx[64], x[3 * 64 + STEERTTS_PLAN_DIMS], hn[64], hs[2 * 64];
   if (H > 64) return 1;
   if (r->ahead && strcmp(r->ahead, text) == 0) memcpy(s, r->ahead_s, sizeof(float) * (size_t)H);
   else encode(d, text, features, r->genre, s);
@@ -398,7 +413,16 @@ static int reading_next(steertts_reading* r, const char* text, const float* feat
   }
   memcpy(x, s, sizeof(float) * (size_t)H);
   memcpy(x + H, nx, sizeof(float) * (size_t)H);
-  memcpy(x + 2 * H, r->prev, sizeof(float) * (size_t)T);
+  int o = 2 * H;
+  if (d->scene) {   /* the mean of the previous sentences' encodings (up to `scene` of them; zeros at the start) */
+    for (int j = 0; j < H; j++) {
+      float m = 0;
+      for (int k = 0; k < r->npast; k++) m += r->past[k * H + j];
+      x[o + j] = r->npast ? m / (float)r->npast : 0;
+    }
+    o += H;
+  }
+  memcpy(x + o, r->prev, sizeof(float) * (size_t)T);
   /* GRUCell, PyTorch gate order r, z, n */
   for (int i = 0; i < H; i++) {
     float ir = dot_row(&d->wih, i, x) + d->bih[i], hr = dot_row(&d->whh, i, r->h) + d->bhh[i];
@@ -412,6 +436,11 @@ static int reading_next(steertts_reading* r, const char* text, const float* feat
   memcpy(hs + H, s, sizeof(float) * (size_t)H);
   for (int k = 0; k < T; k++) plan[k] = dot_row(&d->head, k, hs) + d->head_b[k];
   memcpy(r->prev, plan, sizeof(float) * (size_t)T);
+  if (d->scene) {   /* this sentence joins the scene memory */
+    memcpy(r->past + (size_t)r->next_past * (size_t)H, s, sizeof(float) * (size_t)H);
+    r->next_past = (r->next_past + 1) % d->scene;
+    if (r->npast < d->scene) r->npast++;
+  }
   return 0;
 }
 
