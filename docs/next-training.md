@@ -103,8 +103,9 @@ Kept up to date as the app is built. Newest first within each section.
     YouTube, iPhone, macOS, Microsoft Teams, Zoom, PDF were fine. The apps now respell WhatsApp, iMessage and login
     (`Spoken.respell`), but every client would need its own list. *Train:* a lexicon of app, product and developer
     terms (camel-case brands, CLI names) in the G2P training data, and camel-case splitting in the front end.
-    Also "whissle.ai" (the films respell it "whissle dot ay eye"), and the brand "Whissle" itself should be in the
-    lexicon.
+    Also "whissle.ai": "whissle dot ai" is heard "whistle dot eye" (recogniser, 2026-10-27); the apps now say
+    "dot A I". "Whissle" is heard "Whistle", "GitHub" as "Githab". These belong in the lexicon and the shared front
+    end.
 
 12. **Long sentences (to measure).** Documents are split at 240 characters at a comma or semicolon for first-sound
     latency. Measure quality and prosody on 200–400 character inputs; if good, the split can be longer.
