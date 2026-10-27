@@ -109,6 +109,9 @@ r = d.reading("children")                           # sentence by sentence, keep
 p = r.next("A new message arrived.")
 ```
 
+The edge Python package has the same class in numpy, with no C library: `from steertts_edge import Director` (same
+methods; `edge/tests/test_director.py` checks it is bit-identical to the C library).
+
 A sentence can be a string (the list is then one paragraph; quotes mark dialogue) or a dict with `text`, `dialogue`,
 `has_speaker`, `para_len` and `para_index`. `Director.genres()` lists the genres. `c/tests/test_director_py.py`
 checks the binding against the same golden plans as the C test.
