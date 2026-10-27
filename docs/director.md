@@ -90,6 +90,29 @@ Notes:
   thread.
 - **NULL arguments** are errors, not crashes, as in the rest of the API.
 
+## Python
+
+The C library's Python binding (`c/python/steertts_c.py`, ctypes, no compilation) has the same director:
+
+```python
+from steertts_c import Director, Engine
+
+tts = Engine("steer-tts-edge")
+d = Director("steer-tts-edge")                      # the edge directory, or director.bin itself
+texts = ["“Who are you?” she asked.", "Nobody answered."]
+plans = d.plan(texts, genre="children")             # a list of 6 floats per sentence (one paragraph here)
+for text, p in zip(texts, plans):
+    wav = tts(text, ctrl=d.ctrl(p))                 # the plan as calibrated controls for the voice
+    gap = Director.pause_ms(p)                      # silence to leave after it, in ms
+
+r = d.reading("children")                           # sentence by sentence, keeping the context
+p = r.next("A new message arrived.")
+```
+
+A sentence can be a string (the list is then one paragraph; quotes mark dialogue) or a dict with `text`, `dialogue`,
+`has_speaker`, `para_len` and `para_index`. `Director.genres()` lists the genres. `c/tests/test_director_py.py`
+checks the binding against the same golden plans as the C test.
+
 ## Calibration: asking the voice for what the plan means
 
 The voice doesn't deliver a requested control change in full. Measured on the edge voice (226 random requests,

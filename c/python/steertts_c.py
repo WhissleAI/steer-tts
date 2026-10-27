@@ -8,6 +8,12 @@
         ...
     tts.save(wav, "out.wav")
 
+    from steertts_c import Director                                 # planning a performance (docs/director.md)
+    d = Director("steer-tts-edge")                                  # the edge dir, or director.bin
+    plans = d.plan(["“Who are you?” she asked.", "Nobody answered."], genre="children")
+    for text, p in zip(texts, plans):
+        wav = tts(text, ctrl=d.ctrl(p)); pause = Director.pause_ms(p)
+
 The library is found from $STEERTTS_LIB, else libsteertts.so / .dylib / steertts.dll next to this file, in
 ../build, or on the system library path.
 """
@@ -47,6 +53,11 @@ class _ChunkInfo(ctypes.Structure):
                 ("synth_ms", ctypes.c_double)]
 
 
+class _Sentence(ctypes.Structure):
+    _fields_ = [("text", c_char_p), ("dialogue", c_int), ("has_speaker", c_int), ("para_len", c_int),
+                ("para_index", c_int)]
+
+
 _CHUNK_FN = ctypes.CFUNCTYPE(c_int, POINTER(c_float), c_size_t, POINTER(_ChunkInfo), c_void_p)
 _lib = None
 
@@ -76,6 +87,19 @@ def _api():
         L.steertts_num_voices.argtypes = L.steertts_num_tags.argtypes = [c_void_p]
         L.steertts_control.argtypes = [c_int]
         L.steertts_has.argtypes = [c_void_p, c_char_p]
+        L.steertts_director_load.argtypes = [c_char_p, c_char_p, c_size_t]
+        L.steertts_director_load.restype = c_void_p
+        L.steertts_director_free.argtypes = [c_void_p]
+        L.steertts_director_genre.argtypes = [c_int]
+        L.steertts_director_genre.restype = c_char_p
+        L.steertts_director_plan.argtypes = [c_void_p, POINTER(_Sentence), c_size_t, c_char_p, POINTER(c_float),
+                                             c_char_p, c_size_t]
+        L.steertts_reading_begin.argtypes = [c_void_p, c_char_p]
+        L.steertts_reading_begin.restype = c_void_p
+        L.steertts_reading_next.argtypes = [c_void_p, POINTER(_Sentence), POINTER(_Sentence), POINTER(c_float)]
+        L.steertts_reading_free.argtypes = [c_void_p]
+        L.steertts_plan_controls.argtypes = [c_void_p, POINTER(c_float), c_float, POINTER(c_float)]
+        L.steertts_plan_pause_ms.argtypes = [POINTER(c_float), c_float]
         _lib = L
     return _lib
 
@@ -209,3 +233,96 @@ class Engine:
             buf = (c_float * n)(*wav)
         if _api().steertts_save_wav(buf, n, os.fsencode(str(path))):
             raise OSError(f"cannot write {path}")
+
+
+PLAN_DIMS = 6
+PLAN_NAMES = ("rate", "loud", "f0_med", "f0_iqr", "end", "gap")
+_QUOTES = ("\"", "\u201c", "\u201d", "\u2018")
+
+
+def _sentence(x, i, n):
+    """str or dict -> _Sentence (a str is one paragraph of n sentences; quotes mark dialogue)."""
+    if isinstance(x, str):
+        x = {"text": x}
+    text = x["text"]
+    dialogue = x.get("dialogue", any(q in text for q in _QUOTES))
+    return _Sentence(text.encode(), int(dialogue), int(x.get("has_speaker", 0)), int(x.get("para_len", n)),
+                     int(x.get("para_index", i)))
+
+
+class Director:
+    """The director (docs/director.md): plans how each sentence of a longer text is performed (rate, loudness, pitch
+    level and range, the ending, the pause after) from the text and the sentences around it. A plan is 6 floats;
+    ctrl(plan) turns it into request controls for the paired voice, pause_ms(plan) into the silence after."""
+
+    GENRES = None
+
+    def __init__(self, path="steer-tts-edge"):
+        err = ctypes.create_string_buffer(512)
+        self._d = _api().steertts_director_load(os.fsencode(str(path)), err, len(err))
+        if not self._d:
+            raise SteerTTSError(err.value.decode())
+
+    def close(self):
+        if getattr(self, "_d", None):
+            _api().steertts_director_free(self._d)
+            self._d = None
+
+    __del__ = close
+
+    @staticmethod
+    def genres():
+        out, i = [], 0
+        while (g := _api().steertts_director_genre(i)) is not None:
+            out.append(g.decode()); i += 1
+        return out
+
+    def plan(self, sentences, genre=None):
+        """sentences: strs (one paragraph) or dicts {text, dialogue, has_speaker, para_len, para_index}, in order.
+        Returns one plan (a list of 6 floats: rate, loud, f0_med, f0_iqr, end, gap) per sentence."""
+        n = len(sentences)
+        if n == 0:
+            return []
+        arr = (_Sentence * n)(*[_sentence(x, i, n) for i, x in enumerate(sentences)])
+        out, err = (c_float * (n * PLAN_DIMS))(), ctypes.create_string_buffer(512)
+        if _api().steertts_director_plan(self._d, arr, n, genre.encode() if genre else None, out, err, len(err)):
+            raise SteerTTSError(err.value.decode())
+        return [list(out[i * PLAN_DIMS:(i + 1) * PLAN_DIMS]) for i in range(n)]
+
+    def controls(self, plan, strength=1.0):
+        """The plan as control z-scores for the paired voice: {rate, loud, f0_med, f0_iqr, f0_end}."""
+        p, out = (c_float * PLAN_DIMS)(*plan), (c_float * 5)()
+        _api().steertts_plan_controls(self._d, p, strength, out)
+        return dict(zip(("rate", "loud", "f0_med", "f0_iqr", "f0_end"), out))
+
+    def ctrl(self, plan, strength=1.0):
+        """The same, as a request's ctrl dict (pass as Engine(...)(text, ctrl=...))."""
+        return self.controls(plan, strength)
+
+    @staticmethod
+    def pause_ms(plan, pace=1.0):
+        """Silence to leave after the sentence (80 .. 1500 ms)."""
+        return _api().steertts_plan_pause_ms((c_float * PLAN_DIMS)(*plan), pace)
+
+    def reading(self, genre=None):
+        """Sentence by sentence (messages as they arrive), keeping the context: r = d.reading(); r.next(text)."""
+        return _Reading(self, genre)
+
+
+class _Reading:
+    def __init__(self, d, genre):
+        self._d = d   # keeps the director alive
+        self._r = _api().steertts_reading_begin(d._d, genre.encode() if genre else None)
+
+    def next(self, sentence, following=None):
+        s = _sentence(sentence, 0, 1)
+        nx = _sentence(following, 1, 2) if following is not None else None
+        out = (c_float * PLAN_DIMS)()
+        if _api().steertts_reading_next(self._r, ctypes.byref(s), ctypes.byref(nx) if nx else None, out):
+            raise SteerTTSError("reading failed")
+        return list(out)
+
+    def __del__(self):
+        if getattr(self, "_r", None):
+            _api().steertts_reading_free(self._r)
+            self._r = None
