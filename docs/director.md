@@ -155,11 +155,13 @@ sentences is the ceiling:
 | Correlation with the narrator | rate | loud | f0_med | f0_iqr | end | gap |
 |---|---|---|---|---|---|---|
 | Rule-based moods (no director) | 0.01 | 0.05 | 0.09 | 0.05 | −0.01 | −0.01 |
-| Director | 0.39 | −0.04 | 0.21 | 0.18 | 0.12 | 0.47 |
+| Director, format 1 (50-hour pilot) | 0.39 | −0.04 | 0.21 | 0.18 | 0.12 | 0.47 |
+| **Director, format 2 (shipped)** | 0.39 | 0.15 | 0.30 | 0.24 | 0.15 | 0.39 |
 | Two narrators, same sentence | 0.61 | 0.33 | 0.36 | 0.21 | 0.26 | 0.48 |
 
 The training data is 50 hours: 30 recordings, 28 books, 10 genres, with 5 books read by two or three narrators. Six
-books are held out. Pauses reach the narrators' own agreement. Loudness is carried by the scene: the director
-predicts it from the narrator's real history (r = 0.60), not yet from its own.
+books are held out. The shipped model (format 2) adds scene memory (the mean of the last 8 sentence encodings) and
+learns from a larger text-only teacher's labels on more books at a low weight: loudness, pitch level and range
+improve, and pauses give back a little (0.47 → 0.39). Format-1 files still load.
 
 The C implementation is checked against the trained PyTorch model on 525 held-out sentences in `c/tests/test_director.c`.
