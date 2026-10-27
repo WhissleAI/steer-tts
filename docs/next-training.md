@@ -31,6 +31,27 @@ Kept up to date as the app is built. Newest first within each section.
    so the seams between narrator and character may be audible. *Train:* inline speaker switches with natural
    transitions; voices chosen for distinctness (the catalogue has 200, but which pairs are clearly different to a
    listener is unknown); verb-style deliveries (whisper, shout, sob, laugh, mutter) as tags that work without controls.
+19. **Context steering is small in the audio (measured 2026-10-27, Android).** The same readout at 10 AM and 11 PM
+    (ContextStyler's night rule: softer and slower) measured −24.8 vs −26.7 dB, only 1.9 dB apart, hardly audible on a
+    phone speaker. Urgent battery and "calling again" readouts were also only mildly different in the film takes.
+    *Train:* a wider, reliable `loud` and energy range (soft and intimate through to urgent) that holds on every
+    voice; per-voice calibration of how much a requested change actually lands.
+20. **Short single words lose identity in dark or soft deliveries (heard 2026-10-27, films).** The one-word close
+    "Steer." in a low, dark delivery was misheard (as "steel", "stare"); the films switched to a brighter "Meet
+    Steer." *Train:* intelligibility of one- and two-word utterances under every tag and low-energy control; add
+    such lines to the Whisper round-trip evaluation.
+21. **Everything is trained on books, but the apps mostly don't read books (verified by product use).** The
+    assistant speaks messages, calls, coding-task results, battery and meeting alerts, and the system voice and
+    screen reader speak any app's text. All of these are short, situational lines where the right delivery depends
+    on who sent it, what app, the time and whether you're working, which audiobook narration never shows. The apps
+    hard-code it today (`ContextStyler`, `Expression` moods, the Mac `Announcer`). *Train:* (a) acoustic data beyond
+    narration: announcements, news and briefings (VOA, NASA mission audio, public-domain radio), conversational
+    turns (DailyTalk), emotional short lines; (b) a recorded scenario corpus where the same app line is read in
+    several contexts (late night, urgent, calling again, good vs bad news) by several speakers; (c) the director's
+    second iteration takes app context (content type, app class, sender, urgency, time, presence) as input and
+    learns from that corpus plus a generate-and-judge loop. See the director's iteration 2 plan (internal recipe,
+    `steering_controls/ITER2.md`).
+
 6. **Nonverbals for chat (to measure).** "haha", "lol", 😂 are currently dropped and only the mood (amusement) is
    applied. The `[laugh]` event token exists; measure its quality before the app inserts it for laughter.
 
@@ -79,6 +100,8 @@ Kept up to date as the app is built. Newest first within each section.
     YouTube, iPhone, macOS, Microsoft Teams, Zoom, PDF were fine. The apps now respell WhatsApp, iMessage and login
     (`Spoken.respell`), but every client would need its own list. *Train:* a lexicon of app, product and developer
     terms (camel-case brands, CLI names) in the G2P training data, and camel-case splitting in the front end.
+    Also "whissle.ai" (the films respell it "whissle dot ay eye"), and the brand "Whissle" itself should be in the
+    lexicon.
 
 12. **Long sentences (to measure).** Documents are split at 240 characters at a comma or semicolon for first-sound
     latency. Measure quality and prosody on 200–400 character inputs; if good, the split can be longer.
