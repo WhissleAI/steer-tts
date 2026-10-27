@@ -110,6 +110,13 @@ Kept up to date as the app is built. Newest first within each section.
     Airbnb, Duolingo). No respelling fixed **Zelle** ("aunzel"), **Jira** ("Anjora") or **Calendly** ("Callen lie"):
     these need the G2P itself.
 
+21. **People's names from outside English are mispronounced (verified 2026-10-27, edge model, two voices,
+    recogniser).** The Assistant says a sender's name in nearly every readout. Of 48 first names from many backgrounds,
+    9 were heard wrong in at least one voice: Saoirse ("so worse"), Ximena ("commessin'"), Xiaoming ("Zac Ewing"),
+    Olusegun ("Olegasan"), Thandiwe ("Dandai"), and Siobhan, Nguyen, Mei and Jun in one voice. *Train:* a names
+    lexicon (Irish, Chinese, Vietnamese, Yoruba, Zulu, Spanish, Indian) in G2P training, and names in the acoustic
+    data; the apps are adding a "say it as" list so people can fix the names they hear most.
+
 12. **Long sentences (to measure).** Documents are split at 240 characters at a comma or semicolon for first-sound
     latency. Measure quality and prosody on 200–400 character inputs; if good, the split can be longer.
 
