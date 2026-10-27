@@ -17,10 +17,17 @@
 extern "C" {
 #endif
 
+/* MinGW checks formats against the old msvcrt printf (no %zu); the UCRT these builds link supports C99 formats */
+#if defined(__MINGW32__)
+#define ST_PRINTF gnu_printf
+#else
+#define ST_PRINTF printf
+#endif
+
 /* ------------------------------------------------------------------ errors */
 void st_seterr(const char* fmt, ...)
 #if defined(__GNUC__)
-    __attribute__((format(printf, 1, 2)))
+    __attribute__((format(ST_PRINTF, 1, 2)))
 #endif
     ;
 const char* st_geterr(void);
@@ -124,7 +131,7 @@ const char* st_weights_path(const st_weights* w);
 /* printf-style name helper: a static thread-local buffer, valid until the next call. */
 const char* st_name(const char* fmt, ...)
 #if defined(__GNUC__)
-    __attribute__((format(printf, 1, 2)))
+    __attribute__((format(ST_PRINTF, 1, 2)))
 #endif
     ;
 

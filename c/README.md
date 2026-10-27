@@ -13,6 +13,13 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 ./build/steertts --model models/steer-tts-edge -i                         # keep it loaded, type lines to speak
 ```
 
+Windows x64, cross-compiled from macOS or Linux with MinGW-w64 (`brew install mingw-w64`): self-contained
+`libsteertts.dll` and `steertts.exe` (no runtime DLLs to ship):
+
+```bash
+cmake -B build-win64 -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-x86_64.cmake -DSTEERTTS_BUILD_TESTS=OFF && cmake --build build-win64 -j
+```
+
 ```c
 #include "steertts.h"
 char err[512];
