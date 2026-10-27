@@ -31,16 +31,16 @@ Kept up to date as the app is built. Newest first within each section.
    so the seams between narrator and character may be audible. *Train:* inline speaker switches with natural
    transitions; voices chosen for distinctness (the catalogue has 200, but which pairs are clearly different to a
    listener is unknown); verb-style deliveries (whisper, shout, sob, laugh, mutter) as tags that work without controls.
-19. **Context steering is small in the audio (measured 2026-10-27, Android).** The same readout at 10 AM and 11 PM
+18. **Context steering is small in the audio (measured 2026-10-27, Android).** The same readout at 10 AM and 11 PM
     (ContextStyler's night rule: softer and slower) measured −24.8 vs −26.7 dB, only 1.9 dB apart, hardly audible on a
     phone speaker. Urgent battery and "calling again" readouts were also only mildly different in the film takes.
     *Train:* a wider, reliable `loud` and energy range (soft and intimate through to urgent) that holds on every
     voice; per-voice calibration of how much a requested change actually lands.
-20. **Short single words lose identity in dark or soft deliveries (heard 2026-10-27, films).** The one-word close
+19. **Short single words lose identity in dark or soft deliveries (heard 2026-10-27, films).** The one-word close
     "Steer." in a low, dark delivery was misheard (as "steel", "stare"); the films switched to a brighter "Meet
     Steer." *Train:* intelligibility of one- and two-word utterances under every tag and low-energy control; add
     such lines to the Whisper round-trip evaluation.
-21. **Everything is trained on books, but the apps mostly don't read books (verified by product use).** The
+20. **Everything is trained on books, but the apps mostly don't read books (verified by product use).** The
     assistant speaks messages, calls, coding-task results, battery and meeting alerts, and the system voice and
     screen reader speak any app's text. All of these are short, situational lines where the right delivery depends
     on who sent it, what app, the time and whether you're working, which audiobook narration never shows. The apps
