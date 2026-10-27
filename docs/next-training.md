@@ -36,6 +36,9 @@ Kept up to date as the app is built. Newest first within each section.
     phone speaker. Urgent battery and "calling again" readouts were also only mildly different in the film takes.
     *Train:* a wider, reliable `loud` and energy range (soft and intimate through to urgent) that holds on every
     voice; per-voice calibration of how much a requested change actually lands.
+    More evidence (2026-10-27, Mac, The Tell-Tale Heart at 2.5x): scaling the director's plan down to 40 % changed the
+    pitch spread only from 4.3 to 4.1 semitones (middle half) and didn't reduce loudness variation (2.4 vs 2.8 dB
+    sd). At speed, the voice's own melody dominates and the plan barely moves it.
 19. **Short single words lose identity in dark or soft deliveries (heard 2026-10-27, films).** The one-word close
     "Steer." in a low, dark delivery was misheard (as "steel", "stare"); the films switched to a brighter "Meet
     Steer." *Train:* intelligibility of one- and two-word utterances under every tag and low-energy control; add
