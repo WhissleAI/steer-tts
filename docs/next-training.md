@@ -105,7 +105,10 @@ Kept up to date as the app is built. Newest first within each section.
     terms (camel-case brands, CLI names) in the G2P training data, and camel-case splitting in the front end.
     Also "whissle.ai": "whissle dot ai" is heard "whistle dot eye" (recogniser, 2026-10-27); the apps now say
     "dot A I". "Whissle" is heard "Whistle", "GitHub" as "Githab". These belong in the lexicon and the shared front
-    end.
+    end. An audit of 53 app names ("Maya on X.", two voices, a recogniser) found 17 heard wrong; respelling fixed 11
+    in the apps (Gmail heard "game", PayPal "people", DoorDash, WeChat, Coinbase, Xcode, npm, Grubhub, TikTok,
+    Airbnb, Duolingo). No respelling fixed **Zelle** ("aunzel"), **Jira** ("Anjora") or **Calendly** ("Callen lie"):
+    these need the G2P itself.
 
 12. **Long sentences (to measure).** Documents are split at 240 characters at a comma or semicolon for first-sound
     latency. Measure quality and prosody on 200–400 character inputs; if good, the split can be longer.
