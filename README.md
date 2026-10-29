@@ -81,5 +81,12 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 
 ## Licence
 
-Code (this repo): MIT. Weights (Hugging Face): CC BY-NC 4.0, non-commercial use only. See each model card for the
-intended-use notes.
+Code (this repo): MIT, Copyright (c) 2026 Whissle, Inc. Weights (Hugging Face): CC BY-NC 4.0, non-commercial use
+only. See each model card for the intended-use notes. The weights are not covered by this repo's MIT License.
+
+- **Commercial use of the weights** needs a separate licence from Whissle, Inc. Contact ksingla@whissle.ai.
+- Whissle, Inc. keeps all rights not expressly granted. The public licences do not limit its own use of SteerTTS, or
+  its right to license SteerTTS (including later versions and derived models) on other terms.
+- "SteerTTS" and "Whissle" are trademarks of Whissle, Inc. You may say that your work is based on SteerTTS. Do not
+  name or market a product or model as "SteerTTS".
+- Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
