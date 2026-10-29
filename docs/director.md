@@ -19,9 +19,8 @@ directory) that reads the text in order and plans each sentence, in the units St
 | `end` | the final word's pitch against the sentence's, z | the `f0_end` control (× 0.8) |
 | `gap` | log(1 + seconds of silence after the sentence) | the pause before the next sentence (80–1500 ms) |
 
-It is trained on how audiobook narrators actually performed each sentence: LibriVox recordings of Project Gutenberg
-books in ten genres. Every sentence was measured with the same DSP code that defines SteerTTS's controls
-(`steertts/measure.py`), against the narrator's own average. It sees:
+Its targets are in the same units as SteerTTS's controls (`steertts/measure.py`), relative to the voice's own
+average. It sees:
 - the sentence (hashed words and word pairs; punctuation, length, quotes, dashes),
 - its place in the paragraph,
 - whether it is dialogue and whether a speaker is attributed,
@@ -141,30 +140,25 @@ Small pitch-level plans (a spread of about 0.3 z) stay below the voice's own sen
 
 - **Plan a document once, when it opens.** The plans are 6 floats per sentence. Keeping them with the document makes
   seeking, resuming and exporting consistent, because every sentence keeps the plan it got in context.
-- **Headings are not planned.** The training data left headings out, so render them with your own delivery (slower,
-  a pause after), and plan the body text.
+- **Headings are not planned.** Render them with your own delivery (slower, a pause after), and plan the body text.
 - **Dialogue:** narrators keep their own voice and lift the pitch for dialogue; the director plans that lift. A
   different voice per character is a separate choice.
 - **Strength:** 0.6–1.0 suits most listeners. Plans add to the user's own style; they don't replace it.
 - **Genre** steadies the register when it is known, for example from a library shelf. Without one the director still
-  works: it was trained with the genre hidden a third of the time.
+  works.
 
 ## How well it does
 
-On whole books it never saw in training, the director tracks the narrator's speaking rate, pitch level, pitch range,
+On held-out books, the director tracks the narrator's speaking rate, pitch level, pitch range,
 sentence endings and pauses. Narrators don't fully agree with each other either, so their agreement on the same
 sentences is the ceiling:
 
 | Correlation with the narrator | rate | loud | f0_med | f0_iqr | end | gap |
 |---|---|---|---|---|---|---|
 | Rule-based moods (no director) | 0.01 | 0.05 | 0.09 | 0.05 | −0.01 | −0.01 |
-| Director, format 1 (50-hour pilot) | 0.39 | −0.04 | 0.21 | 0.18 | 0.12 | 0.47 |
 | **Director, format 2 (shipped)** | 0.39 | 0.15 | 0.30 | 0.24 | 0.15 | 0.39 |
 | Two narrators, same sentence | 0.61 | 0.33 | 0.36 | 0.21 | 0.26 | 0.48 |
 
-The training data is 50 hours: 30 recordings, 28 books, 10 genres, with 5 books read by two or three narrators. Six
-books are held out. The shipped model (format 2) adds scene memory (the mean of the last 8 sentence encodings) and
-learns from a larger text-only teacher's labels on more books at a low weight: loudness, pitch level and range
-improve, and pauses give back a little (0.47 → 0.39). Format-1 files still load.
+The shipped model is format 2 (it keeps a short memory of the scene). Format-1 files still load.
 
-The C implementation is checked against the trained PyTorch model on 525 held-out sentences in `c/tests/test_director.c`.
+The C implementation is checked against the reference implementation on 525 held-out sentences in `c/tests/test_director.c`.

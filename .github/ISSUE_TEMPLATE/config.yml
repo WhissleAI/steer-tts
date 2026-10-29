@@ -3,3 +3,6 @@ contact_links:
   - name: Model weights and model card
     url: https://huggingface.co/WhissleAI/steer-tts
     about: Weights, voices, evaluation numbers and the full model card live on Hugging Face.
+  - name: Commercial licence
+    url: https://whissle.ai
+    about: The SteerTTS weights are non-commercial only. For commercial use, contact ksingla@whissle.ai.

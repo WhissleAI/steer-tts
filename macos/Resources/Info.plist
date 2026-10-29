@@ -13,7 +13,7 @@
 	<key>LSMinimumSystemVersion</key><string>14.0</string>
 	<key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
 	<key>NSHighResolutionCapable</key><true/>
-	<key>NSHumanReadableCopyright</key><string>© 2026 Whissle LLC</string>
+	<key>NSHumanReadableCopyright</key><string>© 2026 Whissle Inc.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key><string>SteerTTS reads your calendar on this Mac to say a few minutes ahead when a meeting starts. Nothing leaves your Mac.</string>
 	<key>NSServices</key>
 	<array>
