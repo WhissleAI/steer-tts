@@ -73,6 +73,12 @@ Kept up to date as the app is built. Newest first within each section.
 9. **Voice metadata is thin (verified).** voices.json has gender, pitch register and pace only; the app invents names
    and descriptions. *Train/export:* richer, listener-validated descriptors (warmth, age range, accent) per voice.
 
+23. **`loud` is overridden by the `enunciated` tag (measured 2026-10-29, reply samples).** A reply planned for a noisy
+    room with `loud +0.6`, `rate −0.2` and the `enunciated` tag came out at −24.1 dB against −23.9 dB for the plain
+    reply: slower, not louder. Alone, `loud` works; with the tag its effect disappears. *Train:* controls that stay
+    additive under tags (loudness measured per tag in the control-readback eval); until then the apps apply gain for
+    the noisy-room case outside the model.
+
 ## Text front end (fixed in code, but worth data)
 
 22. **"Read" as a command is said "red" (heard 2026-10-29, demo film).** "Read Treasure Island." came out as /rɛd/ in
