@@ -75,6 +75,12 @@ Kept up to date as the app is built. Newest first within each section.
 
 ## Text front end (fixed in code, but worth data)
 
+22. **"Read" as a command is said "red" (heard 2026-10-29, demo film).** "Read Treasure Island." came out as /rɛd/ in
+    both voices (four seeds on the HD voice, one on the edge voice). Sentence-initial imperative "Read …" is present
+    tense, but the front end picks the past-tense reading. Same family: "lead", "live", "wind", "tear", "close".
+    *Train:* homograph disambiguation in the G2P from part of speech and sentence position (imperatives, "to read",
+    "will read"); add imperative homographs to G2P evaluation. Meanwhile the apps can respell known command phrases.
+
 10. **Out-of-dictionary words go to the neural G2P and come out garbled (verified).** Every hyphenated compound and,
     worst, every number 21–99 ("seventy-two" → S EH V AH N T EH F Y UW) until the front end dropped the hyphens.
     *Train:* a G2P robust to compounds, names and brand words; add such words to G2P evaluation.
