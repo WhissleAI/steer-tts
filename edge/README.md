@@ -43,4 +43,4 @@ python tools/export_onnx.py <package_dir> /tmp/fp32
 python tools/pack_onnx.py <package_dir> /tmp/fp32 <package_dir>/onnx
 ```
 
-Code MIT; weights CC BY-NC 4.0 (see the model card).
+Code and weights CC BY-NC 4.0 + Whissle terms, non-commercial (see ../LICENSE).

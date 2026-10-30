@@ -8,7 +8,7 @@ version = "1.3.0"
 description = "SteerTTS v1 edge build: a 12 MB on-device, numerically steerable English TTS (int4 acoustic model + int4 vocoder)"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Code: MIT. Weights and voices (Hugging Face): CC BY-NC 4.0, non-commercial; commercial licences from Whissle Inc." }
+license = { text = "CC-BY-NC-4.0" }
 authors = [{ name = "Whissle Inc.", email = "ksingla@whissle.ai" }]
 # Only what steertts_edge imports at runtime. The text front end is pure numpy (no NLTK / g2p_en / num2words),
 # the default runtime is ONNX Runtime (OnnxTTS); the PyTorch runtime (EdgeTTS) is the [torch] extra. WAV output uses

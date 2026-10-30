@@ -19,4 +19,4 @@ model files it reads come from huggingface.co/WhissleAI/steer-tts-edge)
 * native/front/ holds the same front end data as front/ (CMUdict entries, the int8 g2p_en GRU, heteronym and Unicode
   tables) re-encoded for the C++ runtime; the notices above apply to it unchanged. onnx/ holds the acoustic model and
   vocoder (same weights as the safetensors) as ONNX graphs.
-* Model weights (acoustic, vocoder, voices) and code: see LICENSE.md (code MIT, weights CC BY-NC 4.0).
+* Model weights (acoustic, vocoder, voices) and code: see LICENSE (code, weights and voices CC BY-NC 4.0 + Whissle terms).

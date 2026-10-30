@@ -126,7 +126,7 @@ final class SettingsScreen {
         about.addView(u.divider());
         about.addView(u.settingRow("Licences", "Open-source notices", u.chevron(), v -> new AlertDialog.Builder(a)
                 .setTitle("Licences")
-                .setMessage("SteerTTS app and engine: MIT licence, github.com/WhissleAI/steer-tts.\n\n"
+                .setMessage("SteerTTS app and engine: CC BY-NC 4.0 + Whissle terms (non-commercial), github.com/WhissleAI/steer-tts.\n\n"
                         + "The SteerTTS voice model is Whissle's own and is included for use in this app.\n\n"
                         + "Pronunciation data derived from the CMU Pronouncing Dictionary (BSD licence).")
                 .setPositiveButton("OK", null).show()));
