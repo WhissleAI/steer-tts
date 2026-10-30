@@ -21,6 +21,7 @@
 #include "st_base.h"
 #include "st_dsp.h"
 #include "st_flow.h"
+#include "st_events.h"
 #include "st_mel.h"
 #include "st_prompt.h"
 #include "st_vocoder.h"
@@ -241,6 +242,8 @@ struct steertts_engine {
   st_weights* w_voices;
   char* default_voice;
   char* voice_gender;        /* per voice: 'f', 'm' or 0 (voices.json "gender") */
+  float* voice_f0;           /* per voice: voices.json "f0_median_hz" (0 = unknown), for the event bank */
+  st_events* events;         /* events.safetensors ([laugh] [cough] ...), NULL = event tokens stay silent */
   int gender_default[2];     /* default voice per gender (female, male), -1 = none */
   int n_tags;
   char** tags;
@@ -335,7 +338,8 @@ static const char* const gender_picks[2] = {"voice_1688", "voice_2500"};
 static int load_genders(steertts_engine* e) {
   e->gender_default[0] = e->gender_default[1] = -1;
   e->voice_gender = (char*)st_calloc((size_t)e->n_voices + 1);
-  if (!e->voice_gender) return -1;
+  e->voice_f0 = (float*)st_calloc(sizeof(float) * ((size_t)e->n_voices + 1));
+  if (!e->voice_gender || !e->voice_f0) return -1;
   char* p = path_join(e->dir, "voices.json");
   st_json* vj = p && file_exists(p) ? load_json_file(p) : NULL;
   st_free(p);
@@ -346,6 +350,7 @@ static int load_genders(steertts_engine* e) {
     /* edge: voices.json is the voice table, same order; v1: matched by name against voices_order */
     int k = i < e->n_voices && !strcmp(e->voices[i], name) ? i : find_str(e->voices, e->n_voices, name);
     if (k >= 0) e->voice_gender[k] = !strcmp(g, "female") ? 'f' : !strcmp(g, "male") ? 'm' : 0;
+    if (k >= 0) e->voice_f0[k] = (float)st_json_num(st_json_get(&vl->items[i], "f0_median_hz"), 0.0);
   }
   st_json_free(vj);
   static const char* const keys[2] = {"female", "male"};
@@ -549,6 +554,16 @@ steertts_engine* steertts_create_ex(const char* model_dir, const steertts_config
     goto fail;
   }
   if (load_genders(e)) goto fail;
+  {  /* EventBank.find: config "events" file, else events.safetensors; absent = no bank */
+    const char* ev = st_json_str(st_json_get(st_json_get(e->cfg_json, "events"), "file"), "events.safetensors");
+    char* p = path_join(e->dir, ev);
+    if (!p) goto fail;
+    if (file_exists(p) && !(e->events = st_events_open(p))) {
+      st_free(p);
+      goto fail;
+    }
+    st_free(p);
+  }
   return e;
 fail:
   copy_err(err, err_len);
@@ -587,6 +602,8 @@ void steertts_destroy(steertts_engine* e) {
   free_list(e->ptags, e->n_ptags);
   st_free(e->default_voice);
   st_free(e->voice_gender);
+  st_free(e->voice_f0);
+  st_events_free(e->events);
   st_free(e->dir);
   st_free(e->assets);
   st_free(e->precision);
@@ -1536,6 +1553,74 @@ typedef struct {
   steertts_engine* e;
 } prompt_cb_ctx;
 
+/* ------------------------------------------------------------------ recorded events (steertts/events.py) */
+#define STOP 1   /* run_segments: the sink asked to stop */
+
+typedef int (*chunk_sink)(void* user, const float* y, size_t n, const steertts_chunk_info* info);
+
+typedef struct {
+  int vi;          /* the voice (gender, f0 of the pick); -1 when cloning */
+  int64_t seed;    /* request seed; the k-th event of a request uses seed + k */
+  int n_ev;
+  int has_level;
+  float level;     /* EventBank.loudness of the first rendered speech chunk */
+} ev_state;
+
+static int is_bank_event(void* user, const char* name) { return st_events_has(((steertts_engine*)user)->events, name); }
+
+/* EventBank.loudness(wav_mel(y)) */
+static int speech_level(const float* y, size_t n, float* level) {
+  if (n < 1024) {  /* wav_mel of a clip shorter than one window: the vocos floor */
+    *level = (float)log(1e-7);
+    return 0;
+  }
+  float* mel = NULL;
+  int T = 0;
+  if (st_mel_spectrogram(y, n, &mel, &T)) return -1;
+  *level = st_events_loudness(mel, T);
+  st_free(mel);
+  return 0;
+}
+
+/* one event chunk: the bank's mel through the engine's vocoder; returns 0, -1 (error) or STOP */
+static int emit_event(steertts_engine* e, ev_state* ev, const st_segment* s, int index, chunk_sink sink, void* user) {
+  double t0 = st_time_ms();
+  char g = ev->vi >= 0 ? e->voice_gender[ev->vi] : 0;
+  double f0 = ev->vi >= 0 ? e->voice_f0[ev->vi] : 0.0;
+  float* mel = NULL;
+  int T = 0;
+  if (st_events_mel(e->events, s->event, g, f0, ev->has_level, ev->level, ev->seed + ev->n_ev, &mel, &T)) return -1;
+  ev->n_ev++;
+  float* y = NULL;
+  size_t n = 0;
+  int rc = st_vocoder_decode(e->voc, e->pool, mel, T, &y, &n);
+  st_free(mel);
+  if (rc) return -1;
+  steertts_chunk_info info = {"", "none", "", 0, index, st_time_ms() - t0, s->event};
+  int st = sink(user, y, n, &info);
+  st_free(y);
+  return st < 0 ? -1 : st ? STOP : 0;
+}
+
+/* SteerTTS._has_event: a [name] token (letters / _, optional spaces) whose lower-case name the bank renders */
+static int has_bank_event(const steertts_engine* e, const char* t) {
+  if (!e->events || !t) return 0;
+  for (const char* p = strchr(t, '['); p; p = strchr(p + 1, '[')) {
+    const char* q = p + 1;
+    while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r' || *q == '\f' || *q == '\v') ++q;
+    char nm[64];
+    int k = 0;
+    while (((*q | 32) >= 'a' && (*q | 32) <= 'z') || *q == '_') {
+      if (k < 63) nm[k++] = (char)(*q >= 'A' && *q <= 'Z' ? *q + 32 : *q);
+      ++q;
+    }
+    nm[k] = 0;
+    while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r' || *q == '\f' || *q == '\v') ++q;
+    if (k && k < 63 && *q == ']' && st_events_has(e->events, nm)) return 1;
+  }
+  return 0;
+}
+
 /* <style prompt="..."> inside markup (MarkupSynth._style_of_prompt): the adapter's best known tag != "none" */
 static int style_of_prompt(void* user, const char* prompt, char** tag, int* n_ctrl, char*** names, float** vals) {
   steertts_engine* e = ((prompt_cb_ctx*)user)->e;
@@ -1562,8 +1647,6 @@ static int style_of_prompt(void* user, const char* prompt, char** tag, int* n_ct
   return 0;
 }
 
-typedef int (*chunk_sink)(void* user, const float* y, size_t n, const steertts_chunk_info* info);
-
 /* markup segments in order (MarkupSynth.stream): pauses as zeros, speech with 10 ms fades */
 static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, chunk_sink sink, void* user) {
   const char* names[N_CTRL];
@@ -1572,13 +1655,34 @@ static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, ch
   st_segment* segs = NULL;
   int ns = 0;
   prompt_cb_ctx pc = {e};
-  if (st_front_parse_markup(e->front, r->text, r->tag, names, vals, r->n_ctrl, (const char* const*)e->tags, e->n_tags,
-                            e->edge ? NULL : style_of_prompt, &pc, &segs, &ns))
+  if (st_front_parse_markup_ev(e->front, r->text, r->tag, names, vals, r->n_ctrl, (const char* const*)e->tags,
+                               e->n_tags, e->edge ? NULL : style_of_prompt, &pc, e->events ? is_bank_event : NULL, e,
+                               &segs, &ns))
     return -1;
   int rc = 0;
-  for (int i = 0; i < ns && rc == 0; ++i) {
+  /* events: the speech level of the first rendered sentence; events before it wait for it (MarkupSynth.stream) */
+  ev_state ev = {0};
+  ev.vi = r->ref_wav ? -1 : find_str(e->voices, e->n_voices, r->voice ? r->voice : e->default_voice);
+  ev.seed = r->seed;
+  int* waiting = (int*)st_malloc(sizeof(int) * (size_t)(ns ? ns : 1));
+  int n_wait = 0;
+  if (!waiting) {
+    st_segments_free(segs, ns);
+    return -1;
+  }
+  for (int i = 0; i <= ns && rc == 0; ++i) {
+    if (i == ns) {  /* text that is only events: no speech level to match, the clip's own level is kept */
+      for (int w = 0; w < n_wait && rc == 0; ++w) rc = emit_event(e, &ev, &segs[waiting[w]], waiting[w], sink, user);
+      n_wait = 0;
+      break;
+    }
     st_segment* s = &segs[i];
     if (s->skip) continue;
+    if (s->event) {
+      if (!ev.has_level) waiting[n_wait++] = i;
+      else rc = emit_event(e, &ev, s, i, sink, user);
+      continue;
+    }
     double t0 = st_time_ms();
     float* y = NULL;
     size_t n = 0;
@@ -1612,6 +1716,20 @@ static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, ch
       st_free(ws);
       if (rc) break;
       fade_ends(y, n);
+      if (e->events && n && !ev.has_level) {
+        if (speech_level(y, n, &ev.level)) {
+          st_free(y);
+          rc = -1;
+          break;
+        }
+        ev.has_level = 1;
+        for (int w = 0; w < n_wait && rc == 0; ++w) rc = emit_event(e, &ev, &segs[waiting[w]], waiting[w], sink, user);
+        n_wait = 0;
+        if (rc) {
+          st_free(y);
+          break;
+        }
+      }
     }
     char ctrl_s[512] = "";
     size_t k = 0;
@@ -1621,17 +1739,21 @@ static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, ch
       k += (size_t)snprintf(ctrl_s + k, sizeof ctrl_s - k, "%s%s=%s", c ? "," : "", s->ctrl_name[c], rep);
     }
     steertts_chunk_info info = {s->text ? s->text : "", s->tag ? s->tag : "none", ctrl_s, s->pause_ms, i,
-                                st_time_ms() - t0};
+                                st_time_ms() - t0, NULL};
     int st = sink(user, y, n, &info);
     st_free(y);
     if (st < 0) {
       rc = -1;
       break;
     }
-    if (st) break;
+    if (st) {
+      rc = STOP;
+      break;
+    }
   }
+  st_free(waiting);
   st_segments_free(segs, ns);
-  return rc;
+  return rc == STOP ? 0 : rc;
 }
 
 static int collect_sink(void* user, const float* y, size_t n, const steertts_chunk_info* info) {
@@ -1651,7 +1773,7 @@ static int synth_req(steertts_engine* e, req_t* r, float** audio, size_t* n) {
     return -1;
   }
   int rc;
-  if (r->markup) {
+  if (r->markup || (!r->n_ws && has_bank_event(e, r->text))) {  /* event tokens render through the segments */
     fbuf b = {0};
     rc = run_segments(e, r, &spk, collect_sink, &b);
     if (rc == 0 && b.chunks == 0) rc = fb_add(&b, NULL, 1);   /* Python: np.zeros(1) when there is no segment */

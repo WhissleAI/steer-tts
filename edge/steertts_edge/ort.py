@@ -69,6 +69,8 @@ class OnnxTTS:
         self._mean = vt["spk_mean"].astype(np.float32)
         self._vi = {v: i for i, v in enumerate(self.voices)}
         self.default_voice = cfg.get("default_voice", self.voices[0])
+        from .events import EventBank
+        self.events = EventBank.find(d, cfg)  # recorded [laugh] [cough] ... (None: tokens stay silent)
         self.spk_ref = self._vi
         so = ort.SessionOptions()
         if threads:
@@ -133,7 +135,7 @@ class OnnxTTS:
                  spk_vec=None, markup=False, **_ignored):
         tag = tag or "none"
         self._check(voice if spk_vec is None else None, tag, dict(_ignored, word_shift=word_shift if markup else None))
-        if markup:
+        if markup or (self.events and not word_shift and self._has_event(text)):
             from .markup import MarkupSynth
             return MarkupSynth(self).render(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
                                             spk_vec=spk_vec)
@@ -214,6 +216,15 @@ class OnnxTTS:
             return np.zeros(0, np.float32)
         re, im = self.voc.run(None, dict(mel=mel.astype(np.float32)))
         return istft(re[0], im[0]).astype(np.float32)
+
+    def _vocode(self, mel):
+        """log-mel [100, T] (numpy) -> waveform, through the same vocoder as the speech."""
+        re, im = self.voc.run(None, dict(mel=np.asarray(mel, np.float32)[None]))
+        return istft(re[0], im[0]).astype(np.float32)
+
+    def _has_event(self, text):
+        from .text import _EVENT_RE
+        return any(m.group(1).lower() in self.events for m in _EVENT_RE.finditer(text or ""))
 
     def save(self, wav, path):
         import wave

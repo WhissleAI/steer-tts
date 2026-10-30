@@ -58,6 +58,8 @@ class EdgeTTS:
         vsd = {k: t for k, t in vsd.items() if not k.startswith(("feature_extractor.", "head.istft."))}
         self.vocoder.load_state_dict(vsd, strict=True)
         self.default_voice = cfg.get("default_voice", self.voices[0])
+        from .events import EventBank
+        self.events = EventBank.find(d, cfg)  # recorded [laugh] [cough] ... (None: tokens stay silent)
         self.spk_ref = self._vi   # name -> row (markup / request checks use `voice in tts.spk_ref`)
 
     # RELEASE (steer-tts-edge 1.0.0): load from a Hugging Face repo id or a local directory.
@@ -113,7 +115,7 @@ class EdgeTTS:
                  spk_vec=None, markup=False, **_ignored):
         tag = tag or "none"  # RELEASE: tag=None means no style tag (was: ValueError "unknown tag None")
         self._check(voice if spk_vec is None else None, tag, dict(_ignored, word_shift=word_shift if markup else None))
-        if markup:
+        if markup or (self.events and not word_shift and self._has_event(text)):
             from .markup import MarkupSynth
             return MarkupSynth(self).render(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
                                             spk_vec=spk_vec)
@@ -173,6 +175,16 @@ class EdgeTTS:
         if mel is None:
             return np.zeros(0, np.float32)
         return self.vocoder.decode(mel.float()).squeeze().cpu().numpy().astype(np.float32)
+
+    @torch.no_grad()
+    def _vocode(self, mel):
+        """log-mel [100, T] (numpy) -> waveform, through the same vocoder as the speech."""
+        m = torch.from_numpy(np.asarray(mel, np.float32))[None].to(self.dev)
+        return self.vocoder.decode(m).squeeze().cpu().numpy().astype(np.float32)
+
+    def _has_event(self, text):
+        from .text import _EVENT_RE
+        return any(m.group(1).lower() in self.events for m in _EVENT_RE.finditer(text or ""))
 
     def save(self, wav, path):
         """16-bit PCM WAV at 24 kHz (clipped to [-1, 1]). RELEASE: stdlib `wave` instead of soundfile, one

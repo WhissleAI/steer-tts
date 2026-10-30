@@ -44,6 +44,7 @@ steertts-edge "Are you coming with us tonight?" --ctrl f0_end=2,f0_iqr=1.5 -o qu
 from steertts_edge import OnnxTTS
 tts = OnnxTTS.from_pretrained("WhissleAI/steer-tts-edge")
 wav = tts("Well, *that* was fast. [pause 400ms] <whisper>Don't tell anyone.</whisper>", markup=True)
+wav = tts("Oh no, I did it again. [laugh] Okay, let me start over.")   # a recorded laugh, matched to the voice
 tts.save(wav, "out.wav")
 ```
 
@@ -95,3 +96,6 @@ licensed under CC BY-NC 4.0 + Whissle terms.
 - "SteerTTS" and "Whissle" are trademarks of Whissle Inc. You may say that your work is based on SteerTTS. Do not
   name or market a product or model as "SteerTTS".
 - Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
+- The recorded event bank (`events.safetensors` in the model packages, used for `[laugh]` `[cough]` `[dog]` ...) is
+  not covered by the licence above: its in-voice clips come from VocalSound (Gong et al., 2022; CC BY-SA 4.0) and
+  its environmental clips are FSD50K clips released under CC0 1.0. See the packages' NOTICE files.

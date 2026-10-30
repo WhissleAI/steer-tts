@@ -114,3 +114,80 @@ void save_wav(const std::vector<float>& y, int sr, const std::string& path) {
 
 }  // namespace dsp
 }  // namespace steertts
+
+namespace steertts {
+namespace dsp {
+
+namespace {
+// in-place iterative radix-2 FFT of n = 2^k complex values
+void fft(std::vector<double>& re, std::vector<double>& im) {
+  const size_t n = re.size();
+  for (size_t i = 1, j = 0; i < n; ++i) {
+    size_t bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) std::swap(re[i], re[j]), std::swap(im[i], im[j]);
+  }
+  for (size_t len = 2; len <= n; len <<= 1) {
+    const double a = -2.0 * kPi / double(len);
+    for (size_t i = 0; i < n; i += len)
+      for (size_t k = 0; k < len / 2; ++k) {
+        double wr = std::cos(a * double(k)), wi = std::sin(a * double(k));
+        double xr = re[i + k + len / 2] * wr - im[i + k + len / 2] * wi;
+        double xi = re[i + k + len / 2] * wi + im[i + k + len / 2] * wr;
+        re[i + k + len / 2] = re[i + k] - xr, im[i + k + len / 2] = im[i + k] - xi;
+        re[i + k] += xr, im[i + k] += xi;
+      }
+  }
+}
+double hz2mel(double f) { return 2595.0 * std::log10(1.0 + f / 700.0); }
+double mel2hz(double m) { return 700.0 * (std::pow(10.0, m / 2595.0) - 1.0); }
+}  // namespace
+
+std::vector<float> log_mel(const std::vector<float>& y, int& T) {
+  const int nb = 100, nf = kNfft / 2 + 1, sr = 24000;
+  const float floor_ = float(std::log(1e-7));
+  if (y.size() < size_t(kNfft)) {
+    T = 1;
+    return std::vector<float>(nb, floor_);
+  }
+  static std::vector<float> fb;   // [100, 513] triangular HTK filters
+  static std::vector<double> win;
+  if (fb.empty()) {
+    std::vector<double> pts(nb + 2);
+    for (int i = 0; i < nb + 2; ++i) pts[i] = mel2hz(hz2mel(sr / 2.0) * i / (nb + 1));
+    fb.assign(size_t(nb) * nf, 0.0f);
+    for (int b = 0; b < nb; ++b)
+      for (int k = 0; k < nf; ++k) {
+        double f = double(sr) / 2.0 * k / (nf - 1);
+        double v = std::min((f - pts[b]) / (pts[b + 1] - pts[b]), (pts[b + 2] - f) / (pts[b + 2] - pts[b + 1]));
+        fb[size_t(b) * nf + k] = float(std::max(0.0, v));
+      }
+    win.resize(kNfft);
+    for (int i = 0; i < kNfft; ++i) win[i] = 0.5 - 0.5 * std::cos(2.0 * kPi * i / kNfft);
+  }
+  const int pad = kNfft / 2, n = int(y.size());
+  auto at = [&](int i) {  // reflect padding
+    int j = i - pad;
+    if (j < 0) j = -j;
+    if (j >= n) j = 2 * (n - 1) - j;
+    return double(y[size_t(j)]);
+  };
+  T = 1 + n / kHop;
+  std::vector<float> out(size_t(nb) * T);
+  std::vector<double> re(kNfft), im(kNfft), mag(nf);
+  for (int t = 0; t < T; ++t) {
+    for (int i = 0; i < kNfft; ++i) re[i] = at(t * kHop + i) * win[i], im[i] = 0;
+    fft(re, im);
+    for (int k = 0; k < nf; ++k) mag[k] = std::sqrt(re[k] * re[k] + im[k] * im[k]);
+    for (int b = 0; b < nb; ++b) {
+      double s = 0;
+      for (int k = 0; k < nf; ++k) s += fb[size_t(b) * nf + k] * mag[k];
+      out[size_t(b) * T + t] = float(std::log(std::max(s, 1e-7)));
+    }
+  }
+  return out;
+}
+
+}  // namespace dsp
+}  // namespace steertts

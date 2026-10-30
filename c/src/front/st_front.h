@@ -59,7 +59,12 @@ typedef struct {
   st_word_shift* ws;     /* sorted by word; word = index in st_front_phonemes(text).widx */
   int pause_ms;          /* > 0: silence of that length instead of speech; -1 with skip = 1: the PAUSE quirk */
   int skip;              /* 1: Python quirk segment, render nothing (see below) */
+  char* event;           /* non-NULL: a recorded sound event ([laugh] ...) from the event bank, text "" */
 } st_segment;
+
+/* Optional event-bank membership test for st_front_parse_markup_ev: 1 if the lower-case token name (e.g. "laugh") is
+ * rendered from the bank (its own segment), 0 to keep it in the TTS text (MarkupSynth with tts.events). */
+typedef int (*st_event_fn)(void* user, const char* name);
 
 /* Optional resolver for <style prompt="...">, the v1 prompt adapter (steertts/markup.py _style_of_prompt): returns
  * the span's style tag (the adapter's first top tag the model knows and != "none", else "none") and its controls.
@@ -82,6 +87,11 @@ typedef int (*st_prompt_style_fn)(void* user, const char* prompt, char** tag, in
 int st_front_parse_markup(st_front* f, const char* text, const char* default_tag, const char* const* ctrl_names,
                           const float* ctrl_vals, int n_ctrl, const char* const* known_tags, int n_tags,
                           st_prompt_style_fn prompt_fn, void* prompt_user, st_segment** segs, int* n_segs);
+/* st_front_parse_markup plus the event bank: tokens with is_event(user, name) == 1 become event segments. */
+int st_front_parse_markup_ev(st_front* f, const char* text, const char* default_tag, const char* const* ctrl_names,
+                             const float* ctrl_vals, int n_ctrl, const char* const* known_tags, int n_tags,
+                             st_prompt_style_fn prompt_fn, void* prompt_user, st_event_fn is_event, void* event_user,
+                             st_segment** segs, int* n_segs);
 void st_segments_free(st_segment* s, int n);
 
 #ifdef __cplusplus
