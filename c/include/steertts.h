@@ -212,6 +212,19 @@ STEERTTS_API int steertts_reading_next(steertts_reading* r, const steertts_sente
                                        float plan[STEERTTS_PLAN_DIMS]);
 STEERTTS_API void steertts_reading_free(steertts_reading* r);
 
+/* Music (director format 3): the same model also plans the music under a reading, per sentence: how likely each of
+ * its moods is ("calm", "tense", "eerie", ...), how intense the music should be (0-1) and how likely a new scene starts
+ * here (0-1). Average a paragraph's sentences and smooth over paragraphs before changing the music (the apps hold a
+ * scene a few paragraphs). steertts_director_moods() is 0 for a director without music (formats 1 and 2), and the
+ * calls below then fail; the plans are the same with or without music.
+ * music[]: steertts_director_moods(d) + 2 numbers per sentence: the mood probabilities, intensity, change. */
+STEERTTS_API int steertts_director_moods(const steertts_director* d);
+STEERTTS_API const char* steertts_director_mood(const steertts_director* d, int i);
+STEERTTS_API int steertts_director_plan_music(const steertts_director* d, const steertts_sentence* sentences, size_t n,
+                                              const char* genre, float* plans, float* music, char* err, size_t err_len);
+STEERTTS_API int steertts_reading_next_music(steertts_reading* r, const steertts_sentence* s, const steertts_sentence* next,
+                                             float plan[STEERTTS_PLAN_DIMS], float* music);
+
 /* A plan as request controls: strength scales it (1 = as narrators perform, 0 = off); the ending is mapped to f0_end.
  * The director's file carries how its paired voice responds (it delivers ~30-95% of a requested change, pitch least),
  * so the request asks for what makes the voice perform the plan; d may be NULL (the plan as is).
