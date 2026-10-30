@@ -45,6 +45,7 @@ def resolve_model_dir(repo_or_path=None, revision=None, token=None, precision="f
     keep = [f for f in top if f.endswith(".json")]
     if precision == "int8":
         keep += [f for f in files if f.startswith("int8/") and f.endswith(".safetensors")]
+        keep += [f for f in top if f == "events.safetensors"]  # the event bank has no int8 copy
     else:
         keep += [f for f in top if f.endswith(".safetensors")]
     return Path(snapshot_download(repo_or_path, revision=revision, token=token, allow_patterns=keep))

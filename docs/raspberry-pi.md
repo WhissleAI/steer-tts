@@ -107,7 +107,7 @@ sudo apt install cmake g++ git
 git clone https://github.com/WhissleAI/steer-tts && cd steer-tts/native
 cmake -B build && cmake --build build -j4                 # downloads onnxruntime-linux-aarch64
 pip install huggingface_hub && hf auth login       # if the repo asks you to accept its licence
-huggingface-cli download WhissleAI/steer-tts-edge --local-dir model --include config.json --include "voices.*" --include "onnx/*" --include "native/*"
+huggingface-cli download WhissleAI/steer-tts-edge --local-dir model --include config.json --include "voices.*" --include "onnx/*" --include "native/*" --include events.safetensors
 ./build/steertts-edge --model model --bench --threads 1
 ./build/steertts-edge --model model "Hello from a Raspberry Pi." --stream -o - | aplay -f S16_LE -r 24000 -c 1
 ```

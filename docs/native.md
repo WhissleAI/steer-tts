@@ -36,7 +36,7 @@ Hugging Face repo asks you to accept its licence, run `hf auth login` and accept
 ```bash
 pip install huggingface_hub
 huggingface-cli download WhissleAI/steer-tts-edge --local-dir steer-tts-edge \
-    --include config.json --include "voices.*" --include "onnx/*" --include "native/*"
+    --include config.json --include "voices.*" --include "onnx/*" --include "native/*" --include events.safetensors
 ```
 
 ## Command line

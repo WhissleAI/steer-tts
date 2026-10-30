@@ -98,7 +98,8 @@ class OnnxTTS:
             raise ImportError("OnnxTTS.from_pretrained(<repo id>) needs huggingface_hub: "
                               "pip install 'steertts-edge[hub]' (or pass a local directory)") from e
         d = snapshot_download(repo_id, revision=revision,
-                              allow_patterns=["config.json", "voices.safetensors", "voices.json", "front/*", "onnx/*"])
+                              allow_patterns=["config.json", "voices.safetensors", "voices.json", "front/*", "onnx/*",
+                                              "events.safetensors"])
         return cls(d, **kw)
 
     # ------------------------------------------------------------------ requests (as EdgeTTS)
