@@ -7,7 +7,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 VERSION=1.0.0
 BUILD=1
-IDENTITY="Developer ID Application: Whissle LLC (XXK95K57U5)"
+# codesign matches a substring of the certificate name; this prefix fits the current Developer ID and the renamed one
+# (override with SIGN_IDENTITY="<SHA-1 from security find-identity -v -p codesigning>" if several match)
+IDENTITY="${SIGN_IDENTITY:-Developer ID Application: Whissle}"
 PROFILE=WHISSLE_NOTARIZE
 MODE=${1:-}
 
