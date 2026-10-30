@@ -42,10 +42,12 @@ Open TTS Leaderboard protocol, run locally (not an official submission): Qwen3-A
 | v1 fp32, refiner on | 215 MB | 0.94 % | 4.27 | 2.62 % | 4.24 |
 | v1 int8, refiner on | 52 MB | 1.03 % | 4.27 | 2.66 % | 4.25 |
 | v1 fp32, refiner off | 215 MB | 0.96 % | 4.20 | 2.62 % | 4.17 |
-| edge (int4 acoustic + int4 vocoder) | 12 MB | 0.96 % | 4.11 | 2.67 % | 4.08 |
+| edge 1.x (v1 int4 acoustic + int4 vocoder) | 12 MB | 0.96 % | 4.11 | 2.67 % | 4.08 |
+| **edge 2.0.0** (v2 int4 acoustic + int4 vocoder) | 12 MB | **0.93 %** | **4.17** | **2.44 %** | **4.15** |
 
 The edge build's ONNX and native runtimes render the same audio as its PyTorch runtime up to float rounding (same
-durations; mel spectrograms agree to ~3·10⁻⁵, waveforms at 52–90 dB SNR), so the edge row holds for all three.
+durations; mel spectrograms agree to ~3·10⁻⁵, waveforms at 52–90 dB SNR), so the edge rows hold for all three. Edge 2.0.0 carries the v2 acoustic model (same architecture and files as
+1.x); pin `revision="v1.4.0"` for the 1.x weights.
 See the model cards for steering readback, per-tag numbers and limitations.
 
 ## Memory and speed (edge)

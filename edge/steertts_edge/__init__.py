@@ -4,7 +4,7 @@ g2p_en / Vocos / WavLM / MiniLM at runtime). Two runtimes over the same package:
 plans how each sentence of a longer text is performed (director.bin; docs/director.md)."""
 from .config import CONTROL_DIMS, SR
 
-__version__ = "1.4.0"
+__version__ = "2.0.0"
 __all__ = ["EdgeTTS", "OnnxTTS", "Director", "SR", "CONTROL_DIMS", "__version__"]
 
 

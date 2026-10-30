@@ -19,9 +19,10 @@ Raspberry Pi-class CPU without Python. Both run from one dependency-free C libra
 | [edge, native](docs/native.md) | 13.9 MB | C++17 / C API + ONNX Runtime | The edge build on ONNX Runtime |
 
 Every build takes the same [request](docs/request.md) (text, voice, tag, controls, guidance, markup) and renders
-sentence by sentence for streaming. The edge build reproduces v1 without its flow refiner: the same intelligibility
-(Seed-TTS WER 0.96 % in both), about 0.1 lower UTMOS, and at least 95 % of v1's effect on every control
-([numbers](docs/models.md#quality)).
+sentence by sentence for streaming. The edge build (2.0.0) carries the v2 acoustic model in 12 MB: Seed-TTS / CV3-Eval
+WER 0.93 % / 2.44 % and UTMOS 4.17 / 4.15, more intelligible than v1 without its flow refiner (0.96 % / 2.62 %) and
+0.03 UTMOS below it ([numbers](docs/models.md#quality)). Inline sound events (`[laugh]`, `[cough]` …) play recorded
+sounds matched to the voice.
 
 ## Quick start
 
