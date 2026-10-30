@@ -5,8 +5,8 @@
 {"text": "Please keep this between the two of us.", "tag": "whisper", "out": "case_004.f32", "n": 56576}
 {"text": "I really thought it would work this time.", "tag": "sadness", "guidance": 1.5, "out": "case_005.f32", "n": 53504}
 {"text": "Well, *that* was fast. [pause 400ms] <slow>Let me think about it.</slow> <whisper>Don't tell anyone.</whisper>", "markup": true, "out": "case_006.f32", "n": 120704}
-{"text": "On 3/14/2025 the price rose 12.5% to $1,299.99.", "voice": "voice_0010", "word_shift": {"1": {"pitch": 3, "dur": 1.4}}, "out": "case_007.f32", "n": 201728}
-{"text": "It's 7:45 pm, call 555-0198 [laugh] now!", "voice": "voice_0005", "tag": "excited", "pace": 1.2, "out": "case_008.f32", "n": 104704}
+{"text": "On 3/14/2025 the price rose 12.5% to $1,299.99.", "voice": "voice_0010", "word_shift": {"1": {"pitch": 3, "dur": 1.4}}, "out": "case_007.f32", "n": 203264}
+{"text": "It's 7:45 pm, call 555-0198 [laugh] now!", "voice": "voice_0005", "tag": "excited", "pace": 1.2, "out": "case_008.f32", "n": 165376}
 {"text": "x", "out": "case_009.f32", "n": 11264}
 {"text": "   ", "out": "case_010.f32", "n": 0}
 {"text": "First sentence here. Second one follows! And a third, with a question?", "markup": true, "tag": "happiness", "ctrl": {"loud": 0.5}, "guidance": 2.0, "out": "case_011.f32", "n": 118784}

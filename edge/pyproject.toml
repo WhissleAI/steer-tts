@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "steertts-edge"
-version = "1.3.0"
+version = "1.4.0"
 description = "SteerTTS v1 edge build: a 12 MB on-device, numerically steerable English TTS (int4 acoustic model + int4 vocoder)"
 readme = "README.md"
 requires-python = ">=3.10"
