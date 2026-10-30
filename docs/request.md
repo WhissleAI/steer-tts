@@ -86,7 +86,8 @@ With `markup` on (and always in `stream()`):
 | `[pause]`, `[pause 300ms]`, `[pause 1.5s]` | Exact silence (400 ms by default, at most 5 s) |
 | `<whisper>…</whisper>` (any tag name) | The span is rendered as its own segment with that tag |
 | `<style prompt="…">…</style>` | The span is rendered with a free-text prompt (v1 only; edge raises an error) |
-| `[laugh]`, `[cough]`, `[dog]` … | Sound-event tokens: they reserve about 0.12 s; no sound is synthesised |
+| `[laugh]` `[cough]` `[sigh]` `[sneeze]` `[throat]` | In-voice sounds from the recorded event bank: a real recording of the voice's gender and nearest pitch, re-pitched to the voice, 2 dB under its level, as its own chunk |
+| `[dog]` `[knock]` `[door]` `[phone]` `[bell]` … | Environmental sounds from the same bank (full package), 3 dB under the speech. A token the bank lacks reserves about 0.12 s and renders no sound |
 
 The per-word tags nest and stack (`<slow><high>…</high></slow>`), and the sentence is still rendered in one pass, so
 the prosody around an edited word stays natural. Text is split into segments at sentence ends and at style-span

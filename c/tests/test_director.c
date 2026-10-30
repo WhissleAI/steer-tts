@@ -2,6 +2,7 @@
  * held-out chapters), sentence-by-sentence readings equal to whole-text planning, the ctrl string in a comma-decimal
  * locale, pause bounds, and NULL arguments. Needs director.bin in the edge model directory
  * ($STEERTTS_EDGE_MODEL, default ../models/steer-tts-edge); skipped without it. */
+#define _POSIX_C_SOURCE 200809L   /* strdup under -std=c11: undeclared, it returned a truncated int pointer */
 #include <locale.h>
 #include <math.h>
 #include <stdio.h>

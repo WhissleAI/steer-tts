@@ -16,7 +16,7 @@
    "type": "string",
    "minLength": 1,
    "maxLength": 5000,
-   "description": "English text. Numbers, units, currency, ordinals, ranges and unknown acronyms are spelled out by the front end. With `markup: true` it may contain inline markup (see `markup`). Event tokens such as [laugh] or [dog] are accepted: the model reserves a short stretch of time for them but renders no sound."
+   "description": "English text. Numbers, units, currency, ordinals, ranges and unknown acronyms are spelled out by the front end. With `markup: true` it may contain inline markup (see `markup`). Event tokens such as [laugh], [cough], [sigh], [sneeze], [throat] or [dog] are rendered from the package's recorded event bank (events.safetensors) as their own chunk, matched to the voice; such text is rendered segment by segment as with markup. A token the bank lacks reserves a short stretch of time but renders no sound."
   },
   "voice": {
    "type": "string",

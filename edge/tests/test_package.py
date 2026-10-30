@@ -17,6 +17,8 @@ PAYLOAD_ONNX = ["config.json", "onnx/enc.onnx", "onnx/dec.onnx", "onnx/voc.onnx"
 def _payload(d, names=PAYLOAD):
     d = Path(d)
     files = [d / f for f in names]
+    if (d / "events.safetensors").exists():  # the recorded event bank counts toward the device budget
+        files.append(d / "events.safetensors")
     code = d / "steertts_edge"
     if code.is_dir():  # repo checkout (the installed package has its code in site-packages)
         files += [p for p in code.rglob("*.py")]

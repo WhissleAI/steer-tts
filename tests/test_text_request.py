@@ -7,10 +7,10 @@ from steertts.text import SYMBOLS, normalize, to_phonemes
 
 
 def test_front_end_expands_numbers_units_acronyms():
-    # what g2p_en gets wrong is rewritten; bare integers are left to g2p_en, which reads them correctly
+    # numbers are spelled out by the front end itself (21-99 without g2p_en's hyphens, so they stay dictionary words)
     t = normalize("It costs $3,000, 20% more than 1990-1995, at 65 mph, a 4x4 via the IOC.")
-    assert "three thousand dollars" in t and "20 percent" in t and "1990 to 1995" in t
-    assert "65 miles per hour" in t and "4 by 4" in t and "I O C" in t
+    assert "three thousand dollars" in t and "twenty percent" in t and "nineteen ninety to nineteen ninety five" in t
+    assert "sixty five miles per hour" in t and "four by four" in t and "I O C" in t and "-" not in t
 
 
 def test_phonemes_and_word_index():

@@ -9,8 +9,10 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cctype>
 #include <cstring>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 
@@ -86,6 +88,153 @@ std::map<std::string, std::vector<float>> load_safetensors(const std::string& pa
 
 size_t padded(size_t n) { return (n + kChunk - 1) / kChunk * kChunk; }
 
+// ------------------------------------------------------------------ recorded events (steertts_edge/events.py)
+const std::set<std::string> kNonverbal = {"laugh", "cough", "sigh", "sneeze", "throat"};
+
+struct EventClip {
+  std::string type, gender;
+  double f0 = 0;
+  int start = 0, n = 0;
+};
+
+struct EventBank {
+  std::vector<uint8_t> q;       // [frames, 100]
+  std::vector<float> lo, step;  // per clip
+  std::vector<EventClip> clips;
+  std::set<std::string> types;
+
+  explicit EventBank(const std::string& path) {
+    std::string raw = read_file(path);
+    if (raw.size() < 8) throw std::runtime_error(path + ": not a safetensors file");
+    uint64_t n;
+    std::memcpy(&n, raw.data(), 8);
+    json::Value hdr = json::parse(raw.substr(8, n));
+    const char* base = raw.data() + 8 + n;
+    if (!hdr.has("__metadata__") || !hdr["__metadata__"].has("format") ||
+        hdr["__metadata__"]["format"].str != "steertts-events-1")
+      throw std::runtime_error(path + ": not a SteerTTS event bank");
+    json::Value idx = json::parse(hdr["__metadata__"]["index"].str);
+    for (auto& c : idx.arr) {
+      EventClip k;
+      k.type = c["type"].str;
+      k.gender = c["gender"].str;
+      k.f0 = c["f0"].num;
+      k.start = int(c["start"].num);
+      k.n = int(c["n"].num);
+      clips.push_back(k);
+      types.insert(k.type);
+    }
+    auto span = [&](const char* name, const char* dtype) {
+      const json::Value& t = hdr[name];
+      if (t["dtype"].str != dtype) throw std::runtime_error(path + ": " + name + " is not " + dtype);
+      size_t a = size_t(t["data_offsets"][0].num), b = size_t(t["data_offsets"][1].num);
+      return std::make_pair(base + a, b - a);
+    };
+    auto sq = span("mel_q", "U8");
+    q.assign(reinterpret_cast<const uint8_t*>(sq.first), reinterpret_cast<const uint8_t*>(sq.first) + sq.second);
+    for (auto* v : {&lo, &step}) {
+      auto s = span(v == &lo ? "lo" : "step", "F32");
+      v->resize(s.second / 4);
+      std::memcpy(v->data(), s.first, s.second);
+    }
+    for (auto& c : clips)
+      if (c.n < 1 || c.start < 0 || size_t(c.start + c.n) * 100 > q.size() || lo.size() != clips.size())
+        throw std::runtime_error(path + ": bad event index");
+  }
+
+  // EventBank.loudness of a band-major [100, T] log-mel
+  static float loudness(const float* m, int T) {
+    if (T < 1) return -6.0f;
+    std::vector<float> e(size_t(T), 0.0f);
+    for (int t = 0; t < T; ++t) {
+      double s = 0;
+      for (int k = 0; k < 100; ++k) s += m[size_t(k) * T + t];
+      e[size_t(t)] = float(s / 100);
+    }
+    std::sort(e.begin(), e.end());
+    double s = 0;
+    for (int t = T / 2; t < T; ++t) s += e[size_t(t)];
+    return float(s / (T - T / 2));
+  }
+
+  int pick(const std::string& type, const std::string& gender, double f0, int64_t seed) const {
+    std::vector<int> cand, same;
+    for (int i = 0; i < int(clips.size()); ++i)
+      if (clips[i].type == type) {
+        cand.push_back(i);
+        if (!gender.empty() && clips[i].gender == gender) same.push_back(i);
+      }
+    if (!same.empty()) cand = same;
+    if (f0 > 0 && kNonverbal.count(type)) {
+      std::vector<std::pair<double, int>> v;
+      for (int i : cand)
+        if (clips[i].f0 > 0) v.push_back({std::fabs(std::log(clips[i].f0 / f0)), i});
+      if (!v.empty()) {
+        std::sort(v.begin(), v.end());
+        cand.clear();
+        for (size_t k = 0; k < v.size() && k < 2; ++k) cand.push_back(v[k].second);
+      }
+    }
+    if (cand.empty()) throw std::runtime_error("no event clip for [" + type + "]");
+    int64_t k = seed % int64_t(cand.size());   // Python's modulo is never negative
+    return cand[size_t(k < 0 ? k + int64_t(cand.size()) : k)];
+  }
+
+  // EventBank.mel -> band-major [100, T] with 80 ms of silence each side
+  std::vector<float> mel(const std::string& type, const std::string& gender, double f0, bool has_ref, float ref,
+                         int64_t seed, int& T) const {
+    int i = pick(type, gender, f0, seed);
+    const EventClip& c = clips[size_t(i)];
+    const int gap = int(0.08 * 24000 / 256), n = c.n;
+    std::vector<float> x(size_t(100) * n);   // band-major
+    for (int t = 0; t < n; ++t)
+      for (int k = 0; k < 100; ++k) x[size_t(k) * n + t] = lo[i] + float(q[size_t(c.start + t) * 100 + k]) * step[i];
+    if (kNonverbal.count(type) && f0 > 0 && c.f0 > 0) {
+      double st = std::max(-4.0, std::min(4.0, 12.0 * std::log2(f0 / c.f0))), ratio = std::pow(2.0, st / 12.0);
+      if (std::fabs(std::log(ratio)) >= 1e-3) {
+        auto h2m = [](double f) { return 2595.0 * std::log10(1.0 + f / 700.0); };
+        auto m2h = [](double m) { return 700.0 * (std::pow(10.0, m / 2595.0) - 1.0); };
+        double step_ = h2m(12000.0) / 101;
+        std::vector<float> y(x.size());
+        for (int k = 0; k < 100; ++k) {
+          double src = (h2m(m2h(step_ * (k + 1)) / ratio) - step_) / step_;
+          src = std::max(0.0, std::min(99.0, src));
+          int i0 = int(std::floor(src)), i1 = std::min(i0 + 1, 99);
+          double w = src - i0;
+          for (int t = 0; t < n; ++t)
+            y[size_t(k) * n + t] = float((1 - w) * x[size_t(i0) * n + t] + w * x[size_t(i1) * n + t]);
+        }
+        x.swap(y);
+      }
+    }
+    if (has_ref) {
+      double g = kNonverbal.count(type) ? -2.0 : -3.0;
+      float off = float(ref + g / 20.0 * std::log(10.0) - loudness(x.data(), n));
+      for (float& v : x) v += off;
+    }
+    T = n + 2 * gap;
+    std::vector<float> m(size_t(100) * T, float(std::log(1e-7)));
+    for (int k = 0; k < 100; ++k) std::memcpy(&m[size_t(k) * T + gap], &x[size_t(k) * n], sizeof(float) * n);
+    return m;
+  }
+};
+
+// SteerTTS._has_event: a [name] token whose lower-case name the bank renders
+bool has_bank_event(const EventBank* b, const std::string& t) {
+  if (!b) return false;
+  auto sp = [](char c) { return c == ' ' || (c >= '\t' && c <= '\r'); };
+  for (size_t p = t.find('['); p != std::string::npos; p = t.find('[', p + 1)) {
+    size_t q = p + 1;
+    while (q < t.size() && sp(t[q])) ++q;
+    std::string nm;
+    while (q < t.size() && (std::isalpha(static_cast<unsigned char>(t[q])) || t[q] == '_'))
+      nm.push_back(char(std::tolower(static_cast<unsigned char>(t[q++]))));
+    while (q < t.size() && sp(t[q])) ++q;
+    if (!nm.empty() && q < t.size() && t[q] == ']' && b->types.count(nm)) return true;
+  }
+  return false;
+}
+
 Ort::Env& env() {
   static Ort::Env e(ORT_LOGGING_LEVEL_WARNING, "steertts");
   return e;
@@ -108,6 +257,7 @@ struct Engine::Impl {
   Ort::SessionOptions so;
   std::unique_ptr<Ort::Session> enc, dec, voc;
   Ort::MemoryInfo mem = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+  std::unique_ptr<EventBank> events;   // events.safetensors ([laugh] [cough] ...), null = tokens stay silent
 
   void check(const Request& r, bool markup) const {
     if (markup && !r.word_shift.empty())
@@ -273,6 +423,11 @@ struct Engine::Impl {
     std::vector<float> m;
     int T = mel(text, voice, tag, ctrl, pace, ws, guidance, spk_vec, m);
     if (T == 0) return {};
+    return vocode(m, T);
+  }
+
+  // band-major [100, T] log-mel -> waveform (the vocoder graph + iSTFT)
+  std::vector<float> vocode(std::vector<float>& m, int T) {
     std::array<int64_t, 3> shp{1, 100, T};
     Ort::Value in = Ort::Value::CreateTensor<float>(mem, m.data(), m.size(), shp.data(), 3);
     const char* in_names[] = {"mel"};
@@ -326,13 +481,18 @@ Engine::Engine(const std::string& package_dir, Options opt) : p_(new Impl) {
   p.enc = mk("enc.onnx");
   p.dec = mk("dec.onnx");
   p.voc = mk("voc.onnx");
+  {  // EventBank.find: config "events" file, else events.safetensors; absent = no bank
+    std::string ev = cfg.has("events") && cfg["events"].has("file") ? cfg["events"]["file"].str : "events.safetensors";
+    if (std::ifstream(package_dir + "/" + ev).good()) p.events.reset(new EventBank(package_dir + "/" + ev));
+  }
 }
 
 Engine::~Engine() = default;
 
 std::vector<float> Engine::synthesize(const Request& r) {
+  bool events = r.word_shift.empty() && has_bank_event(p_->events.get(), r.text);   // event tokens render as chunks
   p_->check(r, r.markup);
-  if (!r.markup)
+  if (!r.markup && !events)
     return p_->render(r.text, r.voice, r.tag, r.ctrl, r.pace, r.word_shift, r.guidance, r.spk_vec);
   std::vector<float> out;
   bool any = false;
@@ -350,7 +510,34 @@ void Engine::stream(const Request& r, const std::function<bool(const Chunk&)>& o
   q.word_shift.clear();
   p_->check(r, true);
   const int fade = int(0.01 * kSampleRate);
-  for (Segment& seg : parse_markup(*p_->front, r.text, r.tag, r.ctrl, p_->tags)) {
+  // events: matched to the voice and to the level of the first rendered sentence; events before it wait for it
+  const VoiceInfo* vi = nullptr;
+  if (r.spk_vec.empty() || !r.voice.empty()) {
+    auto it = p_->voice2i.find(r.voice.empty() ? p_->default_voice : r.voice);
+    if (it != p_->voice2i.end()) vi = &p_->voices[size_t(it->second)];
+  }
+  bool has_level = false;
+  float level = 0;
+  int64_t n_ev = 0;
+  std::vector<Segment> waiting;
+  auto event = [&](Segment s) {
+    auto t0 = std::chrono::steady_clock::now();
+    int T = 0;
+    std::vector<float> m = p_->events->mel(s.event, vi ? vi->gender : "", vi ? vi->f0_median_hz : 0.0, has_level,
+                                           level, n_ev++, T);   // edge stream(): seed 0
+    Chunk c;
+    c.audio = p_->vocode(m, T);
+    c.synth_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    c.segment = std::move(s);
+    return on_chunk(c);
+  };
+  std::set<std::string> bank = p_->events ? p_->events->types : std::set<std::string>();
+  for (Segment& seg : parse_markup(*p_->front, r.text, r.tag, r.ctrl, p_->tags, bank)) {
+    if (!seg.event.empty() && seg.event != Segment::kEventIsStyleTuple) {
+      if (!has_level) waiting.push_back(std::move(seg));
+      else if (!event(std::move(seg))) return;
+      continue;
+    }
     // Python parity quirk (see front.h): a text piece that is literally "PAUSE" crashes Python's stream(); skip it.
     // A literal "EVENT" piece renders empty text there, i.e. an empty chunk, which the code below reproduces.
     if (seg.pause_ms == Segment::kPauseIsStyleTuple) continue;
@@ -362,11 +549,22 @@ void Engine::stream(const Request& r, const std::function<bool(const Chunk&)>& o
     } else {
       c.audio = p_->render(seg.text, r.voice, seg.tag, seg.ctrl, r.pace, seg.word_shift, r.guidance, r.spk_vec);
       dsp::fade_ends(c.audio, fade);
+      if (p_->events && !c.audio.empty() && !has_level) {
+        int T = 0;
+        std::vector<float> m = dsp::log_mel(c.audio, T);
+        level = EventBank::loudness(m.data(), T);
+        has_level = true;
+        for (auto& w : waiting)
+          if (!event(std::move(w))) return;
+        waiting.clear();
+      }
     }
     c.synth_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     c.segment = std::move(seg);
     if (!on_chunk(c)) return;
   }
+  for (auto& w : waiting)  // text that is only events: no speech level to match, the clip's own level is kept
+    if (!event(std::move(w))) return;
 }
 
 int Engine::mel(const Request& r, std::vector<float>& out) {

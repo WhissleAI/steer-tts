@@ -9,9 +9,12 @@ Markup (nestable; unknown tags are dropped and their text spoken normally):
   <whisper>..</whisper>, <sadness>..</sadness>, any style tag the model knows
                                               the span is rendered as its own segment with that tag   (span)
   <style prompt="angry and fast">..</style>   the span gets the prompt adapter's tag + controls       (span)
-  [laugh] [cough] [dog] [knock] ...           event tokens: the model reserves time for them, but renders no
-                                              sound (a recorded-sound mixer
-                                              is not part of this release)
+  [laugh] [cough] [sigh] [sneeze] [throat]   in-voice sounds: a real recording from the package's event bank
+                                              (events.safetensors), of the voice's gender and nearest pitch,
+                                              re-pitched to the voice and set just below its level   (own chunk)
+  [dog] [knock] [door] [phone] [bell] ...     environmental sounds from the same bank (full package)  (own chunk)
+                                              A token the bank lacks stays in the text: the model reserves a
+                                              short stretch of time for it but renders no sound.
 
 Rendering: the text is cut into segments at sentence ends (. ! ?), pauses and style-span boundaries; each segment
 is one forward pass with its tag/controls and per-word shifts, and segments are yielded in order, so a caller can
@@ -46,7 +49,7 @@ class Segment:
     ctrl: dict
     word_shift: dict = field(default_factory=dict)
     pause_ms: int = 0  # silence instead of speech when > 0 (text empty)
-    event: str = ""  # environmental sound event rendered by the EnvMixer (text empty)
+    event: str = ""  # sound event rendered from the event bank (text empty)
 
 
 @dataclass
@@ -67,6 +70,7 @@ class MarkupSynth:
     def __init__(self, tts):
         """tts: a steertts.SteerTTS (its prompt adapter is loaded on first use of a prompt)."""
         self.s = tts
+        self.events = getattr(tts, "events", None) or ()
 
     # ------------------------------------------------------------------ parsing
     def _style_of_prompt(self, prompt):
@@ -101,7 +105,9 @@ class MarkupSynth:
                     v, unit = m.group(7), (m.group(8) or "ms").lower()
                     ms = int(float(v) * (1000 if unit == "s" else 1)) if v else 400
                     runs.append(("PAUSE", min(ms, 5000)))
-                else:  # event token (or unknown: dropped by to_phonemes) stays in the TTS text
+                elif name in self.events:  # a recorded event from the bank: its own chunk
+                    runs.append(("EVENT", name))
+                else:  # event token the bank lacks (or unknown: dropped by to_phonemes) stays in the TTS text
                     runs.append((f" [{name}] ", style_stack[-1], frozenset(pros_stack)))
                 continue
             closing, name, prm = bool(m.group(2)), m.group(3).lower(), m.group(4)
@@ -178,8 +184,22 @@ class MarkupSynth:
         """Yields Chunk per segment, in order (first chunk = first sentence / span)."""
         import time
         fade = int(0.01 * SR)
+        info = self.s.voice_info.get(voice or (None if ref_wav is not None else self.s.default_voice), {})
+        level, waiting, n_ev = None, [], [0]  # speech level (log-mel) for events; events before any speech wait
+
+        def event(seg, t0):
+            mel = self.events.mel(seg.event, info.get("gender"), info.get("f0_median_hz"), level, seed=seed + n_ev[0])
+            n_ev[0] += 1
+            return Chunk(self.s._vocode(mel), seg, (time.time() - t0) * 1000)
+
         for seg in self.parse(text, prompt, tag, ctrl):
             t0 = time.time()
+            if isinstance(seg.event, str) and seg.event:  # (a literal "EVENT" text piece keeps its old quirk)
+                if level is None:
+                    waiting.append(seg)
+                else:
+                    yield event(seg, t0)
+                continue
             if seg.pause_ms:
                 y = np.zeros(int(seg.pause_ms * SR / 1000), np.float32)
             else:
@@ -189,7 +209,15 @@ class MarkupSynth:
                 if len(y) > 2 * fade:  # 10 ms fades so concatenated segments never click
                     ramp = np.linspace(0, 1, fade, dtype=np.float32)
                     y[:fade] *= ramp; y[-fade:] *= ramp[::-1]
+                if self.events and len(y):
+                    from .events import EventBank, wav_mel
+                    level = EventBank.loudness(wav_mel(y)) if level is None else level
+                    for w in waiting:
+                        yield event(w, time.time())
+                    waiting = []
             yield Chunk(y, seg, (time.time() - t0) * 1000)
+        for w in waiting:  # text that is only events: no speech level to match, the clip's own level is kept
+            yield event(w, time.time())
 
     def render(self, text, **kw):
         return np.concatenate([c.audio for c in self.stream(text, **kw)] or [np.zeros(1, np.float32)])

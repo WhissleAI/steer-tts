@@ -19,9 +19,10 @@ Raspberry Pi-class CPU without Python. Both run from one dependency-free C libra
 | [edge, native](docs/native.md) | 13.9 MB | C++17 / C API + ONNX Runtime | The edge build on ONNX Runtime |
 
 Every build takes the same [request](docs/request.md) (text, voice, tag, controls, guidance, markup) and renders
-sentence by sentence for streaming. The edge build reproduces v1 without its flow refiner: the same intelligibility
-(Seed-TTS WER 0.96 % in both), about 0.1 lower UTMOS, and at least 95 % of v1's effect on every control
-([numbers](docs/models.md#quality)).
+sentence by sentence for streaming. The edge build (2.0.0) carries the v2 acoustic model in 12 MB: Seed-TTS / CV3-Eval
+WER 0.93 % / 2.44 % and UTMOS 4.17 / 4.15, more intelligible than v1 without its flow refiner (0.96 % / 2.62 %) and
+0.03 UTMOS below it ([numbers](docs/models.md#quality)). Inline sound events (`[laugh]`, `[cough]` …) play recorded
+sounds matched to the voice.
 
 ## Quick start
 
@@ -44,6 +45,7 @@ steertts-edge "Are you coming with us tonight?" --ctrl f0_end=2,f0_iqr=1.5 -o qu
 from steertts_edge import OnnxTTS
 tts = OnnxTTS.from_pretrained("WhissleAI/steer-tts-edge")
 wav = tts("Well, *that* was fast. [pause 400ms] <whisper>Don't tell anyone.</whisper>", markup=True)
+wav = tts("Oh no, I did it again. [laugh] Okay, let me start over.")   # a recorded laugh, matched to the voice
 tts.save(wav, "out.wav")
 ```
 
@@ -95,3 +97,6 @@ licensed under CC BY-NC 4.0 + Whissle terms.
 - "SteerTTS" and "Whissle" are trademarks of Whissle Inc. You may say that your work is based on SteerTTS. Do not
   name or market a product or model as "SteerTTS".
 - Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
+- The recorded event bank (`events.safetensors` in the model packages, used for `[laugh]` `[cough]` `[dog]` ...) is
+  not covered by the licence above: its in-voice clips come from VocalSound (Gong et al., 2022; CC BY-SA 4.0) and
+  its environmental clips are FSD50K clips released under CC0 1.0. See the packages' NOTICE files.

@@ -143,6 +143,7 @@ typedef struct {
   int pause_ms;             /* > 0 for a pause segment */
   int index;                /* 0-based segment index */
   double synth_ms;          /* time spent rendering this chunk */
+  const char* event;        /* a recorded sound event chunk ("laugh", "dog" ...), else NULL */
 } steertts_chunk_info;
 typedef int (*steertts_chunk_ex_fn)(const float* audio, size_t n, const steertts_chunk_info* info, void* user);
 STEERTTS_API int steertts_stream_ex(steertts_engine* e, const char* text, const steertts_options* o,

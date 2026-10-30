@@ -18,4 +18,12 @@ SteerTTS v1 edge build - third-party notices
 * native/front/ holds the same front end data as front/ (CMUdict entries, the int8 g2p_en GRU, heteronym and Unicode
   tables) re-encoded for the C++ runtime; the notices above apply to it unchanged. onnx/ holds the acoustic model and
   vocoder (same weights as the safetensors) as ONNX graphs.
+* events.safetensors (the recorded sound events for [laugh] [cough] [sigh] [sneeze] [throat] and environmental tokens) is
+  licensed separately from the rest of this package, under CC BY-SA 4.0
+  (https://creativecommons.org/licenses/by-sa/4.0/). Its in-voice clips are adapted from VocalSound (Yuan Gong, Jin Yu
+  and James Glass, "VocalSound: A Dataset for Improving Human Vocal Sounds Recognition", ICASSP 2022; CC BY-SA 4.0).
+  Changes: clips selected, trimmed around their loudest part, peak-normalised and stored as int8-quantised Vocos
+  log-mel spectrograms; speaker and clip identifiers removed. Its environmental clips (full package only) are FSD50K
+  clips (Eduardo Fonseca et al., "FSD50K: An Open Dataset of Human-Labeled Sound Events", IEEE/ACM TASLP 2022)
+  whose own licence is CC0 1.0, processed the same way.
 * Model weights (acoustic, vocoder, voices) and code: see LICENSE (code, weights and voices CC BY-NC 4.0 + Whissle terms).

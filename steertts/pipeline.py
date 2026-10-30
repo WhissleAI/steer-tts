@@ -45,6 +45,7 @@ def resolve_model_dir(repo_or_path=None, revision=None, token=None, precision="f
     keep = [f for f in top if f.endswith(".json")]
     if precision == "int8":
         keep += [f for f in files if f.startswith("int8/") and f.endswith(".safetensors")]
+        keep += [f for f in top if f == "events.safetensors"]  # the event bank has no int8 copy
     else:
         keep += [f for f in top if f.endswith(".safetensors")]
     return Path(snapshot_download(repo_or_path, revision=revision, token=token, allow_patterns=keep))
@@ -85,6 +86,8 @@ class SteerTTS:
         self.flow = self._load_flow("refiner") if flow else None
         self._pflow, self._xv, self._pm, self._vec_cache = None, None, None, {}
         self.default_voice = self.cfg.get("default_voice", DEFAULT_VOICE)
+        from .events import EventBank
+        self.events = EventBank.find(d, self.cfg)  # recorded [laugh] [cough] [dog] ... (None: tokens stay silent)
 
     @classmethod
     def from_pretrained(cls, repo_or_path=None, revision=None, token=None, precision="fp32", **kw):
@@ -163,7 +166,7 @@ class SteerTTS:
     def synthesize(self, request=None, **kw):
         """Render a request -> float32 waveform at 24 kHz. Markup requests are rendered segment by segment."""
         req = self.resolve(request, **kw)
-        if req["markup"]:
+        if req["markup"] or (self.events and not req.get("word_shift") and self._has_event(req["text"])):
             return self.markup().render(**self._stream_args(req))
         return self._render(req["text"], self._voice(req), req["tag"], req["ctrl"], req["pace"], req.get("word_shift"),
                             req.get("ref_wav"), req["guidance"], req["flow"], req["seed"])
@@ -296,6 +299,16 @@ class SteerTTS:
                                 ctx=full, cm=cm, cfg=0.0)[..., P:]
         wav = self.vocos.decode(mel.float()).squeeze().cpu().numpy().astype(np.float32)
         return (wav, mel) if return_mel else wav
+
+    @torch.no_grad()
+    def _vocode(self, mel):
+        """log-mel [100, T] (numpy) -> waveform, through the same vocoder as the speech."""
+        m = torch.from_numpy(np.asarray(mel, np.float32))[None].to(self.dev)
+        return self.vocos.decode(m).squeeze().cpu().numpy().astype(np.float32)
+
+    def _has_event(self, text):
+        from .text import _EVENT_RE
+        return any(m.group(1).lower() in self.events for m in _EVENT_RE.finditer(text or ""))
 
     # ------------------------------------------------------------------ helpers
     def voice_stats(self, voice):

@@ -50,7 +50,7 @@ class _Config(ctypes.Structure):
 
 class _ChunkInfo(ctypes.Structure):
     _fields_ = [("text", c_char_p), ("tag", c_char_p), ("ctrl", c_char_p), ("pause_ms", c_int), ("index", c_int),
-                ("synth_ms", ctypes.c_double)]
+                ("synth_ms", ctypes.c_double), ("event", c_char_p)]
 
 
 class _Sentence(ctypes.Structure):
@@ -175,7 +175,8 @@ class Engine:
         return self.synthesize(dict(kw, text=text))
 
     def stream(self, text=None, request=None, **kw):
-        """Yields (audio, info) per sentence / pause / style span; info: text, tag, ctrl, pause_ms, index, synth_ms.
+        """Yields (audio, info) per sentence / pause / style span; info: text, tag, ctrl, pause_ms, index, synth_ms,
+        event (the sound event name of a recorded event chunk, else "").
         (The whole text is rendered before the generator returns its first item; use stream_cb for true
         incremental playback.)"""
         chunks = []
@@ -193,7 +194,7 @@ class Engine:
             try:
                 i = info.contents
                 d = dict(text=i.text.decode(), tag=i.tag.decode(), ctrl=i.ctrl.decode(), pause_ms=i.pause_ms,
-                         index=i.index, synth_ms=i.synth_ms)
+                         index=i.index, synth_ms=i.synth_ms, event=(i.event or b"").decode())
                 return 1 if fn(_array(ptr, n), d) else 0
             except BaseException as e:   # stop the stream and re-raise in the caller
                 failure.append(e)

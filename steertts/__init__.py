@@ -7,4 +7,4 @@ from .request import normalize_request, schema
 
 __all__ = ["SteerTTS", "SteerTTSPipeline", "CONTROL_DIMS", "DEFAULT_VOICE", "SR", "normalize_request", "schema",
            "resolve_model_dir"]
-__version__ = "1.2.0"
+__version__ = "1.3.0"

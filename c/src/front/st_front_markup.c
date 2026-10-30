@@ -23,7 +23,7 @@ typedef struct {
   float* val;
 } mstyle;
 
-enum { P_TEXT, P_PAUSE, P_BREAK };
+enum { P_TEXT, P_PAUSE, P_BREAK, P_EVENT };
 typedef struct {
   int kind;
   st_u32s text;
@@ -134,6 +134,14 @@ static piece* add_piece(mk* M, int kind) {
   memset(p, 0, sizeof *p);
   p->kind = kind;
   return p;
+}
+
+static int is_event_name(fx* x, st_event_fn fn, void* user, const st_u32s* name) {
+  st_sb nm = {0};
+  sb_utf8(x, &nm, name->p, name->n);
+  int r = !x->err && fn(user, sb_cstr(&nm));
+  sb_free(&nm);
+  return r;
 }
 
 static int is_lit(const u32* s, int n, const char* lit) {
@@ -256,6 +264,7 @@ void st_segments_free(st_segment* s, int n) {
     st_free(s[i].ctrl_name);
     st_free(s[i].ctrl_val);
     st_free(s[i].ws);
+    st_free(s[i].event);
   }
   st_free(s);
 }
@@ -323,6 +332,14 @@ static void resolve_prompt(mk* M, st_prompt_style_fn fn, void* user, const char*
 int st_front_parse_markup(st_front* f, const char* text_utf8, const char* default_tag, const char* const* ctrl_names,
                           const float* ctrl_vals, int n_ctrl, const char* const* known_tags, int n_tags,
                           st_prompt_style_fn prompt_fn, void* prompt_user, st_segment** segs_out, int* n_segs) {
+  return st_front_parse_markup_ev(f, text_utf8, default_tag, ctrl_names, ctrl_vals, n_ctrl, known_tags, n_tags,
+                                  prompt_fn, prompt_user, NULL, NULL, segs_out, n_segs);
+}
+
+int st_front_parse_markup_ev(st_front* f, const char* text_utf8, const char* default_tag, const char* const* ctrl_names,
+                             const float* ctrl_vals, int n_ctrl, const char* const* known_tags, int n_tags,
+                             st_prompt_style_fn prompt_fn, void* prompt_user, st_event_fn is_event, void* event_user,
+                             st_segment** segs_out, int* n_segs) {
   *segs_out = NULL;
   *n_segs = 0;
   if (!f || !text_utf8) {
@@ -408,7 +425,10 @@ int st_front_parse_markup(st_front* f, const char* text_utf8, const char* defaul
         }
         piece* p = add_piece(&M, P_PAUSE);
         if (p) p->ms = ms < 5000 ? ms : 5000;
-      } else {  /* event token (or unknown: dropped by to_phonemes) stays in the TTS text */
+      } else if (is_event && is_event_name(x, is_event, event_user, &tmp)) {  /* a recorded event: its own chunk */
+        piece* p = add_piece(&M, P_EVENT);
+        if (p) u32s_put(x, &p->text, tmp.p, tmp.n);
+      } else {  /* event token the bank lacks (or unknown: dropped by to_phonemes) stays in the TTS text */
         st_u32s ev = {0};
         u32s_ascii(x, &ev, " [");
         u32s_put(x, &ev, tmp.p, tmp.n);
@@ -478,7 +498,8 @@ int st_front_parse_markup(st_front* f, const char* text_utf8, const char* defaul
   M.npc = M.cappc = 0;
   for (int r = 0; r < nruns && !x->err; ++r) {
     piece* R = &runs[r];
-    if (R->kind == P_PAUSE || is_lit(R->text.p, R->text.n, "PAUSE") || is_lit(R->text.p, R->text.n, "EVENT")) {
+    if (R->kind == P_PAUSE || R->kind == P_EVENT || is_lit(R->text.p, R->text.n, "PAUSE") ||
+        is_lit(R->text.p, R->text.n, "EVENT")) {
       piece* p = add_piece(&M, R->kind);
       if (p) {
         *p = *R;
@@ -527,7 +548,7 @@ int st_front_parse_markup(st_front* f, const char* text_utf8, const char* defaul
     if (!p) break;
     if (boundary) {
       have_style = 0;
-      if (p->kind == P_PAUSE || txt_pause || txt_event) {
+      if (p->kind == P_PAUSE || p->kind == P_EVENT || txt_pause || txt_event) {
         st_segment* s = add_seg(x, &S);
         if (!s) break;
         s->text = st_strdup("");
@@ -535,6 +556,11 @@ int st_front_parse_markup(st_front* f, const char* text_utf8, const char* defaul
         if (!s->text || !s->tag) fx_fail(x, "MemoryError: out of memory");
         if (p->kind == P_PAUSE) {
           s->pause_ms = p->ms;
+        } else if (p->kind == P_EVENT) {
+          st_sb nm = {0};
+          sb_utf8(x, &nm, p->text.p, p->text.n);
+          if (!(s->event = st_strdup(sb_cstr(&nm)))) fx_fail(x, "MemoryError: out of memory");
+          sb_free(&nm);
         } else {  /* Python bug: pause_ms / event = the run's style tuple */
           s->skip = 1;
           s->pause_ms = txt_pause ? -1 : 0;

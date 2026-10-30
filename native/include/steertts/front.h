@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -51,7 +52,7 @@ struct Segment {
   std::vector<std::pair<std::string, float>> ctrl;  // controls, sorted by key (Python: dict(sorted(items)))
   std::map<int, WordShift> word_shift;  // key = word index in to_phonemes(text).word_idx (same numbering)
   int pause_ms = 0;  // > 0: silence of that length instead of speech (text empty)
-  std::string event;  // always empty for well-formed input (kept for parity with Python's Segment)
+  std::string event;  // a recorded sound event ("laugh", "dog" ...) from the event bank (text empty), else empty
 
   // Python quirk replicated for parity: a text piece that is exactly "PAUSE" / "EVENT" (e.g. "Stop. PAUSE")
   // becomes a Segment whose pause_ms / event field holds the *style tuple* instead of a number / name. In C++ that
@@ -92,8 +93,11 @@ class Frontend {
 // zero samples; speech segment -> rendered audio (empty if the segment has no phones, see has_speech); if it has
 // more than 2*240 samples, multiply the first 240 samples by linspace(0, 1, 240) (float32: k/239) and the last 240
 // by the reversed ramp (10 ms fades at 24 kHz); concatenate segments in order with nothing in between.
+// bank_events: the event bank's types (MarkupSynth with tts.events): those tokens become their own event segment,
+// any other [name] stays in the TTS text.
 std::vector<Segment> parse_markup(const Frontend& fe, const std::string& text, const std::string& default_tag,
                                   const std::vector<std::pair<std::string, float>>& default_ctrl,
-                                  const std::vector<std::string>& known_tags);
+                                  const std::vector<std::string>& known_tags,
+                                  const std::set<std::string>& bank_events = {});
 
 }  // namespace steertts

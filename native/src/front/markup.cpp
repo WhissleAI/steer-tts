@@ -40,7 +40,7 @@ struct Style {
 };
 
 struct Piece {
-  enum Kind { TEXT, PAUSE, BREAK } kind = TEXT;
+  enum Kind { TEXT, PAUSE, BREAK, EVENT } kind = TEXT;
   u32str text;
   Style style;
   unsigned pros = 0;  // frozenset(pros_stack) as a bit set
@@ -60,7 +60,8 @@ bool is_lit(const u32str& s, const char* lit) {
 
 std::vector<Segment> parse_markup(const Frontend& fe, const std::string& text_utf8, const std::string& default_tag,
                                   const std::vector<std::pair<std::string, float>>& default_ctrl,
-                                  const std::vector<std::string>& known_tags) {
+                                  const std::vector<std::string>& known_tags,
+                                  const std::set<std::string>& bank_events) {
   const Frontend::Impl& I = fe.impl();
   const detail::Ucd& u = I.ucd;
   std::set<std::string> tag2i(known_tags.begin(), known_tags.end());
@@ -133,7 +134,12 @@ std::vector<Segment> parse_markup(const Frontend& fe, const std::string& text_ut
         p.kind = Piece::PAUSE;
         p.ms = std::min(ms, 5000);
         runs.push_back(p);
-      } else {  // event token (or unknown: dropped by to_phonemes) stays in the TTS text
+      } else if (bank_events.count(narrow_utf8(name))) {  // a recorded event from the bank: its own chunk
+        Piece p;
+        p.kind = Piece::EVENT;
+        p.text = name;
+        runs.push_back(p);
+      } else {  // event token the bank lacks (or unknown: dropped by to_phonemes) stays in the TTS text
         text_run(U" [" + name + U"] ");
       }
       continue;
@@ -165,7 +171,7 @@ std::vector<Segment> parse_markup(const Frontend& fe, const std::string& text_ut
   // split runs at sentence ends so each sentence is its own (streamable) segment
   std::vector<Piece> pieces;
   for (const Piece& r : runs) {
-    if (r.kind == Piece::PAUSE || is_lit(r.text, "PAUSE") || is_lit(r.text, "EVENT")) {
+    if (r.kind == Piece::PAUSE || r.kind == Piece::EVENT || is_lit(r.text, "PAUSE") || is_lit(r.text, "EVENT")) {
       pieces.push_back(r);
       continue;
     }
@@ -234,11 +240,11 @@ std::vector<Segment> parse_markup(const Frontend& fe, const std::string& text_ut
     if (!I.strip(all).empty()) segs.push_back(make_segment(cur, cur_style));
   };
   for (const Piece& p : pieces) {
-    bool pause = p.kind == Piece::PAUSE, brk = p.kind == Piece::BREAK;
+    bool pause = p.kind == Piece::PAUSE, brk = p.kind == Piece::BREAK, event = p.kind == Piece::EVENT;
     bool txt_pause = p.kind == Piece::TEXT && is_lit(p.text, "PAUSE");
     bool txt_event = p.kind == Piece::TEXT && is_lit(p.text, "EVENT");
     bool txt_break = p.kind == Piece::TEXT && is_lit(p.text, "BREAK");
-    if (pause || brk || txt_pause || txt_event || txt_break) {
+    if (pause || brk || event || txt_pause || txt_event || txt_break) {
       flush();
       cur.clear();
       have_style = false;
@@ -246,6 +252,11 @@ std::vector<Segment> parse_markup(const Frontend& fe, const std::string& text_ut
         Segment s;
         s.tag = "none";
         s.pause_ms = pause ? p.ms : Segment::kPauseIsStyleTuple;  // Python bug: pause_ms = the run's style tuple
+        segs.push_back(s);
+      } else if (event) {
+        Segment s;
+        s.tag = "none";
+        s.event = narrow_utf8(p.text);
         segs.push_back(s);
       } else if (txt_event) {
         Segment s;
