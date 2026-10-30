@@ -8,7 +8,7 @@ version = "1.2.0"
 description = "SteerTTS: a small, numerically steerable English TTS (hybrid attention + bidirectional sequence mixing)"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Code: MIT. Weights and voices (Hugging Face): CC BY-NC 4.0, non-commercial; commercial licences from Whissle Inc." }
+license = { text = "CC-BY-NC-4.0" }
 authors = [{ name = "Whissle Inc.", email = "ksingla@whissle.ai" }]
 # Versions are the ones the release was verified with (fresh env, TEST_LOG.md). torch is a range because the right
 # wheel depends on your CUDA / CPU setup; torchaudio (pulled in by vocos) must match the torch you install.

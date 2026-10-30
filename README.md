@@ -71,7 +71,7 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 
 | Path | What |
 |---|---|
-| `steertts/` | v1 inference package (Python, MIT) |
+| `steertts/` | v1 inference package (Python) |
 | `edge/` | `steertts_edge`: edge runtimes (ONNX Runtime, PyTorch), tests, ONNX export and packing tools |
 | `c/` | stand-alone C11 library + CLI for v1 and edge, helper-model converters, parity tests |
 | `native/` | C++17 runtime on ONNX Runtime (edge): text front end port, engine, CLI, tests |
@@ -81,14 +81,17 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 
 ## Licence
 
-Code (this repo): MIT, Copyright (c) 2026 Whissle Inc. Weights (Hugging Face): CC BY-NC 4.0, non-commercial use
-only. See each model card for the intended-use notes. The weights are not covered by this repo's MIT License.
+Code (this repo) and weights (Hugging Face): CC BY-NC 4.0 + Whissle terms, non-commercial use only. Copyright (c) 2026
+Whissle Inc. See [LICENSE](LICENSE); third-party components keep their own licences (NOTICE files).
 
-- **Commercial use of the weights and voices** (including commercial use of generated audio) needs a separate
-  written licence from Whissle Inc. Contact ksingla@whissle.ai.
+Versions up to steertts v1.2.0 and steertts-edge v1.3.0 were released under MIT; from 2026-10-29 on, the code is
+licensed under CC BY-NC 4.0 + Whissle terms.
+
+- **Commercial use of the code, weights and voices** (including commercial use of generated audio) needs a
+  separate written licence from Whissle Inc. Contact ksingla@whissle.ai.
 - Whissle Inc. keeps all rights not expressly granted. The public licences do not limit its own use of SteerTTS, or
   its right to license SteerTTS (including later versions and derived models) on other terms. No patent rights are
-  granted for the weights.
+  granted.
 - "SteerTTS" and "Whissle" are trademarks of Whissle Inc. You may say that your work is based on SteerTTS. Do not
   name or market a product or model as "SteerTTS".
 - Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
