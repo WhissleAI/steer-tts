@@ -1,7 +1,8 @@
 /* The director (steertts.h: planning a performance). Mirrors the training code (train_director.py) exactly:
  * the same tokenizer (CRC32 of "w:word" and "b:word_word" into 16384 buckets), the same 18 features, an embedding
  * bag (mean) -> tanh(Linear) sentence encoder, a GRU cell over the reading that sees the next sentence and its own
- * previous plan, and a linear head. Weights are 8-bit with a float scale per row (export_director.py). */
+ * previous plan, and a linear head. Weights are 8-bit with a float scale per row (export_director.py). Format 3 adds a
+ * music head on the same state (the scene's mood, intensity, change; export_director_music.py), optionally fed back. */
 #include "steertts.h"
 #include "st_director.h"
 
@@ -13,6 +14,7 @@
 #include <string.h>
 
 #define MAX_TOKENS 512
+#define MAX_MOODS 32
 
 typedef struct {
   int rows, cols;
@@ -25,6 +27,10 @@ struct steertts_director {
   int scene;   /* version 2: the mean of the last `scene` sentence encodings is part of the GRU input */
   mat embm, enc, wih, whh, head;
   float *enc_b, *bih, *bhh, *head_b;
+  int nmood, mfeedback, mhidden;   /* format 3: music moods (0: none), previous music fed back to the GRU, music hidden */
+  mat mhid, music;
+  float *mhid_b, *music_b;
+  char moods[MAX_MOODS][24];
   float cal[25];   /* request = want x cal (rate loud f0_med f0_iqr f0_end): how to ask the paired voice for a change */
   int has_cal;
   void* blob;
@@ -35,6 +41,7 @@ struct steertts_reading {
   float genre[ST_DIRECTOR_GENRES];
   float* h;      /* hid */
   float* prev;   /* ntarget */
+  float* pm;     /* format 3 with feedback: the previous sentence's mood probabilities */
   float* past;   /* the last `scene` sentence encodings (a ring), for the scene mean */
   int npast, next_past;
   char* ahead;   /* the last look-ahead sentence and its encoding, reused when it becomes the current one */
@@ -84,14 +91,23 @@ steertts_director* steertts_director_from_memory(const void* data, size_t n, cha
   d->blob = blob;
   const uint8_t* p = (const uint8_t*)blob + 4;
   const uint8_t* end = (const uint8_t*)blob + n;
-  uint32_t h[8] = {0};
+  uint32_t h[11] = {0};
   memcpy(h, p, sizeof(uint32_t) * 7);
   p += sizeof(uint32_t) * 7;
-  if (h[0] == 2) {   /* version 2: scene memory */
+  if (h[0] == 2 || h[0] == 3) {   /* version 2: scene memory */
     memcpy(&h[7], p, sizeof(uint32_t));
     p += sizeof(uint32_t);
   }
-  if (h[0] != 1 && h[0] != 2) {
+  if (h[0] == 3) {   /* version 3: the music head */
+    if ((size_t)(end - p) < sizeof(uint32_t) * 3) {
+      set_err(err, err_len, "director model file is truncated");
+      steertts_director_free(d);
+      return NULL;
+    }
+    memcpy(&h[8], p, sizeof(uint32_t) * 3);
+    p += sizeof(uint32_t) * 3;
+  }
+  if (h[0] != 1 && h[0] != 2 && h[0] != 3) {
     set_err(err, err_len, "unsupported director model version");
     steertts_director_free(d);
     return NULL;
@@ -103,13 +119,18 @@ steertts_director* steertts_director_from_memory(const void* data, size_t n, cha
   d->ngenre = (int)h[5];
   d->ntarget = (int)h[6];
   d->scene = (int)h[7];
+  d->nmood = (int)h[8];
+  d->mfeedback = (int)h[9];
+  d->mhidden = (int)h[10];
   if (d->nfeat != ST_DIRECTOR_FEATURES || d->ngenre != ST_DIRECTOR_GENRES || d->ntarget != STEERTTS_PLAN_DIMS) {
     set_err(err, err_len, "director model shape does not match this build");
     steertts_director_free(d);
     return NULL;
   }
-  int H = d->hid, in_enc = d->emb + d->nfeat + d->ngenre, in_cell = (d->scene ? 3 : 2) * H + d->ntarget;
-  if (d->scene < 0 || d->scene > 64 || H > 64 || d->emb > 64) {
+  int H = d->hid, in_enc = d->emb + d->nfeat + d->ngenre,
+      in_cell = (d->scene ? 3 : 2) * H + d->ntarget + (d->mfeedback ? d->nmood : 0);
+  if (d->scene < 0 || d->scene > 64 || H > 64 || d->emb > 64 || d->nmood < 0 || d->nmood > MAX_MOODS ||
+      d->mhidden < 0 || d->mhidden > 64 || (d->mfeedback && !d->nmood)) {
     set_err(err, err_len, "director model shape is out of range");
     steertts_director_free(d);
     return NULL;
@@ -123,6 +144,29 @@ steertts_director* steertts_director_from_memory(const void* data, size_t n, cha
     set_err(err, err_len, "director model file is truncated");
     steertts_director_free(d);
     return NULL;
+  }
+  if (d->nmood) {   /* format 3: the music head, then its mood names ("MOOD", each a u8 length and the bytes) */
+    int in_m = d->mhidden ? d->mhidden : 2 * H;
+    if ((d->mhidden && (!read_mat(&d->mhid, d->mhidden, 2 * H, &p, end) || !read_vec(&d->mhid_b, d->mhidden, &p, end))) ||
+        !read_mat(&d->music, d->nmood + 2, in_m, &p, end) || !read_vec(&d->music_b, d->nmood + 2, &p, end) ||
+        (size_t)(end - p) < 4 || memcmp(p, "MOOD", 4) != 0) {
+      set_err(err, err_len, "director model file is truncated (music)");
+      steertts_director_free(d);
+      return NULL;
+    }
+    p += 4;
+    for (int i = 0; i < d->nmood; i++) {
+      if (p >= end || (size_t)(end - p) < 1u + *p) {
+        set_err(err, err_len, "director model file is truncated (moods)");
+        steertts_director_free(d);
+        return NULL;
+      }
+      int L = *p++;
+      int k = L < 23 ? L : 23;
+      memcpy(d->moods[i], p, (size_t)k);
+      d->moods[i][k] = 0;
+      p += L;
+    }
   }
   /* optional: the paired voice's calibration ("CAL1" + 25 floats) */
   if ((size_t)(end - p) >= 4 + sizeof d->cal && memcmp(p, "CAL1", 4) == 0) {
@@ -372,8 +416,9 @@ static steertts_reading* reading_begin(const steertts_director* d, const float* 
   if (genre) memcpy(r->genre, genre, sizeof r->genre);
   r->h = (float*)calloc((size_t)d->hid, sizeof(float));
   r->prev = (float*)calloc((size_t)d->ntarget, sizeof(float));
+  r->pm = d->mfeedback ? (float*)calloc((size_t)d->nmood, sizeof(float)) : NULL;
   r->past = d->scene ? (float*)calloc((size_t)d->scene * (size_t)d->hid, sizeof(float)) : NULL;
-  if (!r->h || !r->prev || (d->scene && !r->past)) {
+  if (!r->h || !r->prev || (d->scene && !r->past) || (d->mfeedback && !r->pm)) {
     steertts_reading_free(r);
     return NULL;
   }
@@ -385,16 +430,17 @@ void steertts_reading_free(steertts_reading* r) {
   free(r->ahead);
   free(r->h);
   free(r->prev);
+  free(r->pm);
   free(r->past);
   free(r);
 }
 
 static int reading_next(steertts_reading* r, const char* text, const float* features, const char* next_text,
-                        const float* next_features, float plan[STEERTTS_PLAN_DIMS]) {
+                        const float* next_features, float plan[STEERTTS_PLAN_DIMS], float* music) {
   if (!r || !text || !features || !plan) return 1;
   const steertts_director* d = r->d;
   int H = d->hid, T = d->ntarget;
-  float s[64], nx[64], x[3 * 64 + STEERTTS_PLAN_DIMS], hn[64], hs[2 * 64];
+  float s[64], nx[64], x[3 * 64 + STEERTTS_PLAN_DIMS + MAX_MOODS], hn[64], hs[2 * 64];
   if (H > 64) return 1;
   if (r->ahead && strcmp(r->ahead, text) == 0) memcpy(s, r->ahead_s, sizeof(float) * (size_t)H);
   else encode(d, text, features, r->genre, s);
@@ -423,6 +469,7 @@ static int reading_next(steertts_reading* r, const char* text, const float* feat
     o += H;
   }
   memcpy(x + o, r->prev, sizeof(float) * (size_t)T);
+  if (d->mfeedback) memcpy(x + o + T, r->pm, sizeof(float) * (size_t)d->nmood);
   /* GRUCell, PyTorch gate order r, z, n */
   for (int i = 0; i < H; i++) {
     float ir = dot_row(&d->wih, i, x) + d->bih[i], hr = dot_row(&d->whh, i, r->h) + d->bhh[i];
@@ -436,6 +483,22 @@ static int reading_next(steertts_reading* r, const char* text, const float* feat
   memcpy(hs + H, s, sizeof(float) * (size_t)H);
   for (int k = 0; k < T; k++) plan[k] = dot_row(&d->head, k, hs) + d->head_b[k];
   memcpy(r->prev, plan, sizeof(float) * (size_t)T);
+  if (d->nmood) {   /* the music: softmax over the moods, sigmoid intensity and change */
+    float mh[64], mo[MAX_MOODS + 2], mx = -1e30f, sum = 0;
+    const float* in = hs;
+    if (d->mhidden) {
+      for (int i = 0; i < d->mhidden; i++) mh[i] = tanhf(dot_row(&d->mhid, i, hs) + d->mhid_b[i]);
+      in = mh;
+    }
+    for (int k = 0; k < d->nmood + 2; k++) mo[k] = dot_row(&d->music, k, in) + d->music_b[k];
+    for (int k = 0; k < d->nmood; k++) mx = mo[k] > mx ? mo[k] : mx;
+    for (int k = 0; k < d->nmood; k++) sum += (mo[k] = expf(mo[k] - mx));
+    for (int k = 0; k < d->nmood; k++) mo[k] /= sum;
+    mo[d->nmood] = sigm(mo[d->nmood]);
+    mo[d->nmood + 1] = sigm(mo[d->nmood + 1]);
+    if (d->mfeedback) memcpy(r->pm, mo, sizeof(float) * (size_t)d->nmood);
+    if (music) memcpy(music, mo, sizeof(float) * (size_t)(d->nmood + 2));
+  }
   if (d->scene) {   /* this sentence joins the scene memory */
     memcpy(r->past + (size_t)r->next_past * (size_t)H, s, sizeof(float) * (size_t)H);
     r->next_past = (r->next_past + 1) % d->scene;
@@ -465,7 +528,48 @@ int steertts_reading_next(steertts_reading* r, const steertts_sentence* s, const
   st_director_features(s->text, s->dialogue, s->has_speaker, s->para_len, s->para_index, f);
   if (next && next->text) st_director_features(next->text, next->dialogue, next->has_speaker, next->para_len,
                                                next->para_index, fn);
-  return reading_next(r, s->text, f, next && next->text ? next->text : NULL, next && next->text ? fn : NULL, plan);
+  return reading_next(r, s->text, f, next && next->text ? next->text : NULL, next && next->text ? fn : NULL, plan, NULL);
+}
+
+int steertts_reading_next_music(steertts_reading* r, const steertts_sentence* s, const steertts_sentence* next,
+                                float plan[STEERTTS_PLAN_DIMS], float* music) {
+  if (!r || !s || !s->text || !plan || !music || !r->d->nmood) return 1;
+  float f[ST_DIRECTOR_FEATURES], fn[ST_DIRECTOR_FEATURES];
+  st_director_features(s->text, s->dialogue, s->has_speaker, s->para_len, s->para_index, f);
+  if (next && next->text) st_director_features(next->text, next->dialogue, next->has_speaker, next->para_len,
+                                               next->para_index, fn);
+  return reading_next(r, s->text, f, next && next->text ? next->text : NULL, next && next->text ? fn : NULL, plan, music);
+}
+
+int steertts_director_moods(const steertts_director* d) { return d ? d->nmood : 0; }
+
+const char* steertts_director_mood(const steertts_director* d, int i) {
+  return d && i >= 0 && i < d->nmood ? d->moods[i] : NULL;
+}
+
+int steertts_director_plan_music(const steertts_director* d, const steertts_sentence* sentences, size_t n, const char* genre,
+                                 float* plans, float* music, char* err, size_t err_len) {
+  if (!d || !d->nmood || (!sentences && n) || (!plans && n) || (!music && n)) {
+    set_err(err, err_len, !d || d->nmood ? "steertts_director_plan_music: NULL director, sentences, plans or music"
+                                         : "this director has no music (format 3 needed)");
+    return 1;
+  }
+  steertts_reading* r = steertts_reading_begin(d, genre);
+  if (!r) {
+    set_err(err, err_len, "out of memory");
+    return 1;
+  }
+  for (size_t i = 0; i < n; i++) {
+    if (!sentences[i].text) {
+      steertts_reading_free(r);
+      set_err(err, err_len, "steertts_director_plan_music: a sentence without text");
+      return 1;
+    }
+    steertts_reading_next_music(r, &sentences[i], i + 1 < n ? &sentences[i + 1] : NULL, plans + i * STEERTTS_PLAN_DIMS,
+                                music + i * (size_t)(d->nmood + 2));
+  }
+  steertts_reading_free(r);
+  return 0;
 }
 
 int steertts_director_plan(const steertts_director* d, const steertts_sentence* sentences, size_t n, const char* genre,
