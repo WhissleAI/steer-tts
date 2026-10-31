@@ -1,0 +1,27 @@
+name: C library
+on:
+  push:
+    paths: ["c/**", ".github/workflows/c.yml"]
+  pull_request:
+    paths: ["c/**", ".github/workflows/c.yml"]
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, cc: gcc}
+          - {os: ubuntu-latest, cc: clang}
+          - {os: ubuntu-24.04-arm, cc: gcc}
+          - {os: macos-latest, cc: clang}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (CMake)
+        run: cmake -S c -B c/build -DCMAKE_C_COMPILER=${{ matrix.cc }} && cmake --build c/build -j4
+      - name: Build (make)
+        run: make -C c CC=${{ matrix.cc }} OUT=build-make -j4
+      - name: Tests (model-free ones run, the others skip)
+        run: cd c/build && ctest --output-on-failure
+      - name: CLI
+        run: c/build/steertts --version

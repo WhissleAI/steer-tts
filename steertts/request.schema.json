@@ -1,0 +1,280 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "urn:steertts:request-schema:v1",
+ "title": "SteerTTS synthesis request",
+ "description": "One request = one rendered waveform (24 kHz mono float32). Every field except `text` is optional. Controls are SPEAKER-RELATIVE z-scores: 0 = the chosen voice's own neutral speech, +-1 = one pooled within-speaker standard deviation (raw units per dim: control_stats.json pooled_sd). Mask semantics: a control named in `ctrl` is requested (value + availability mask 1); every control NOT named is unspecified (mask 0) and the model chooses it from voice, tag and text. `{\"rate\": 0}` therefore asks for the voice's neutral rate, while omitting `rate` lets the tag/text decide. SteerTTS.resolve(request) returns the fully resolved request (defaults filled, `prompt` mapped to `tag` + `ctrl`, recorded in `prompt_mapping`), which is itself a valid request.",
+ "type": "object",
+ "required": [
+  "text"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "$schema": {
+   "type": "string"
+  },
+  "text": {
+   "type": "string",
+   "minLength": 1,
+   "maxLength": 5000,
+   "description": "English text. Numbers, units, currency, ordinals, ranges and unknown acronyms are spelled out by the front end. With `markup: true` it may contain inline markup (see `markup`). Event tokens such as [laugh], [cough], [sigh], [sneeze], [throat] or [dog] are rendered from the package's recorded event bank (events.safetensors) as their own chunk, matched to the voice; such text is rendered segment by segment as with markup. A token the bank lacks reserves a short stretch of time but renders no sound."
+  },
+  "voice": {
+   "type": "string",
+   "pattern": "^voice_[0-9]{4}$",
+   "description": "Built-in voice (anonymised public name, see voices.json). Default: the model's default_voice (voice_1688). Mutually exclusive with ref_wav."
+  },
+  "ref_wav": {
+   "type": "string",
+   "description": "Path to a reference recording (any sample rate, first 8 s used, >= 0.5 s) for zero-shot cloning: the voice is taken from its WavLM speaker vector and, when flow is on, the prompted flow uses the clip's own mel as context. Mutually exclusive with voice. Only clone voices whose owners consented."
+  },
+  "prompt": {
+   "type": "string",
+   "description": "Free-text voice direction ('soft and sad', 'excited, a bit faster'). Mapped by the prompt adapter to a style tag and a subset of controls. An explicit `tag` overrides the prompt's tag; explicit `ctrl` dims override the prompt's values for those dims."
+  },
+  "tag": {
+   "type": "string",
+   "enum": [
+    "none",
+    "adoration",
+    "amazement",
+    "amusement",
+    "anger",
+    "anxiety",
+    "apologetic",
+    "bored",
+    "confidence",
+    "confusion",
+    "contempt",
+    "contentment",
+    "cuteness",
+    "desire",
+    "determined",
+    "disappointment",
+    "disgust",
+    "distress",
+    "ecstasy",
+    "embarrassment",
+    "emphasis",
+    "enunciated",
+    "excited",
+    "fast",
+    "fear",
+    "frustration",
+    "guilt",
+    "happiness",
+    "hesitant",
+    "high_pitch",
+    "interest",
+    "irritation",
+    "laughing",
+    "loud",
+    "low_pitch",
+    "mysterious",
+    "neutral",
+    "nostalgia",
+    "pain",
+    "panic",
+    "pride",
+    "realization",
+    "relief",
+    "sadness",
+    "sarcasm",
+    "serenity",
+    "skeptical",
+    "slow",
+    "sympathy",
+    "tired",
+    "whisper"
+   ],
+   "default": "none",
+   "description": "Style tag; 'none' = unspecified. Tags act as style switches: voice-quality tags such as whisper change the voice strongly, but an independent emotion classifier recognises only sadness among the emotion tags, and about half of the tags are acoustically close to neutral (see the model card). For a specific acoustic change prefer ctrl."
+  },
+  "ctrl": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "rate": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "articulation rate (phones per second of speech, pauses excluded). + faster"
+    },
+    "loud": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "mean speech level (dB). + louder"
+    },
+    "f0_med": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "median pitch (semitones). + higher"
+    },
+    "f0_iqr": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "pitch range, interquartile (semitones). + livelier, - monotone"
+    },
+    "f0_end": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "pitch slope over the last 300 ms of voicing (st/s). + rising (question-like), - falling"
+    },
+    "pause": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "share of the speech span spent in silent pauses >= 100 ms. + more pauses"
+    },
+    "tilt": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "spectral tilt, energy 1-5 kHz vs 50 Hz-1 kHz (dB). + brighter / pressed"
+    },
+    "voiced": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "voiced share of speech frames. - whispery"
+    },
+    "flat": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "spectral flatness (log). + breathier / noisier"
+    },
+    "centroid": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "spectral centroid (log Hz). + brighter"
+    },
+    "cpps": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "cepstral peak prominence (dB), periodicity. - breathier / rougher"
+    },
+    "h1h2": {
+     "type": "number",
+     "minimum": -5,
+     "maximum": 5,
+     "description": "H1-H2 (dB). + breathier"
+    }
+   },
+   "default": {},
+   "description": "Requested controls {dim: z}. Values beyond +-3 are outside the well-tested range."
+  },
+  "pace": {
+   "type": "number",
+   "minimum": 0.25,
+   "maximum": 4.0,
+   "default": 1.0,
+   "description": "Global duration divisor applied after prediction (>1 faster). Unlike ctrl.rate it does not change the style, only the timing."
+  },
+  "guidance": {
+   "type": "number",
+   "minimum": 0.0,
+   "maximum": 4.0,
+   "default": 1.0,
+   "description": "Steering scale s: out = out(no request) + s * (out(request) - out(no request)), on durations, pitch, energy and mel. s > 1 strengthens the requested change (control labels are noisy, so the learned effect is attenuated) at the cost of more leakage into other dims and some quality; only applied when a tag or ctrl is given."
+  },
+  "word_shift": {
+   "type": "object",
+   "description": "Per-word prosody edits {word_index: {pitch: semitones, energy: dB, dur: factor}} (word_index counts words of the normalised text from 0). Not combinable with markup or stream(), which raise an error (use *emph*, <slow> etc. there).",
+   "patternProperties": {
+    "^[0-9]+$": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "pitch": {
+       "type": "number",
+       "minimum": -12,
+       "maximum": 12
+      },
+      "energy": {
+       "type": "number",
+       "minimum": -20,
+       "maximum": 20
+      },
+      "dur": {
+       "type": "number",
+       "minimum": 0.25,
+       "maximum": 4
+      }
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "markup": {
+   "type": "boolean",
+   "default": false,
+   "description": "Parse inline markup in text: *emphasis* / <emph>..</emph>; per-word <slow> <fast> <high> <low> <loud> <soft>; [pause], [pause 300ms], [pause 1.5s]; span styles <whisper>..</whisper> (any tag) and <style prompt=\"...\">..</style>. The text is rendered sentence by sentence (and per span), joined with 10 ms fades. stream() always parses markup."
+  },
+  "flow": {
+   "type": "boolean",
+   "default": true,
+   "description": "Refine the mel with the flow-matching decoder (refiner for built-in voices, prompted flow for ref_wav). false = the acoustic model's mel straight into Vocos (faster, slightly hazier)."
+  },
+  "seed": {
+   "type": "integer",
+   "minimum": 0,
+   "default": 0,
+   "description": "Noise seed of the flow sampler (renders are deterministic per device for a given seed)."
+  },
+  "prompt_mapping": {
+   "type": "object",
+   "description": "Written by resolve(): what `prompt` mapped to {tag, ctrl, top_tags}. Informational; ignored on input.",
+   "properties": {
+    "tag": {
+     "type": "string"
+    },
+    "ctrl": {
+     "type": "object"
+    },
+    "top_tags": {
+     "type": "array"
+    }
+   }
+  }
+ },
+ "examples": [
+  {
+   "text": "The meeting has been moved to Thursday afternoon at three.",
+   "voice": "voice_1688"
+  },
+  {
+   "text": "I can't believe you did that!",
+   "voice": "voice_1688",
+   "tag": "anger",
+   "ctrl": {
+    "loud": 1.5,
+    "f0_med": 1.0
+   }
+  },
+  {
+   "text": "Are you serious?",
+   "ctrl": {
+    "f0_end": 2.0,
+    "f0_iqr": 1.5
+   }
+  },
+  {
+   "text": "Please keep this between us.",
+   "prompt": "whispering, slow and secretive"
+  },
+  {
+   "text": "Well, *that* was fast. [pause 400ms] <slow>Let me think.</slow>",
+   "markup": true
+  },
+  {
+   "text": "Now in a cloned voice.",
+   "ref_wav": "reference.wav"
+  }
+ ]
+}

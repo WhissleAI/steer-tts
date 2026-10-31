@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "steertts"
+version = "1.3.0"
+description = "SteerTTS: a small, numerically steerable English TTS (hybrid attention + bidirectional sequence mixing)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "CC-BY-NC-4.0" }
+authors = [{ name = "Whissle Inc.", email = "ksingla@whissle.ai" }]
+# Versions are the ones the release was verified with (fresh env, TEST_LOG.md). torch is a range because the right
+# wheel depends on your CUDA / CPU setup; torchaudio (pulled in by vocos) must match the torch you install.
+dependencies = [
+  "torch>=2.4,<2.12",
+  "numpy>=1.24,<2.5",
+  "safetensors==0.8.0",
+  "huggingface_hub>=0.23",
+  "vocos==0.1.0",
+  "g2p_en==2.1.0",
+  "nltk==3.10.3",
+  "num2words==0.5.14",
+  "soundfile==0.14.0",
+  "soxr==1.1.0",
+]
+
+[project.optional-dependencies]
+prompt = ["transformers==5.19.0"]          # free-text directions (MiniLM sentence encoder)
+clone = ["transformers==5.19.0"]           # zero-shot cloning (WavLM speaker encoder)
+measure = ["praat-parselmouth==0.4.7"]     # read the 12 controls back from audio
+play = ["sounddevice>=0.4"]                # `steertts play` / --play (else ffplay or aplay is used)
+all = ["transformers==5.19.0", "praat-parselmouth==0.4.7", "sounddevice>=0.4"]
+test = ["transformers==5.19.0", "praat-parselmouth==0.4.7", "pytest>=8", "jsonschema>=4.20"]
+
+[project.scripts]
+steertts = "steertts.cli:main"
+
+[tool.setuptools]
+packages = ["steertts"]
+
+[tool.setuptools.package-data]
+steertts = ["request.schema.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

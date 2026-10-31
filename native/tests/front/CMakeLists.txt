@@ -1,0 +1,25 @@
+# Standalone build of the front-end golden test:
+#   cmake -S native/tests/front -B build/front -DCMAKE_BUILD_TYPE=Release && cmake --build build/front -j8
+#   build/front/front_golden native/assets/front native/tests/front/golden.jsonl
+# Optional: -DSTEERTTS_SANITIZE=ON builds library + test with -fsanitize=address,undefined.
+cmake_minimum_required(VERSION 3.16)
+project(steertts_front_tests CXX)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+option(STEERTTS_SANITIZE "build with ASan + UBSan" OFF)
+if(STEERTTS_SANITIZE)
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=address,undefined)
+endif()
+if(NOT TARGET steertts_front)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../src/front ${CMAKE_CURRENT_BINARY_DIR}/steertts_front)
+endif()
+add_executable(front_golden front_golden.cpp)
+target_link_libraries(front_golden PRIVATE steertts_front)
+target_include_directories(front_golden PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src/front)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(steertts_front PRIVATE -Wall -Wextra)
+  target_compile_options(front_golden PRIVATE -Wall -Wextra)
+endif()

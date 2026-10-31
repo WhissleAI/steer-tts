@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Read this screen": window content only when the user starts it. Content-changed and scrolled events are subscribed
+     only so the service's copy of the screen stays fresh after a scroll (they are not acted on); the accessibility
+     button starts and stops reading -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/screen_reader_description"
+    android:summary="@string/screen_reader_summary"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled"
+    android:accessibilityFeedbackType="feedbackSpoken"
+    android:accessibilityFlags="flagRequestAccessibilityButton|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:notificationTimeout="300" />

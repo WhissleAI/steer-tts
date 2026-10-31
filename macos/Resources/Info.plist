@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key><string>SteerTTS</string>
+	<key>CFBundleDisplayName</key><string>SteerTTS</string>
+	<key>CFBundleIdentifier</key><string>ai.whissle.steertts</string>
+	<key>CFBundleExecutable</key><string>SteerTTS</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>__VERSION__</string>
+	<key>CFBundleVersion</key><string>__BUILD__</string>
+	<key>LSMinimumSystemVersion</key><string>14.0</string>
+	<key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>NSHumanReadableCopyright</key><string>© 2026 Whissle Inc.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key><string>SteerTTS reads your calendar on this Mac to say a few minutes ahead when a meeting starts. Nothing leaves your Mac.</string>
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key><dict><key>default</key><string>Read with SteerTTS</string></dict>
+			<key>NSMessage</key><string>readSelection</string>
+			<key>NSPortName</key><string>SteerTTS</string>
+			<key>NSSendTypes</key><array><string>public.utf8-plain-text</string><string>NSStringPboardType</string></array>
+			<key>NSRequiredContext</key><dict/>
+			<key>NSKeyEquivalent</key><dict/>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key><dict><key>default</key><string>Add to SteerTTS Reading List</string></dict>
+			<key>NSMessage</key><string>addSelection</string>
+			<key>NSPortName</key><string>SteerTTS</string>
+			<key>NSSendTypes</key><array><string>public.utf8-plain-text</string><string>NSStringPboardType</string></array>
+			<key>NSRequiredContext</key><dict/>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key><dict><key>default</key><string>Read File with SteerTTS</string></dict>
+			<key>NSMessage</key><string>readFiles</string>
+			<key>NSPortName</key><string>SteerTTS</string>
+			<key>NSSendFileTypes</key><array><string>com.adobe.pdf</string><string>org.idpf.epub-container</string><string>org.openxmlformats.wordprocessingml.document</string><string>public.html</string><string>public.plain-text</string><string>net.daringfireball.markdown</string></array>
+			<key>NSRequiredContext</key><dict/>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key><string>Document to listen to</string>
+			<key>CFBundleTypeRole</key><string>Viewer</string>
+			<key>LSHandlerRank</key><string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array><string>com.adobe.pdf</string><string>org.idpf.epub-container</string><string>org.openxmlformats.wordprocessingml.document</string><string>public.html</string><string>public.plain-text</string><string>net.daringfireball.markdown</string></array>
+		</dict>
+	</array>
+</dict>
+</plist>

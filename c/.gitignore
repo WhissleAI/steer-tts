@@ -1,0 +1,8 @@
+build/
+models/
+__pycache__/
+!tests/golden/**/*.safetensors
+!tests/golden/**/*.wav
+*.o
+*.obj
+build-*/

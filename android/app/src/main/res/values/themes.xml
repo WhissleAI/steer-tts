@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Whissle green; the dark variant is in values-night. Views pick their colours from Ui.init(). -->
+    <style name="SteerTTS" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#1A6A55</item>
+        <item name="android:colorAccent">#1A6A55</item>
+        <item name="android:colorControlActivated">#1A6A55</item>
+        <item name="android:windowBackground">#F4F6F5</item>
+        <item name="android:statusBarColor">#F4F6F5</item>
+        <item name="android:navigationBarColor">#F4F6F5</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:alertDialogTheme">@style/SteerTTS.Dialog</item>
+        <item name="android:timePickerDialogTheme">@style/SteerTTS.Dialog</item>
+    </style>
+
+    <!-- dialogs: rounded, Whissle green, sentence-case buttons -->
+    <style name="SteerTTS.Dialog" parent="@android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">#1A6A55</item>
+        <item name="android:colorControlActivated">#1A6A55</item>
+        <item name="android:windowBackground">@drawable/dialog_bg</item>
+        <item name="android:buttonBarButtonStyle">@style/SteerTTS.DialogButton</item>
+    </style>
+    <style name="SteerTTS.DialogButton" parent="@android:style/Widget.Material.Light.Button.Borderless.Colored">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+</resources>

@@ -1,0 +1,93 @@
+// SteerTTS on Android: the C library (../../c) is compiled into the app's JNI library and the edge model is bundled
+// as assets. The model is not in git: by default it is copied from ../c/models/steer-tts-edge (c/tools/get_models.sh),
+// or pass -PsteerttsModel=/path/to/steer-tts-edge.
+plugins {
+    id "com.android.application"
+}
+
+def modelDir = file(project.findProperty("steerttsModel") ?: "../../c/models/steer-tts-edge")
+def modelAssets = layout.buildDirectory.dir("generated/steertts-model")
+
+tasks.register("copySteerttsModel", Copy) {
+    doFirst {
+        if (!new File(modelDir, "config.json").exists())
+            throw new GradleException("no SteerTTS edge model in ${modelDir}: run c/tools/get_models.sh or pass -PsteerttsModel=DIR")
+    }
+    from(modelDir) {
+        include "config.json", "acoustic.safetensors", "vocoder.safetensors", "voices.json", "voices.safetensors",
+                "native/front/**"
+    }
+    into modelAssets.map { it.dir("model") }
+}
+
+android {
+    namespace "ai.whissle.steertts.demo"
+    compileSdk 36
+    ndkVersion "27.1.12297006"
+
+    defaultConfig {
+        applicationId "ai.whissle.steertts"      // the Play Store id (permanent); the code's namespace stays ai.whissle.steertts.demo
+        minSdk 26
+        targetSdk 36
+        versionCode 15
+        versionName "1.8.5"
+        resValue "string", "app_name", "SteerTTS"
+        ndk { abiFilters "arm64-v8a" }
+        externalNativeBuild {
+            cmake { arguments "-DANDROID_STL=none" }
+        }
+    }
+    // Release key from ~/.gradle/gradle.properties (STEERTTS_STORE_FILE, ..._STORE_PASSWORD, ..._KEY_ALIAS,
+    // ..._KEY_PASSWORD); without them the release build is signed with the debug key. Updates to an installed app must
+    // be signed with the same key, so keep the keystore backed up.
+    signingConfigs {
+        if (project.hasProperty("STEERTTS_STORE_FILE")) {
+            release {
+                storeFile file(STEERTTS_STORE_FILE)
+                storePassword STEERTTS_STORE_PASSWORD
+                keyAlias STEERTTS_KEY_ALIAS
+                keyPassword STEERTTS_KEY_PASSWORD
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"           // installs next to the store app; demo-recording hooks work only here
+            resValue "string", "app_name", "SteerTTS debug"
+        }
+        release {
+            minifyEnabled false
+            signingConfig project.hasProperty("STEERTTS_STORE_FILE") ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+    sourceSets {
+        main { assets.srcDirs += modelAssets }
+    }
+    packaging {
+        // compressed and extracted at install: AGP 8.2 aligns stored native libraries to 4 KB only, which phones with
+        // 16 KB pages (Android 15+) refuse to map from the APK ("app isn't 16 KB compatible")
+        jniLibs { useLegacyPackaging true }
+    }
+    androidResources {
+        noCompress += ["safetensors", "bin", "json", "tsv", "txt"]   // copied once at first start, faster uncompressed
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    testOptions {
+        unitTests.returnDefaultValues = true   // the speech logic is plain Java; android.* stubs are never called for real
+    }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+}
+
+tasks.named("preBuild") { dependsOn "copySteerttsModel" }

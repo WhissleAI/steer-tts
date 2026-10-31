@@ -1,0 +1,280 @@
+package ai.whissle.steertts.demo;
+
+import android.content.Context;
+import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
+import android.os.SystemClock;
+import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * The assistant's voice (message readouts, caller and meeting announcements, the briefing), in the app's main process:
+ * its own engine on its own thread. What it says is a Speech: parts, each rendered with the user's style adjusted for
+ * the situation (ContextStyler) and then the part's mood and voice (Expression), a sentence at a time and played through Player while other audio ducks (transient audio focus). Requests queue; an interrupting one
+ * (an incoming call, a new read-aloud) drops what is queued or playing. The renderer stays at most a few seconds ahead
+ * of playback, so a long article is never all in memory, and the engine (~30 MB) is closed after two idle minutes.
+ * While it speaks there is always a way to stop it: a "Speaking · Stop" notification, the headset's pause button (a
+ * media session), a second tap on the Catch me up tile, and any call or other app taking the audio.
+ */
+final class Announcer {
+    private static final String TAG = "SteerTTS";
+    private static final long IDLE_MS = 120_000, AHEAD = 8L * SteerTTS.SAMPLE_RATE;
+    private static Announcer instance;
+
+    static synchronized Announcer get(Context c) {
+        if (instance == null) instance = new Announcer(c.getApplicationContext());
+        return instance;
+    }
+
+    private final Context app;
+    private final Handler engineThread;
+    private final Player player = new Player();
+    private final AudioManager am;
+    private final AudioFocusRequest focus;
+    private volatile SteerTTS tts;                            // engine thread
+    private final AtomicInteger gen = new AtomicInteger();   // bumped by stop(): older requests are dropped
+    private final List<Runnable> waiting = new ArrayList<>(); // done callbacks of requests not finished (guarded)
+    private final Runnable closeIdle = () -> {
+        if (tts != null) tts.close();
+        tts = null;
+    };
+
+    private Announcer(Context app) {
+        this.app = app;
+        Player.initTap(app);
+        HandlerThread t = new HandlerThread("steertts-announcer", Process.THREAD_PRIORITY_URGENT_AUDIO);
+        t.start();
+        engineThread = new Handler(t.getLooper());
+        am = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
+        focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                .setOnAudioFocusChangeListener(change -> {
+                    // a call (ringing or placed), another app's audio or a voice assistant: stop, don't talk over it
+                    if (change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) stop();
+                })
+                .build();
+        android.content.IntentFilter f = new android.content.IntentFilter(ACTION_STOP);
+        if (android.os.Build.VERSION.SDK_INT >= 33) app.registerReceiver(stopReceiver, f, Context.RECEIVER_NOT_EXPORTED);
+        else app.registerReceiver(stopReceiver, f);
+    }
+
+    // ---------------------------------------------------------------- a way to stop it
+    static final String ACTION_STOP = "ai.whissle.steertts.ANNOUNCER_STOP";
+    private static final String CHANNEL = "speaking";
+    private static final int NOTE_ID = 7;
+    private final android.content.BroadcastReceiver stopReceiver = new android.content.BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) { stop(); }
+    };
+    private android.media.session.MediaSession session;
+
+    /** Whether something is being said or waits to be said. */
+    boolean speaking() {
+        synchronized (waiting) { return !waiting.isEmpty(); }
+    }
+
+    /** The "Speaking · Stop" notification and the headset button, while anything is queued or playing (main thread). */
+    private void controls(boolean on) {
+        MAIN.post(() -> {
+            android.app.NotificationManager nm = app.getSystemService(android.app.NotificationManager.class);
+            if (!on || !speaking()) {
+                nm.cancel(NOTE_ID);
+                if (session != null) {
+                    session.setActive(false);
+                    session.release();
+                    session = null;
+                }
+                return;
+            }
+            if (session == null) {
+                session = new android.media.session.MediaSession(app, "SteerTTS assistant");
+                session.setCallback(new android.media.session.MediaSession.Callback() {
+                    @Override public void onPause() { stop(); }
+                    @Override public void onStop() { stop(); }
+                    @Override public void onPlay() { stop(); }   // a single headset press toggles: while speaking, it stops
+                });
+                session.setPlaybackState(new android.media.session.PlaybackState.Builder()
+                        .setActions(android.media.session.PlaybackState.ACTION_PAUSE | android.media.session.PlaybackState.ACTION_STOP
+                                | android.media.session.PlaybackState.ACTION_PLAY_PAUSE)
+                        .setState(android.media.session.PlaybackState.STATE_PLAYING, 0, 1f).build());
+                session.setMetadata(new android.media.MediaMetadata.Builder()
+                        .putString(android.media.MediaMetadata.METADATA_KEY_TITLE, "SteerTTS is speaking")
+                        .putString(android.media.MediaMetadata.METADATA_KEY_ARTIST, "Tap Stop to quiet it").build());
+                session.setActive(true);
+            }
+            nm.createNotificationChannel(new android.app.NotificationChannel(CHANNEL, "Assistant speaking",
+                    android.app.NotificationManager.IMPORTANCE_LOW));
+            android.app.PendingIntent stopIt = android.app.PendingIntent.getBroadcast(app, 7,
+                    new Intent(ACTION_STOP).setPackage(app.getPackageName()), android.app.PendingIntent.FLAG_IMMUTABLE);
+            android.app.Notification n = new android.app.Notification.Builder(app, CHANNEL)
+                    .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                    .setContentTitle("SteerTTS is speaking")
+                    .setContentText("Tap Stop to quiet it.")
+                    .setOngoing(true)
+                    .setOnlyAlertOnce(true)
+                    .setVisibility(android.app.Notification.VISIBILITY_PUBLIC)
+                    .setCategory(android.app.Notification.CATEGORY_STATUS)
+                    .addAction(new android.app.Notification.Action.Builder(
+                            android.graphics.drawable.Icon.createWithResource(app, R.drawable.ic_close), "Stop", stopIt).build())
+                    .setDeleteIntent(stopIt)
+                    // a media notification (tied to the session): shown even when notifications aren't allowed,
+                    // and on the lock screen, with Stop in the compact view
+                    .setStyle(new android.app.Notification.MediaStyle().setMediaSession(session.getSessionToken())
+                            .setShowActionsInCompactView(0))
+                    .build();
+            try {
+                nm.notify(NOTE_ID, n);
+            } catch (SecurityException ignored) {   // notifications not allowed: the headset button and tile still stop it
+            }
+        });
+    }
+
+    /**
+     * Speaks text (plain, no markup). caller: the package the text is about, for ContextStyler. done (may be null)
+     * runs when it has been heard out, or was dropped.
+     */
+    void say(String text, String caller, boolean interrupt, Runnable done) {
+        say(new Speech().add(text, Expression.of(text)), caller, interrupt, done);
+    }
+
+    /** Speaks parts that may each have their own mood and voice (a readout's framing, then the message). */
+    void say(Speech sp, String caller, boolean interrupt, Runnable done) {
+        if (interrupt) stop();
+        int g = gen.get();
+        Runnable d = done != null ? done : () -> { };
+        if (sp.isEmpty()) {
+            d.run();
+            return;
+        }
+        boolean first;
+        synchronized (waiting) {
+            first = waiting.isEmpty();
+            if (first && am.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {   // a call is on
+                d.run();
+                return;
+            }
+            waiting.add(d);
+        }
+        if (first) controls(true);
+        String text = sp.text();
+        if (SteerTTS.debug(app)) Log.i(TAG, "announce [" + caller + "] " + text.substring(0, Math.min(text.length(), 160)) + describe(sp));
+        engineThread.post(() -> render(sp, caller, g, d));
+    }
+
+    /** " {sad: apologetic; voice_0010}" per part with a mood or a voice of its own (the log; tests read it). */
+    private static String describe(Speech sp) {
+        StringBuilder b = new StringBuilder();
+        for (Speech.Part p : sp.parts)
+            if (!p.mood.neutral() || p.voice != null)
+                b.append(b.length() > 0 ? ", " : "").append(p.mood.name).append(p.mood.tag != null ? ":" + p.mood.tag : "")
+                        .append(p.voice != null ? " " + p.voice : "");
+        return b.length() > 0 ? " {" + b + "}" : "";
+    }
+
+    /** Drops everything queued or playing; their done callbacks run now. */
+    void stop() {
+        gen.incrementAndGet();
+        player.flush();
+        List<Runnable> dropped;
+        synchronized (waiting) {
+            dropped = new ArrayList<>(waiting);
+            waiting.clear();
+            am.abandonAudioFocusRequest(focus);
+        }
+        controls(false);
+        for (Runnable r : dropped) r.run();
+    }
+
+    private void render(Speech sp, String caller, int g, Runnable done) {
+        engineThread.removeCallbacks(closeIdle);
+        try {
+            if (tts == null) tts = new SteerTTS(SteerTTS.installModel(app).getPath(), 0);
+            Style mine = Style.load(app);
+            Smooth.on = mine.smooth;
+            Style base = ContextStyler.decide(app, mine, sp.text(), caller, false);
+            if (gen.get() == g) show(base, sp, caller);
+            for (Speech.Part part : sp.parts) {
+                Style s = moodStyle(base, part.mood);
+                String voice = voice(tts, part.voice != null ? part.voice : s.voice);
+                String lang = Spoken.unspoken(part.text);   // e.g. an email subject in Hindi: say so, not silence
+                String text = lang == null ? part.text : lang.equals("another language") ? "Something in a language I can't read yet."
+                        : "Something in " + lang + ".";
+                for (String sentence : SteerTtsService.sentences(Spoken.say(text))) {
+                    while (player.pendingSamples() > AHEAD && gen.get() == g) SystemClock.sleep(50);
+                    if (gen.get() != g) break;
+                    float[] y = tts.synthesize(sentence, voice, s.tagOrNull(), s.ctrl(), s.pace, false);
+                    if (y == null || gen.get() != g) break;
+                    player.write(y);
+                }
+                if (part.pauseAfterMs > 0 && gen.get() == g) player.write(new float[SteerTTS.SAMPLE_RATE * part.pauseAfterMs / 1000]);
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, "announce failed", ex);
+        }
+        if (gen.get() == g) player.end(() -> finished(done));
+        else finished(done);
+        engineThread.postDelayed(closeIdle, IDLE_MS);
+    }
+
+    /**
+     * The situation's style with a part's mood on top: the mood's tag replaces the user's (except a whisper, which is
+     * the user's choice of voice quality) and its control shifts add to the user's.
+     */
+    static Style moodStyle(Style base, Expression.Mood m) {
+        Style s = base.copy();
+        if (m.neutral()) return s;
+        if (m.tag != null && !"whisper".equals(base.tag)) s.tag = m.tag;
+        for (java.util.Map.Entry<String, Float> e : m.ctrl.entrySet()) s.add(e.getKey(), e.getValue());
+        s.reason = base.reason.startsWith("neutral") || base.reason.isEmpty() ? m.why : m.why + "; " + base.reason;
+        return s;
+    }
+
+    /** Tells the app's screen what is being said and in what style (SteerTtsService does the same). */
+    /**
+     * The app's screen, when it is open (same process): told directly, on the main thread. A broadcast can wait
+     * seconds in the queue while the system is busy with the very notification being read out.
+     */
+    static volatile java.util.function.Consumer<Intent> screen;
+    private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
+
+    private void tell(Intent i) {
+        java.util.function.Consumer<Intent> s = screen;
+        if (s != null) MAIN.post(() -> s.accept(i));
+        else app.sendBroadcast(i);
+    }
+
+    private void show(Style base, Speech sp, String caller) {
+        Style s = moodStyle(base, sp.mainMood());
+        tell(new Intent(SteerTtsService.ACTION_STYLE).setPackage(app.getPackageName())
+                .putExtra("speaking", true).putExtra("source", "assistant").putExtra("style", s.toJson().toString())
+                .putExtra("text", sp.text()).putExtra("caller", caller));
+    }
+
+    private void finished(Runnable done) {
+        synchronized (waiting) {
+            if (!waiting.remove(done)) return;   // already run by stop()
+            if (waiting.isEmpty()) {
+                am.abandonAudioFocusRequest(focus);
+                controls(false);
+                tell(new Intent(SteerTtsService.ACTION_STYLE).setPackage(app.getPackageName())
+                        .putExtra("speaking", false));
+            }
+        }
+        done.run();
+    }
+
+    private static String voice(SteerTTS e, String v) {
+        if (v == null || v.equals("female")) return e.genderVoice("female");
+        if (v.equals("male")) return e.genderVoice("male");
+        return e.voiceGender(v) != null ? v : e.genderVoice("female");
+    }
+}

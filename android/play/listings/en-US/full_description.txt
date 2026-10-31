@@ -1,0 +1,48 @@
+SteerTTS gives your phone an expressive voice that runs entirely on the device. No account, no internet connection, nothing sent anywhere: every word is made right on your phone.
+
+LISTEN TO ANYTHING
+• PDFs are read from the page itself: you see the real page, the line being read is highlighted where it is printed, and tapping a line reads from there. Two-column papers are read column by column; headers, footers and page numbers are skipped.
+• EPUB e-books, Word documents, web pages and plain text too, with a real player: pause, skip by sentence, speed from 0.8× to 2×.
+• Books are performed, not just read: dialogue in a second voice and in its own mood, italics stressed, a pause after each chapter heading.
+• Controls on the lock screen and in the notification, a sleep timer, and the next item in your list plays on its own. Your place in every document is remembered.
+• Share an article or a file to SteerTTS from any app, or select text and choose "Read with SteerTTS".
+
+SAY IT YOUR WAY
+• One tap says the same words happy, whispered, excited or sad.
+• Inline markup changes delivery mid-sentence: a whisper, stress on one word, a pause.
+• 200 named voices with previews and favourites, eight styles from Calm to Whisper, a speed slider and simple controls for pitch, expressiveness, loudness and endings (with twelve fine controls behind Advanced).
+• Reads the way people write: times, dates, phone numbers, prices, temperatures, titles such as Dr. and Mrs., and chapter numbers.
+
+IT SPEAKS UP FOR YOU
+• Message readouts: new messages from the apps you choose, read aloud as they arrive, the way they were meant: a sorry sounds gentle, "HAPPY BIRTHDAY!!! 🎉" sounds excited, "haha" sounds amused. By default only with headphones or in the car, never during a call or in Do Not Disturb.
+• A voice for each person: every sender's messages in a voice of their own, so you know who wrote without hearing the name.
+• Catch me up: messages that arrived while SteerTTS couldn't read them out are summarised, person by person, when you put your headphones in.
+• Incoming calls: hear who is calling while the phone rings, and when someone calls a third time, that it may be urgent. Missed calls too.
+• Reminders and timers, deliveries and rides ("Your driver is arriving"), email senders and subjects (if you turn it on), and a battery heads-up.
+• Meeting reminders: your next event announced a few minutes before it starts, including where it happens.
+• Daily briefing: every morning, or whenever you ask, your day ahead plus last night's sleep, your steps and resting heart rate from Health Connect.
+
+IT ADAPTS TO THE MOMENT
+Alerts come out faster and louder, questions rise at the end, and late at night it speaks softer. You can switch this off.
+
+READ ANY SCREEN
+Any app's page read aloud when you ask: tap "Read this screen" in Quick Settings. The paragraph being read is outlined, a tiny control floats on top to pause, skip and keep going, and auto-continue scrolls the page and reads on. Tables and lists of links are summed up in a sentence instead of read cell by cell.
+
+FREE BOOKS
+70,000 classics and children's stories from Project Gutenberg, free. Stories are performed: each character gets a voice of their own, whispered lines are whispered and shouted ones shouted, and the narration follows the mood of the scene.
+
+ONE TAP, ANYWHERE
+Quick Settings tiles read whatever you copied, or catch you up, without opening the app.
+
+YOUR PHONE'S VOICE
+Set SteerTTS as Android's text-to-speech engine and other apps on your phone speak with it too.
+
+FAST AND SMALL
+• First sound in under 60 milliseconds on a single CPU core (Pixel 10).
+• Renders speech more than 60 times faster than real time.
+• The whole app, voice model included, is about 13 MB.
+
+PRIVATE BY DESIGN
+Notification text, calendar events, health data and your documents are read on the phone, spoken, and never sent anywhere. No account, no ads, no analytics. The app uses the internet only to open a link you share with it.
+
+SteerTTS speaks English. Made by Whissle.

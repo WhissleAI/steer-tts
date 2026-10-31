@@ -1,0 +1,22 @@
+// "Chat": a stand-in messaging app for demo recordings. It posts the notifications a real messenger would (a new
+// message, an incoming call) so SteerTTS's readouts can be filmed without a real account. Not part of the product.
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "ai.whissle.demochat"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "ai.whissle.demochat"
+        minSdk 31
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

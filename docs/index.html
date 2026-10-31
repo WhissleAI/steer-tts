@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SteerTTS samples</title>
+<meta name="description" content="Audio samples for SteerTTS v1 and SteerTTS edge (12 MB), a small steerable English TTS by Whissle.">
+<style>
+:root {
+  --bg: #fbfaf8; --fg: #1d1d1f; --muted: #5f6368; --line: #e3e1dc; --card: #ffffff;
+  --accent: #2f5d8a; --code-bg: #f1efeb;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151618; --fg: #e8e8ea; --muted: #a0a4aa; --line: #2c2e33; --card: #1c1d20;
+    --accent: #8db7e0; --code-bg: #26282c;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151618; --fg: #e8e8ea; --muted: #a0a4aa; --line: #2c2e33; --card: #1c1d20;
+  --accent: #8db7e0; --code-bg: #26282c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+main { max-width: 880px; margin: 0 auto; padding: 40px 16px 64px; }
+h1 { font-size: 2rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+h2 { font-size: 1.3rem; margin: 48px 0 6px; }
+h3 { font-size: 1.02rem; margin: 28px 0 10px; color: var(--muted); font-weight: 600; }
+p { margin: 8px 0; }
+.lede { color: var(--muted); font-size: 1.05rem; margin-bottom: 14px; }
+a { color: var(--accent); }
+code { font: 0.86em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0 0; padding: 0; list-style: none; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--muted); font-size: 0.93rem; margin: 10px 0 18px; }
+.facts b { color: var(--fg); font-weight: 600; }
+.row {
+  display: grid; grid-template-columns: 1fr 300px; gap: 10px 20px; align-items: center;
+  padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin: 10px 0;
+}
+.row.pair { grid-template-columns: 1fr; }
+.pair .players { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+.label { font-size: 0.82rem; color: var(--muted); margin-bottom: 2px; }
+.text { font-style: italic; }
+.req { margin-top: 4px; font-size: 0.92rem; color: var(--muted); }
+audio { width: 100%; height: 40px; }
+.note { color: var(--muted); font-size: 0.92rem; }
+table.t { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.92rem; background: var(--card); }
+table.t th, table.t td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; }
+table.t th { color: var(--muted); font-weight: 600; }
+table.t td.n { font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+pre { background: var(--code-bg); padding: 10px 12px; border-radius: 8px; overflow-x: auto; font: 0.86em/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+@media (max-width: 640px) {
+  .row, .pair .players { grid-template-columns: 1fr; }
+  h1 { font-size: 1.6rem; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>SteerTTS</h1>
+<p class="lede">A small English text-to-speech model you can steer with numbers, style tags, free-text prompts and inline markup.
+Every clip below is raw model output, with no cherry-picking across seeds.</p>
+<ul class="links">
+  <li><a href="https://github.com/WhissleAI/steer-tts">Code (GitHub)</a></li>
+  <li><a href="https://huggingface.co/WhissleAI/steer-tts">SteerTTS v1 weights</a></li>
+  <li><a href="https://huggingface.co/WhissleAI/steer-tts-edge">SteerTTS edge (12 MB)</a></li>
+  <li><a href="#c">C library (no Python)</a></li>
+</ul>
+
+<h2 id="v1">SteerTTS v1</h2>
+<p class="facts"><span>Acoustic model + flow refiner + Vocos vocoder</span><span><b>24 kHz</b></span><span>seed 0</span></p>
+
+<h3>Default voice: v1.0.0 vs v1.0.1</h3>
+<div class="row pair">
+  <div class="text">“Hi, thanks for calling. I can help you reschedule your appointment today.”</div>
+  <div class="players">
+    <div><div class="label"><code>voice_1361</code> (v1.0.0 default)</div><audio controls preload="none" src="audio/v1/cmp_intro_voice_1361.mp3"></audio></div>
+    <div><div class="label"><code>voice_1688</code> (v1.0.1 default)</div><audio controls preload="none" src="audio/v1/cmp_intro_voice_1688.mp3"></audio></div>
+  </div>
+</div>
+<div class="row pair">
+  <div class="text">“The weather was cold, but the view from the top was worth every single step.”</div>
+  <div class="players">
+    <div><div class="label"><code>voice_1361</code> (v1.0.0 default)</div><audio controls preload="none" src="audio/v1/cmp_story_voice_1361.mp3"></audio></div>
+    <div><div class="label"><code>voice_1688</code> (v1.0.1 default)</div><audio controls preload="none" src="audio/v1/cmp_story_voice_1688.mp3"></audio></div>
+  </div>
+</div>
+
+<h3>Steering <code>voice_1688</code></h3>
+<div class="row"><div><div class="text">“Are you coming with us tonight?”</div><div class="req">No controls</div></div><audio controls preload="none" src="audio/v1/steer_plain.mp3"></audio></div>
+<div class="row"><div><div class="text">Same text</div><div class="req"><code>ctrl={"f0_end": 2, "f0_iqr": 1.5}</code>: rising, livelier</div></div><audio controls preload="none" src="audio/v1/steer_question_rise.mp3"></audio></div>
+<div class="row"><div><div class="text">“Please keep this between the two of us.”</div><div class="req"><code>ctrl={"rate": -1.5, "loud": -1.5}</code>: slow, soft</div></div><audio controls preload="none" src="audio/v1/steer_slow_soft.mp3"></audio></div>
+<div class="row"><div><div class="text">Same text</div><div class="req"><code>tag="whisper"</code></div></div><audio controls preload="none" src="audio/v1/steer_whisper_tag.mp3"></audio></div>
+<div class="row"><div><div class="text">“I really thought it would work this time.”</div><div class="req"><code>tag="sadness"</code>, <code>guidance=1.5</code></div></div><audio controls preload="none" src="audio/v1/steer_sad_tag.mp3"></audio></div>
+<div class="row"><div><div class="text">“I can't believe we actually won!”</div><div class="req"><code>prompt="excited, a bit faster"</code></div></div><audio controls preload="none" src="audio/v1/steer_prompt.mp3"></audio></div>
+<div class="row"><div><div class="text">Inline markup</div><div class="req"><code>Well, *that* was fast. [pause 400ms] &lt;slow&gt;Let me think about it.&lt;/slow&gt; &lt;whisper&gt;Don't tell anyone.&lt;/whisper&gt;</code></div></div><audio controls preload="none" src="audio/v1/steer_markup.mp3"></audio></div>
+
+<h2 id="edge">SteerTTS edge</h2>
+<p class="facts"><span><b>11.84 MB</b> total payload</span><span>int4 acoustic model + int4 vocoder</span><span>rendered on a CPU</span><span>default voice <code>voice_1688</code></span></p>
+<div class="row"><div><div class="text">“Hi, thanks for calling. I can help you reschedule your appointment today.”</div><div class="req">No controls</div></div><audio controls preload="none" src="audio/edge/neutral.mp3"></audio></div>
+<div class="row"><div><div class="text">“Are you coming with us tonight?”</div><div class="req"><code>ctrl={"f0_end": 2, "f0_iqr": 1.5}</code>: rising, livelier</div></div><audio controls preload="none" src="audio/edge/question_rise.mp3"></audio></div>
+<div class="row"><div><div class="text">“The weather was cold, but the view from the top was worth every step.”</div><div class="req"><code>ctrl={"rate": -1.5}</code>: slower</div></div><audio controls preload="none" src="audio/edge/rate_slow.mp3"></audio></div>
+<div class="row"><div><div class="text">Same text</div><div class="req"><code>ctrl={"rate": 1.5}</code>: faster</div></div><audio controls preload="none" src="audio/edge/rate_fast.mp3"></audio></div>
+<div class="row"><div><div class="text">“Please keep this between the two of us.”</div><div class="req"><code>tag="whisper"</code></div></div><audio controls preload="none" src="audio/edge/whisper.mp3"></audio></div>
+<div class="row"><div><div class="text">“I really thought it would work this time.”</div><div class="req"><code>tag="sadness"</code>, <code>guidance=1.5</code></div></div><audio controls preload="none" src="audio/edge/sadness.mp3"></audio></div>
+<div class="row"><div><div class="text">Inline markup</div><div class="req"><code>Well, *that* was fast. [pause 400ms] &lt;slow&gt;Let me think about it.&lt;/slow&gt; &lt;whisper&gt;Don't tell anyone.&lt;/whisper&gt;</code></div></div><audio controls preload="none" src="audio/edge/markup.mp3"></audio></div>
+<p class="note">Clips are MP3 encodes of the WAV files in each Hugging Face repo.</p>
+
+<h2 id="c">The same models in plain C</h2>
+<p class="facts"><span>One C11 library, no dependencies</span><span>both models, every feature</span><span><b>27 MB</b> RAM for edge</span><span>1.4 MB static binary</span></p>
+<p>The <a href="https://github.com/WhissleAI/steer-tts/tree/main/c">C library</a> runs v1 (flow refiner, free-text prompts, voice cloning, fp32 or int8) and the edge build without Python, PyTorch or ONNX Runtime. Same requests, same audio: on 218 test sentences the C renders have exactly the same length as the Python ones and differ from them by about 0.0001 dB in the spectrum.</p>
+
+<h3>Python (PyTorch) vs C, same request</h3>
+<div class="row pair">
+  <div><div class="text">“Are you coming with us tonight?”</div><div class="req">v1, <code>ctrl={"f0_end": 2, "f0_iqr": 1.5}</code></div></div>
+  <div class="players">
+    <div><div class="label">Python</div><audio controls preload="none" src="audio/v1/steer_question_rise.mp3"></audio></div>
+    <div><div class="label">C library</div><audio controls preload="none" src="audio/c/v1_question_rise.mp3"></audio></div>
+  </div>
+</div>
+<div class="row pair">
+  <div><div class="text">“I really thought it would work this time.”</div><div class="req">v1, <code>tag="sadness"</code>, <code>guidance=1.5</code></div></div>
+  <div class="players">
+    <div><div class="label">Python</div><audio controls preload="none" src="audio/v1/steer_sad_tag.mp3"></audio></div>
+    <div><div class="label">C library</div><audio controls preload="none" src="audio/c/v1_sad_tag.mp3"></audio></div>
+  </div>
+</div>
+<div class="row pair">
+  <div><div class="text">“I can't believe we actually won!”</div><div class="req">v1, <code>prompt="excited, a bit faster"</code> (MiniLM prompt encoder, in C)</div></div>
+  <div class="players">
+    <div><div class="label">Python</div><audio controls preload="none" src="audio/v1/steer_prompt.mp3"></audio></div>
+    <div><div class="label">C library</div><audio controls preload="none" src="audio/c/v1_prompt.mp3"></audio></div>
+  </div>
+</div>
+<div class="row pair">
+  <div><div class="text">Inline markup</div><div class="req">edge, <code>Well, *that* was fast. [pause 400ms] &lt;slow&gt;Let me think about it.&lt;/slow&gt; &lt;whisper&gt;Don't tell anyone.&lt;/whisper&gt;</code></div></div>
+  <div class="players">
+    <div><div class="label">Python</div><audio controls preload="none" src="audio/edge/markup.mp3"></audio></div>
+    <div><div class="label">C library</div><audio controls preload="none" src="audio/c/edge_markup.mp3"></audio></div>
+  </div>
+</div>
+
+<h3>Only in C on device</h3>
+<div class="row pair">
+  <div><div class="text">“Now in a cloned voice, rendered by the C library.”</div><div class="req">v1 cloning: WavLM x-vector + prompted flow, both in C. The reference is a v1 render of built-in <code>voice_0100</code> (no real person).</div></div>
+  <div class="players">
+    <div><div class="label">reference clip</div><audio controls preload="none" src="audio/c/clone_reference.mp3"></audio></div>
+    <div><div class="label">clone (C library)</div><audio controls preload="none" src="audio/c/v1_clone.mp3"></audio></div>
+  </div>
+</div>
+<div class="row"><div><div class="text">“Are you coming with us tonight?”</div><div class="req">v1 <b>int8</b> in C (65 MB RAM), same controls as above</div></div><audio controls preload="none" src="audio/c/v1int8_question_rise.mp3"></audio></div>
+
+<h3>Speed and memory, one CPU thread</h3>
+<div class="scroll"><table class="t">
+<tr><th>Build</th><th>Runtime</th><th>Real-time factor</th><th>Peak RAM</th><th>Load</th></tr>
+<tr><td>edge</td><td><b>C library</b></td><td class="n">0.061</td><td class="n">27 MB</td><td class="n">0.02 s</td></tr>
+<tr><td>edge</td><td>C++ + ONNX Runtime</td><td class="n">0.079</td><td class="n">97 MB</td><td class="n">0.50 s</td></tr>
+<tr><td>v1, with flow</td><td><b>C library</b></td><td class="n">0.88</td><td class="n">173 MB (int8: 65 MB)</td><td class="n">0.03 s</td></tr>
+<tr><td>v1, with flow</td><td>Python + PyTorch</td><td class="n">1.06</td><td class="n">930 MB</td><td class="n">0.77 s</td></tr>
+<tr><td>v1, no flow</td><td><b>C library</b></td><td class="n">0.095</td><td class="n">105 MB</td><td class="n">0.02 s</td></tr>
+</table></div>
+<p class="note">20 benchmark sentences on a 2018 desktop CPU (Threadripper 2970WX); lower is faster, below 1 is faster than real time. Full numbers, parity tests and the evaluation: <a href="https://github.com/WhissleAI/steer-tts/blob/main/docs/c.md">docs/c.md</a>.</p>
+
+<h2 id="try">Try it</h2>
+<p><code>pip install "steertts[all] @ git+https://github.com/WhissleAI/steer-tts"</code></p>
+<p><code>steertts say "Hello there, nice to meet you." -o hello.wav</code></p>
+<p class="note">The v1 weights download from Hugging Face on first use. The repo asks you to accept the licence terms once (CC BY-NC 4.0).</p>
+<p>Without Python, with the C library:</p>
+<pre>git clone https://github.com/WhissleAI/steer-tts && cd steer-tts/c
+make                                    # or: cmake -B build &amp;&amp; cmake --build build
+tools/get_models.sh edge                # 13 MB (export HF_TOKEN=... if the repo asks you to accept its licence)
+build/steertts --model models/steer-tts-edge "Hello from C." -o hello.wav</pre>
+
+<footer>SteerTTS by <a href="https://whissle.ai">Whissle</a>. Code, weights and samples are CC BY-NC 4.0 + Whissle terms (non-commercial; commercial licences from Whissle Inc.).
+Report bad audio or bugs at <a href="https://github.com/WhissleAI/steer-tts/issues">github.com/WhissleAI/steer-tts/issues</a>.</footer>
+</main>
+</body>
+</html>

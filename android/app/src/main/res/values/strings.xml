@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="screen_reader_summary">Reads the screen aloud when you ask, with a small control to pause, skip and keep going</string>
+    <string name="screen_reader_description">SteerTTS reads the text on your screen aloud, in any app, when you start it from the Quick Settings tile, the accessibility button or the app. It reads the visible text of the app in front of you, and can scroll that page to keep reading. It reads only when you ask, never stores or sends what it reads, and does not watch what you do.</string>
+</resources>
