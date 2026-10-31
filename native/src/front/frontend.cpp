@@ -81,6 +81,15 @@ int roman_value(const std::string& r) {
   return t;
 }
 
+// spelled as letters (a lone "A" is the article, so it is written "ay")
+const char* ampm_words(char32_t c) { return c == U'A' || c == U'a' ? " ay M" : " P M"; }
+
+const char* tens_plural(char32_t d) {
+  static const char* t[] = {"", "tens", "twenties", "thirties", "forties", "fifties", "sixties", "seventies", "eighties",
+                            "nineties"};
+  return t[d - U'0'];
+}
+
 // str(int(s)) for a string of ASCII digits
 std::string int_str(const std::string& d) {
   size_t i = 0;
@@ -120,7 +129,8 @@ Frontend::Impl::Impl(const std::string& dir)
       {"mph", "miles per hour"},       {"km", "kilometers"},             {"kg", "kilograms"},
       {"cm", "centimeters"},           {"mm", "millimeters"},            {"ft", "feet"},
       {"lbs", "pounds"},               {"lb", "pounds"},                 {"kHz", "kilohertz"},
-      {"Hz", "hertz"},                 {"GB", "gigabytes"},              {"MB", "megabytes"}};
+      {"Hz", "hertz"},                 {"GB", "gigabytes"},              {"MB", "megabytes"},
+      {"kph", "kilometers per hour"}};
   std::stable_sort(u.begin(), u.end(), [](const auto& a, const auto& b) { return a.first.size() > b.first.size(); });
   for (auto& e : u) {
     std::string pat;
@@ -141,14 +151,22 @@ Frontend::Impl::Impl(const std::string& dir)
       {R"(\bi\.e\.)", "that is"},               {R"(\betc\.(?=\s*[,;:!?)]|\s+[a-z]))", "et cetera"},
       {R"(\betc\.)", "et cetera."},              {R"(\bapprox\.)", "approximately"},
       {R"(\bNo\.(?=\s*[0-9]))", "number"},          {R"(\bFig\.(?=\s*[0-9]))", "figure"},
-      {R"(\bVol\.(?=\s*[0-9]))", "volume"},         {R"(\bpp\.(?=\s*[0-9]))", "pages"},
+      {R"(\bVol\.(?=\s*[0-9]))", "volume"},         {R"(\bpp\.(?=\s*[0-9]))", "pages"}};
+  for (auto& a : ab) abbrev.emplace_back(Regex(&ucd, a[0]), a[1]);
+  // month abbreviations before a day / year ("Nov 3", "Nov. 3, 2024"), then after a day ("3 Nov"; a final period stays)
+  const char* months[][2] = {{"Jan", "January"}, {"Feb", "February"}, {"Mar", "March"},     {"Apr", "April"},
+                             {"Jun", "June"},    {"Jul", "July"},     {"Aug", "August"},    {"Sept", "September"},
+                             {"Sep", "September"}, {"Oct", "October"}, {"Nov", "November"}, {"Dec", "December"}};
+  for (auto& m : months) abbrev.emplace_back(Regex(&ucd, std::string("\\b") + m[0] + R"((?:\.\s*|\s+)(?=[0-9]))"), std::string(m[1]) + " ");
+  for (auto& m : months) abbrev.emplace_back(Regex(&ucd, std::string("(?<=[0-9] )") + m[0] + "\\b"), m[1]);
+  const char* ab2[][2] = {
       {R"(\bJan\.)", "January"},                 {R"(\bFeb\.)", "February"},
       {R"(\bMar\.(?=\s*[0-9]))", "March"},          {R"(\bApr\.)", "April"},
       {R"(\bJun\.(?=\s*[0-9]))", "June"},           {R"(\bJul\.(?=\s*[0-9]))", "July"},
       {R"(\bAug\.)", "August"},                  {R"(\bSept?\.)", "September"},
       {R"(\bOct\.)", "October"},                 {R"(\bNov\.)", "November"},
       {R"(\bDec\.)", "December"}};
-  for (auto& a : ab) abbrev.emplace_back(Regex(&ucd, a[0]), a[1]);
+  for (auto& a : ab2) abbrev.emplace_back(Regex(&ucd, a[0]), a[1]);
   deg_cf = Regex(&ucd, "([0-9])\\s?°\\s?([CF])(?![A-Za-z])");
   deg = Regex(&ucd, "([0-9])\\s?°");
   letter_amp = Regex(&ucd, R"(\b([A-Z])\s?&\s?([A-Z])\b)");
@@ -163,6 +181,11 @@ Frontend::Impl::Impl(const std::string& dir)
   ww = Regex(&ucd, R"(\bWW(II|I|1|2)\b)");
   fraction = Regex(&ucd, R"((?<![0-9/])([1-9])/(10|[2-9])(?![0-9/]))");
   num_hyphen = Regex(&ucd, R"((?<=[a-z])-(?=[a-z]))");
+  decade4 = Regex(&ucd, R"(\b(1[1-9]|20)([0-9])0'?s\b)");         // 1990s, 1800s, 2000s
+  decade2 = Regex(&ucd, R"((?<![0-9A-Za-z])'?([1-9])0'?s\b)");    // '90s, 80s
+  digit_groups = Regex(&ucd, R"((\b(?:[Nn]umber|[Cc]all|[Pp]hone|[Tt]el|[Dd]ial|[Ff]ax)\.?:?\s+)?(?<![0-9.,-])([0-9]+(?:-[0-9]+)+)(?![0-9-]|[.,][0-9]))");
+  sign = Regex(&ucd, "(?<![^\\s(])([+−-])(?=[0-9])");           // +30, -5, U+2212 minus
+  letter_digit = Regex(&ucd, R"(\b(?=[A-Z0-9]*[A-Z])(?=[A-Z0-9]*[0-9])[A-Z0-9]+\b)");  // Q4, 5G, MP3
 }
 
 u32str Frontend::Impl::pre(const u32str& text0) const {
@@ -185,13 +208,13 @@ u32str Frontend::Impl::pre(const u32str& text0) const {
       w += mm[0] == '0' ? " oh " + mm.substr(1) : " " + mm;
     else if (!m.has(3))
       w += (std::atoi(h.c_str()) > 12 || std::atoi(h.c_str()) == 0 || h[0] == '0') ? " hundred" : " o'clock";
-    if (m.has(3)) w += (s[m.caps[6]] == U'A' || s[m.caps[6]] == U'a') ? " ay em" : " pee em";
+    if (m.has(3)) w += ampm_words(s[m.caps[6]]);
     return A(w);
   });
   t = colon.sub(t, [](const Regex::Match&, const u32str&) { return u32str(U" "); });  // durations, ratios
   t = ampm.sub(t, [](const Regex::Match& m, const u32str& s) {
     char32_t a = s[m.caps[4]];
-    return A(int_str(N(m.str(s, 1))) + (a == U'A' || a == U'a' ? " ay em" : " pee em"));
+    return A(int_str(N(m.str(s, 1))) + ampm_words(a));
   });
   for (auto& ab : abbrev) {
     const std::string& w = ab.second;
@@ -227,6 +250,13 @@ u32str Frontend::Impl::pre(const u32str& text0) const {
     int k = d == U"10" ? 10 : static_cast<int>(d[0] - U'0');
     return n + U" " + A(n == U"1" ? one[k] : many[k]);
   });
+  t = decade4.sub(t, [](const Regex::Match& m, const u32str& s) {  // 1990s -> 19 nineties, 1800s -> 18 hundreds
+    u32str c = m.str(s, 1);
+    char32_t d = s[m.caps[4]];
+    if (d != U'0') return c + U" " + A(tens_plural(d));
+    return c == U"20" ? u32str(U"two thousands") : c + U" hundreds";
+  });
+  t = decade2.sub(t, [](const Regex::Match& m, const u32str& s) { return A(tens_plural(s[m.caps[2]])); });
   return t;
 }
 
@@ -271,8 +301,35 @@ std::string Frontend::Impl::num_float(const u32str& s) const {
 
 u32str Frontend::Impl::expand(const u32str& text0) const {
   const detail::Ucd& u = ucd;
-  u32str t = range.sub(pre(text0), [](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" to " + m.str(s, 2); });
+  // hyphen-joined digit groups: an ID / phone number read digit by digit after "number" / "call" / "phone"
+  // (No. 90-5551, call 555-1234) or when a group starts with 0 (555-0198); otherwise unchanged (a range, read next).
+  // Dates (31-03-2018, 2023-10-22) are left as they are.
+  u32str t = digit_groups.sub(pre(text0), [](const Regex::Match& m, const u32str& s) {
+    std::vector<u32str> g(1);
+    for (char32_t c : m.str(s, 2)) {
+      if (c == U'-')
+        g.emplace_back();
+      else
+        g.back() += c;
+    }
+    bool date = g.size() == 3 && ((g[2].size() == 4 && g[0].size() <= 2 && g[1].size() <= 2) ||
+                                  (g[0].size() == 4 && g[1].size() <= 2 && g[2].size() <= 2));
+    bool lead0 = false;
+    for (auto& x : g) lead0 = lead0 || (x.size() > 1 && x[0] == U'0');
+    if (!(m.has(1) || (!date && lead0))) return m.str(s, 0);
+    u32str o = m.has(1) ? m.str(s, 1) : u32str();
+    for (size_t k = 0; k < g.size(); ++k) {
+      if (k) o += U", ";
+      for (size_t i = 0; i < g[k].size(); ++i) {
+        if (i) o += U' ';
+        o += g[k][i];
+      }
+    }
+    return o;
+  });
+  t = range.sub(t, [](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" to " + m.str(s, 2); });
   t = by.sub(t, [](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" by " + m.str(s, 2); });
+  t = sign.sub(t, [](const Regex::Match& m, const u32str& s) { return u32str(s[m.start] == U'+' ? U"plus " : U"minus "); });
   t = compound.sub(t, [](const Regex::Match&, const u32str&) { return u32str(U" "); });
   t = currency.sub(t, [](const Regex::Match& m, const u32str& s) {
     char32_t c = s[m.caps[2]];
@@ -284,6 +341,18 @@ u32str Frontend::Impl::expand(const u32str& text0) const {
     const std::string& words = un.second;
     t = un.first.sub(t, [&](const Regex::Match& m, const u32str& s) { return m.str(s, 1) + U" " + A(words); });
   }
+  t = letter_digit.sub(t, [](const Regex::Match& m, const u32str& s) {  // after the units: 5GB is gigabytes
+    u32str g = m.str(s, 0), o;  // Q4 -> Q 4, 5G -> 5 G, MP3 -> M P 3
+    auto dig = [](char32_t c) { return c >= U'0' && c <= U'9'; };
+    for (size_t i = 0; i < g.size(); ++i) {
+      if (i && !(dig(g[i]) && dig(g[i - 1]))) o += U' ';
+      if (g[i] == U'A')
+        o += U"ay";
+      else
+        o += g[i];
+    }
+    return o;
+  });
   t = ordinal.sub(t, [&](const Regex::Match& m, const u32str& s) {
     return A(num(detail::py_int_digits(m.str(s, 1), u), true));
   });

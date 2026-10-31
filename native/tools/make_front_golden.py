@@ -2,6 +2,11 @@
 """Generate the C++ front-end golden corpus from the Python edge front end (the source of truth).
 
 usage: make_front_golden.py <pkg_dir> <out_dir> [--g2p-words N]
+       make_front_golden.py <pkg_dir> --update <golden.jsonl>
+
+--update re-renders every record of an existing golden.jsonl from its inputs (text, tag, ctrl) with the current front
+end and appends the shared normalisation cases (tests/front_cases.json) that are not in it yet; golden_g2p.jsonl is
+left as it is. Use it after a front-end change, so the corpus keeps its texts and only the expected outputs move.
 
 Writes <out_dir>/golden.jsonl, one JSON object per line:
   {"k": "ph", "text": s, "norm": normalize(s) | null, "ids": [...], "widx": [...]}      text.to_phonemes(s)[:2]
@@ -29,6 +34,12 @@ SEEDTTS = Path(os.environ.get("SEEDTTS_TESTSET", "seedtts_testset"))
 SEED_EN = SEEDTTS / "en"
 SEED_ZH = SEEDTTS / "zh"
 CV3 = Path(os.environ.get("CV3_TEXTS", "cv3_eval_zero_shot_en.jsonl"))
+# normalisation cases shared by every runtime's tests: [{"text", "norm"}, ...]
+FRONT_CASES = Path(__file__).resolve().parents[2] / "tests" / "front_cases.json"
+
+
+def front_cases():
+    return [c["text"] for c in json.loads(FRONT_CASES.read_text(encoding="utf-8"))] if FRONT_CASES.exists() else []
 
 
 def real_texts():
@@ -287,8 +298,63 @@ def gen_markup(r, en, tags):
     return out
 
 
+def err(e):
+    return f"{type(e).__name__}: {e}"
+
+
+def ph_record(T, t):
+    rec = {"k": "ph", "text": t}
+    try:
+        rec["norm"] = T.normalize(t)
+    except Exception as e:  # noqa: BLE001
+        rec["norm"] = None
+        rec["norm_error"] = err(e)
+    try:
+        ids, widx, _ = T.to_phonemes(t)
+        rec["ids"], rec["widx"] = ids, widx
+    except Exception as e:  # noqa: BLE001
+        rec["error"] = err(e)
+    return rec
+
+
+def mk_record(ms, t, tag, ctrl):
+    rec = {"k": "mk", "text": t, "tag": tag, "ctrl": [[k, v] for k, v in ctrl.items()] if ctrl else None}
+    try:
+        segs = ms.parse(t, tag=tag, ctrl=ctrl)
+        ss = []
+        for s in segs:
+            ws = []
+            for w, sh in sorted(s.word_shift.items()):
+                ws.append([w, sh.get("pitch", 0.0), sh.get("energy", 0.0), sh.get("dur", 1.0)])
+            ss.append({"text": s.text, "tag": s.tag, "ctrl": [[k, v] for k, v in s.ctrl.items()], "ws": ws,
+                       "pause_ms": s.pause_ms if isinstance(s.pause_ms, int) else -1,
+                       "event": s.event if isinstance(s.event, str) else "<style-tuple>"})
+        rec["segs"] = ss
+    except Exception as e:  # noqa: BLE001
+        rec["error"] = err(e)
+    return rec
+
+
+def update(T, ms, path):
+    """Re-render an existing golden.jsonl in place (same records, same order) and append new shared cases."""
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").split("\n") if line.strip()]
+    ph = [ph_record(T, j["text"]) for j in rows if j["k"] == "ph"]
+    mk = [mk_record(ms, j["text"], j["tag"], dict(j["ctrl"]) if j["ctrl"] else None) for j in rows if j["k"] == "mk"]
+    seen = {r["text"] for r in ph}
+    new = [ph_record(T, t) for t in front_cases() if t not in seen]
+    it_ph, it_mk = iter(ph), iter(mk)
+    out = [next(it_ph) if j["k"] == "ph" else next(it_mk) for j in rows]
+    last_ph = max(i for i, j in enumerate(rows) if j["k"] == "ph")
+    out[last_ph + 1:last_ph + 1] = new  # new "ph" records go after the existing ones
+    changed = sum(a != b for a, b in zip(rows, out[:last_ph + 1] + out[last_ph + 1 + len(new):]))
+    with open(path, "w", encoding="utf-8") as f:
+        for rec in out:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    print(f"golden: {len(rows)} records, {changed} changed, {len(new)} new to_phonemes cases -> {path}")
+
+
 def main():
-    pkg, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
+    pkg = Path(sys.argv[1])
     n_g2p_rand = int(sys.argv[sys.argv.index("--g2p-words") + 1]) if "--g2p-words" in sys.argv else 4000
     sys.path.insert(0, str(pkg))
     from steertts_edge import text as T
@@ -301,6 +367,9 @@ def main():
         tag2i = {t: i for i, t in enumerate(tags)}
 
     ms = MarkupSynth(Stub())
+    if "--update" in sys.argv:
+        return update(T, ms, Path(sys.argv[sys.argv.index("--update") + 1]))
+    out_dir = Path(sys.argv[2])
     meta = json.loads(lzma.decompress((pkg / "front" / "front.json.xz").read_bytes()))
     r = random.Random(20261022)
     en, zh = real_texts()
@@ -319,43 +388,16 @@ def main():
     cases += ["a" * 20000, "abc'" * 3000, "1," + ",".join(["000"] * 5000), "1," + ",".join(["000"] * 1000) + ".5",
               ". " * 5000, "a-" * 5000, "a." * 5000, "[laugh]" * 2000, "x" * 5000 + "!", "9" * 5000,
               "$" + "1," * 3000 + "5", "-" * 10000, "'" * 10000, "a " * 10000]
-
-    def err(e):
-        return f"{type(e).__name__}: {e}"
+    cases += front_cases()
 
     out_dir.mkdir(parents=True, exist_ok=True)
     n_ph = n_mk = 0
     with open(out_dir / "golden.jsonl", "w", encoding="utf-8") as f:
         for t in cases:
-            rec = {"k": "ph", "text": t}
-            try:
-                rec["norm"] = T.normalize(t)
-            except Exception as e:  # noqa: BLE001
-                rec["norm"] = None
-                rec["norm_error"] = err(e)
-            try:
-                ids, widx, _ = T.to_phonemes(t)
-                rec["ids"], rec["widx"] = ids, widx
-            except Exception as e:  # noqa: BLE001
-                rec["error"] = err(e)
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.write(json.dumps(ph_record(T, t), ensure_ascii=False) + "\n")
             n_ph += 1
         for t, tag, ctrl in gen_markup(r, en, tags):
-            rec = {"k": "mk", "text": t, "tag": tag, "ctrl": [[k, v] for k, v in ctrl.items()] if ctrl else None}
-            try:
-                segs = ms.parse(t, tag=tag, ctrl=ctrl)
-                ss = []
-                for s in segs:
-                    ws = []
-                    for w, sh in sorted(s.word_shift.items()):
-                        ws.append([w, sh.get("pitch", 0.0), sh.get("energy", 0.0), sh.get("dur", 1.0)])
-                    ss.append({"text": s.text, "tag": s.tag, "ctrl": [[k, v] for k, v in s.ctrl.items()], "ws": ws,
-                               "pause_ms": s.pause_ms if isinstance(s.pause_ms, int) else -1,
-                               "event": s.event if isinstance(s.event, str) else "<style-tuple>"})
-                rec["segs"] = ss
-            except Exception as e:  # noqa: BLE001
-                rec["error"] = err(e)
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.write(json.dumps(mk_record(ms, t, tag, ctrl), ensure_ascii=False) + "\n")
             n_mk += 1
     # GRU G2P words: every member-only lexicon word + random pseudo-words
     from steertts_edge.edge_front.lexicon import Lexicon

@@ -4,7 +4,9 @@
  * golden_dir defaults to ../../native/tests/front (run from c/tests); assets from $STEERTTS_FRONT_ASSETS or the
  * local edge release. Checks normalize / to_phonemes (ids, word_idx, errors) on golden.jsonl "ph" lines, parse_markup
  * on "mk" lines (default known tags = steertts-v1-edge config.json "tags"), the GRU on golden_g2p.jsonl, the v1
- * <style prompt> callback path, and concurrent use of one st_front. Exit 0 = all exact, 77 = skipped. */
+ * <style prompt> callback path, and concurrent use of one st_front. Also checks normalize against the expected spoken
+ * forms of the shared normalisation cases (../../tests/front_cases.json, the list every runtime's tests use).
+ * Exit 0 = all exact, 77 = skipped. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -382,12 +384,43 @@ int main(int argc, char** argv) {
     st_free(gbuf);
   }
 
+  /* shared normalisation cases: [{"text", "norm"}, ...] with the expected spoken form */
+  stat s_shared = {0, 0};
+  {
+    char* cbuf;
+    size_t clen;
+    char cpath[1100];
+    snprintf(cpath, sizeof cpath, "%s/../../../tests/front_cases.json", gdir);
+    if (st_read_file(cpath, &cbuf, &clen)) {
+      printf("cannot read %s\n", cpath);
+      return 1;
+    }
+    st_json* cj = st_json_parse(cbuf, clen);
+    for (int i = 0; cj && i < cj->n; ++i) {
+      const st_json* c = st_json_at(cj, i);
+      const char* text = st_json_str(st_json_get(c, "text"), "");
+      const char* want = st_json_str(st_json_get(c, "norm"), "");
+      char* got = st_front_normalize(f, text);
+      int ok = got && !strcmp(got, want);
+      s_shared.n++;
+      s_shared.ok += ok;
+      if (!ok) {
+        snprintf(detail, sizeof detail, "want=\"%s\"\n    c   =\"%s\"", want, got ? got : st_geterr());
+        report("shared", text, detail);
+      }
+      st_free(got);
+    }
+    if (!cj) printf("bad JSON in %s: %s\n", cpath, st_geterr());
+    st_json_free(cj);
+    st_free(cbuf);
+  }
+
   printf("\n%-12s %8s %8s %9s\n", "field", "cases", "exact", "rate");
   struct {
     const char* name;
     stat* s;
   } rows[] = {{"normalize", &s_norm}, {"ids", &s_ids},     {"word_idx", &s_widx}, {"errors(ph)", &s_err},
-              {"markup", &s_mk},      {"errors(mk)", &s_mkerr}, {"gru_g2p", &s_g2p}};
+              {"markup", &s_mk},      {"errors(mk)", &s_mkerr}, {"gru_g2p", &s_g2p}, {"shared", &s_shared}};
   int all = 1;
   for (size_t r = 0; r < sizeof rows / sizeof rows[0]; ++r) {
     stat* s = rows[r].s;
