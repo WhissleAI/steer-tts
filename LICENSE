@@ -4,10 +4,6 @@ The SteerTTS code and SteerTTS model weights and voices are licensed to you unde
 Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0), reproduced in full below, and the Whissle terms in
 this section. Non-commercial use only. Third-party components keep their own licences; see NOTICE files.
 
-Versions of the code released up to steertts v1.2.0 and steertts-edge v1.3.0 (before 2026-10-29) were released under
-the MIT License; copies obtained under those terms keep them. From 2026-10-29 on, the code is licensed under CC BY-NC
-4.0 and these Whissle terms.
-
 Whissle terms
 -------------
 

@@ -1,4 +1,4 @@
-SteerTTS C library (c/): CC BY-NC 4.0 + Whissle terms, see ../LICENSE (up to v1.2.0: MIT).
+SteerTTS C library (c/): CC BY-NC 4.0 + Whissle terms, see ../LICENSE.
 
 The code re-implements, from their public descriptions and reference implementations, the inference of:
 - SteerTTS v1 and edge (this repository; weights CC BY-NC 4.0, see the model cards)

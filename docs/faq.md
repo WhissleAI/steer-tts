@@ -48,7 +48,7 @@ explicit controls for a dependable effect ([request.md](request.md#style-tags)).
 
 **Can I use it commercially?**
 The code and the weights are CC BY-NC 4.0 + Whissle terms (non-commercial use only; commercial licences from
-Whissle Inc., ksingla@whissle.ai). Code released up to v1.2.0 was MIT.
+Whissle Inc., ksingla@whissle.ai).
 
 **How do I report a bad render?**
 Open an [issue](../../issues) with the exact request (text, voice, tag, ctrl, build and runtime) and the audio.
