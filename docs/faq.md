@@ -22,8 +22,8 @@ inside the matmul), and `stream()` renders one sentence at a time. Measured peak
 C library keeps the packed weights memory-mapped and needs no runtime of its own.)
 
 **Is it real-time on a Raspberry Pi?**
-See [raspberry-pi.md](raspberry-pi.md) for what was measured (the ARM64 build, under emulation, renders the same
-audio as x86) and what was estimated (speed on Pi 4 / Pi 5 hardware).
+Yes. On a Raspberry Pi 5 the C library renders the edge model 11× faster than real time on one core (34× on four, 20×
+sustained without a cooler); see [raspberry-pi.md](raspberry-pi.md).
 
 **Is it fast?**
 On a desktop CPU core the edge build renders many times faster than real time; time to first audio is the time to
