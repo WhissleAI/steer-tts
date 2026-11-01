@@ -38,6 +38,9 @@
 
 enum { MR = 6, NR = 16, KC = 256, MC = 96, NC = 64 };
 
+enum { KERN_UNSET, KERN_C, KERN_AVX2, KERN_NEON };
+static atomic_int g_kern = KERN_UNSET;   /* which micro-kernel; races only ever store the same value */
+
 /* ------------------------------------------------------------------ B sources */
 typedef enum { SRC_NT, SRC_NN, SRC_MAT } src_kind;
 typedef struct {
@@ -47,9 +50,89 @@ typedef struct {
   const st_mat* m;  /* SRC_MAT */
 } bsrc;
 
+#ifdef ST_NEON
+/* 4 rows of B (4 consecutive k each) -> 4 panel rows dst[(kk + i) * NR + j .. j + 3] */
+static inline void store_t4(float* d, float32x4_t r0, float32x4_t r1, float32x4_t r2, float32x4_t r3) {
+  float32x4_t t0 = vtrn1q_f32(r0, r1), t1 = vtrn2q_f32(r0, r1), t2 = vtrn1q_f32(r2, r3), t3 = vtrn2q_f32(r2, r3);
+  vst1q_f32(d, vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f32(t0), vreinterpretq_f64_f32(t2))));
+  vst1q_f32(d + NR, vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f32(t1), vreinterpretq_f64_f32(t3))));
+  vst1q_f32(d + 2 * NR, vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f32(t0), vreinterpretq_f64_f32(t2))));
+  vst1q_f32(d + 3 * NR, vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f32(t1), vreinterpretq_f64_f32(t3))));
+}
+
+/* 16 consecutive weights of one row as floats, exactly as the scalar code computes them ((float)q * scale) */
+static inline void row16_i4(const uint8_t* b, float sc, float32x4_t v[4]) {   /* b: 8 bytes, low nibble first */
+  uint8x8_t raw = vld1_u8(b);
+  uint8x8x2_t z = vzip_u8(vand_u8(raw, vdup_n_u8(15)), vshr_n_u8(raw, 4));
+  int8x16_t q = vsubq_s8(vreinterpretq_s8_u8(vcombine_u8(z.val[0], z.val[1])), vdupq_n_s8(8));
+  int16x8_t lo = vmovl_s8(vget_low_s8(q)), hi = vmovl_s8(vget_high_s8(q));
+  float32x4_t s = vdupq_n_f32(sc);
+  v[0] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(lo))), s);
+  v[1] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(lo))), s);
+  v[2] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(hi))), s);
+  v[3] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(hi))), s);
+}
+
+static inline void row16_i8(const int8_t* r, float sc, float32x4_t v[4]) {
+  int8x16_t q = vld1q_s8(r);
+  int16x8_t lo = vmovl_s8(vget_low_s8(q)), hi = vmovl_s8(vget_high_s8(q));
+  float32x4_t s = vdupq_n_f32(sc);
+  v[0] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(lo))), s);
+  v[1] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(lo))), s);
+  v[2] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(hi))), s);
+  v[3] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(hi))), s);
+}
+
+/* the vector path of pack_b for row-major sources (NT and weight matrices): blocks of 4 columns x 16 k, transposed
+ * in registers. Handles kk in [0, kc16) where kc16 = kc rounded down to 16 (and, for int4, a group boundary never
+ * falls inside a 16-block: g % 16 == 0, k0 % 16 == 0); returns kc16, the caller finishes the tail. Bit-identical to
+ * the scalar loops (the same conversions and products). */
+static int pack_b_neon(const bsrc* s, int n0, int nn, int k0, int kc, float* dst) {
+  const st_mat* m = s->kind == SRC_MAT ? s->m : NULL;
+  if (s->kind == SRC_NN || (k0 & 15)) return 0;
+  if (m && m->type == ST_W_I4 && (m->g & 15)) return 0;
+  int kc16 = kc & ~15;
+  for (int j = 0; j < nn; j += 4) {
+    for (int kk = 0; kk < kc16; kk += 16) {
+      float32x4_t v[4][4];
+      for (int r = 0; r < 4; ++r) {
+        int row = n0 + j + r;
+        if (j + r >= nn) {
+          v[r][0] = v[r][1] = v[r][2] = v[r][3] = vdupq_n_f32(0.f);
+        } else if (!m) {
+          const float* p = s->b + (size_t)row * s->ldb + k0 + kk;
+          v[r][0] = vld1q_f32(p), v[r][1] = vld1q_f32(p + 4), v[r][2] = vld1q_f32(p + 8), v[r][3] = vld1q_f32(p + 12);
+        } else if (m->type == ST_W_F32) {
+          const float* p = m->w + (size_t)row * m->K + k0 + kk;
+          v[r][0] = vld1q_f32(p), v[r][1] = vld1q_f32(p + 4), v[r][2] = vld1q_f32(p + 8), v[r][3] = vld1q_f32(p + 12);
+        } else if (m->type == ST_W_I8) {
+          row16_i8(m->q8 + (size_t)row * m->K + k0 + kk, m->s[row], v[r]);
+        } else {
+          size_t idx = (size_t)row * m->Kp + (size_t)(k0 + kk);   /* even: Kp and k0 are multiples of 16 */
+          row16_i4(m->q4 + (idx >> 1), m->s[(size_t)row * (m->Kp / m->g) + (k0 + kk) / m->g], v[r]);
+        }
+      }
+      for (int q = 0; q < 4; ++q) store_t4(dst + (size_t)(kk + 4 * q) * NR + j, v[0][q], v[1][q], v[2][q], v[3][q]);
+    }
+  }
+  return kc16;
+}
+#endif
+
 /* dst[kk*NR + j] = B(n0 + j, k0 + kk), zero for j >= nn */
 static void pack_b(const bsrc* s, int n0, int nn, int k0, int kc, float* dst) {
   if (nn < NR) memset(dst, 0, sizeof(float) * (size_t)kc * NR);
+#ifdef ST_NEON
+  if (atomic_load_explicit(&g_kern, memory_order_relaxed) == KERN_NEON) {
+    int done = pack_b_neon(s, n0, nn, k0, kc, dst);
+    if (done) {
+      if (done == kc) return;
+      /* the tail (fewer than 16 k values) with the scalar loops on a shifted view */
+      pack_b(s, n0, nn, k0 + done, kc - done, dst + (size_t)done * NR);
+      return;
+    }
+  }
+#endif
   switch (s->kind) {
     case SRC_NT:
       for (int j = 0; j < nn; ++j) {
@@ -180,26 +263,142 @@ ST_TARGET_AVX2 static void kern_avx2(int kc, const float* A, int lda, int mr, co
 #endif
 
 #ifdef ST_NEON
+#if defined(__GNUC__) && defined(__aarch64__)
+#define ST_NEON_ASM 1
+/* The 6 x 16 tile's k loop, 4 k per iteration, in assembly: v8-v31 hold the 24 accumulators (row i in v(8+4i) ..
+ * v(11+4i)), v0-v5 four k values of each A row (used by lane), v6-v7 half a B row. Compilers do not keep this in
+ * registers reliably (GCC 12 at -O2 spills about half the accumulators every iteration). Each C element is the
+ * chain of fused multiply-adds in k order, as in the C kernels. acc: [6][16] floats, written. */
+static void kern_neon_k4(int n4, const float* a0, const float* a1, const float* a2, const float* a3,
+                         const float* a4, const float* a5, const float* Bp, float* acc) {
+  __asm__ volatile(
+      "movi v8.4s, #0\n movi v9.4s, #0\n movi v10.4s, #0\n movi v11.4s, #0\n"
+      "movi v12.4s, #0\n movi v13.4s, #0\n movi v14.4s, #0\n movi v15.4s, #0\n"
+      "movi v16.4s, #0\n movi v17.4s, #0\n movi v18.4s, #0\n movi v19.4s, #0\n"
+      "movi v20.4s, #0\n movi v21.4s, #0\n movi v22.4s, #0\n movi v23.4s, #0\n"
+      "movi v24.4s, #0\n movi v25.4s, #0\n movi v26.4s, #0\n movi v27.4s, #0\n"
+      "movi v28.4s, #0\n movi v29.4s, #0\n movi v30.4s, #0\n movi v31.4s, #0\n"
+      "cbz %w[n], 2f\n"
+      "1:\n"
+      "ldr q0, [%[a0]], #16\n ldr q1, [%[a1]], #16\n ldr q2, [%[a2]], #16\n"
+      "ldr q3, [%[a3]], #16\n ldr q4, [%[a4]], #16\n ldr q5, [%[a5]], #16\n"
+      "ldp q6, q7, [%[b], #0]\n"
+      "fmla v8.4s, v6.4s, v0.s[0]\n fmla v9.4s, v7.4s, v0.s[0]\n"
+      "fmla v12.4s, v6.4s, v1.s[0]\n fmla v13.4s, v7.4s, v1.s[0]\n"
+      "fmla v16.4s, v6.4s, v2.s[0]\n fmla v17.4s, v7.4s, v2.s[0]\n"
+      "fmla v20.4s, v6.4s, v3.s[0]\n fmla v21.4s, v7.4s, v3.s[0]\n"
+      "fmla v24.4s, v6.4s, v4.s[0]\n fmla v25.4s, v7.4s, v4.s[0]\n"
+      "fmla v28.4s, v6.4s, v5.s[0]\n fmla v29.4s, v7.4s, v5.s[0]\n"
+      "ldp q6, q7, [%[b], #32]\n"
+      "fmla v10.4s, v6.4s, v0.s[0]\n fmla v11.4s, v7.4s, v0.s[0]\n"
+      "fmla v14.4s, v6.4s, v1.s[0]\n fmla v15.4s, v7.4s, v1.s[0]\n"
+      "fmla v18.4s, v6.4s, v2.s[0]\n fmla v19.4s, v7.4s, v2.s[0]\n"
+      "fmla v22.4s, v6.4s, v3.s[0]\n fmla v23.4s, v7.4s, v3.s[0]\n"
+      "fmla v26.4s, v6.4s, v4.s[0]\n fmla v27.4s, v7.4s, v4.s[0]\n"
+      "fmla v30.4s, v6.4s, v5.s[0]\n fmla v31.4s, v7.4s, v5.s[0]\n"
+      "ldp q6, q7, [%[b], #64]\n"
+      "fmla v8.4s, v6.4s, v0.s[1]\n fmla v9.4s, v7.4s, v0.s[1]\n"
+      "fmla v12.4s, v6.4s, v1.s[1]\n fmla v13.4s, v7.4s, v1.s[1]\n"
+      "fmla v16.4s, v6.4s, v2.s[1]\n fmla v17.4s, v7.4s, v2.s[1]\n"
+      "fmla v20.4s, v6.4s, v3.s[1]\n fmla v21.4s, v7.4s, v3.s[1]\n"
+      "fmla v24.4s, v6.4s, v4.s[1]\n fmla v25.4s, v7.4s, v4.s[1]\n"
+      "fmla v28.4s, v6.4s, v5.s[1]\n fmla v29.4s, v7.4s, v5.s[1]\n"
+      "ldp q6, q7, [%[b], #96]\n"
+      "fmla v10.4s, v6.4s, v0.s[1]\n fmla v11.4s, v7.4s, v0.s[1]\n"
+      "fmla v14.4s, v6.4s, v1.s[1]\n fmla v15.4s, v7.4s, v1.s[1]\n"
+      "fmla v18.4s, v6.4s, v2.s[1]\n fmla v19.4s, v7.4s, v2.s[1]\n"
+      "fmla v22.4s, v6.4s, v3.s[1]\n fmla v23.4s, v7.4s, v3.s[1]\n"
+      "fmla v26.4s, v6.4s, v4.s[1]\n fmla v27.4s, v7.4s, v4.s[1]\n"
+      "fmla v30.4s, v6.4s, v5.s[1]\n fmla v31.4s, v7.4s, v5.s[1]\n"
+      "ldp q6, q7, [%[b], #128]\n"
+      "fmla v8.4s, v6.4s, v0.s[2]\n fmla v9.4s, v7.4s, v0.s[2]\n"
+      "fmla v12.4s, v6.4s, v1.s[2]\n fmla v13.4s, v7.4s, v1.s[2]\n"
+      "fmla v16.4s, v6.4s, v2.s[2]\n fmla v17.4s, v7.4s, v2.s[2]\n"
+      "fmla v20.4s, v6.4s, v3.s[2]\n fmla v21.4s, v7.4s, v3.s[2]\n"
+      "fmla v24.4s, v6.4s, v4.s[2]\n fmla v25.4s, v7.4s, v4.s[2]\n"
+      "fmla v28.4s, v6.4s, v5.s[2]\n fmla v29.4s, v7.4s, v5.s[2]\n"
+      "ldp q6, q7, [%[b], #160]\n"
+      "fmla v10.4s, v6.4s, v0.s[2]\n fmla v11.4s, v7.4s, v0.s[2]\n"
+      "fmla v14.4s, v6.4s, v1.s[2]\n fmla v15.4s, v7.4s, v1.s[2]\n"
+      "fmla v18.4s, v6.4s, v2.s[2]\n fmla v19.4s, v7.4s, v2.s[2]\n"
+      "fmla v22.4s, v6.4s, v3.s[2]\n fmla v23.4s, v7.4s, v3.s[2]\n"
+      "fmla v26.4s, v6.4s, v4.s[2]\n fmla v27.4s, v7.4s, v4.s[2]\n"
+      "fmla v30.4s, v6.4s, v5.s[2]\n fmla v31.4s, v7.4s, v5.s[2]\n"
+      "ldp q6, q7, [%[b], #192]\n"
+      "fmla v8.4s, v6.4s, v0.s[3]\n fmla v9.4s, v7.4s, v0.s[3]\n"
+      "fmla v12.4s, v6.4s, v1.s[3]\n fmla v13.4s, v7.4s, v1.s[3]\n"
+      "fmla v16.4s, v6.4s, v2.s[3]\n fmla v17.4s, v7.4s, v2.s[3]\n"
+      "fmla v20.4s, v6.4s, v3.s[3]\n fmla v21.4s, v7.4s, v3.s[3]\n"
+      "fmla v24.4s, v6.4s, v4.s[3]\n fmla v25.4s, v7.4s, v4.s[3]\n"
+      "fmla v28.4s, v6.4s, v5.s[3]\n fmla v29.4s, v7.4s, v5.s[3]\n"
+      "ldp q6, q7, [%[b], #224]\n"
+      "fmla v10.4s, v6.4s, v0.s[3]\n fmla v11.4s, v7.4s, v0.s[3]\n"
+      "fmla v14.4s, v6.4s, v1.s[3]\n fmla v15.4s, v7.4s, v1.s[3]\n"
+      "fmla v18.4s, v6.4s, v2.s[3]\n fmla v19.4s, v7.4s, v2.s[3]\n"
+      "fmla v22.4s, v6.4s, v3.s[3]\n fmla v23.4s, v7.4s, v3.s[3]\n"
+      "fmla v26.4s, v6.4s, v4.s[3]\n fmla v27.4s, v7.4s, v4.s[3]\n"
+      "fmla v30.4s, v6.4s, v5.s[3]\n fmla v31.4s, v7.4s, v5.s[3]\n"
+      "add %[b], %[b], #256\n"
+      "subs %w[n], %w[n], #1\n"
+      "b.ne 1b\n"
+      "2:\n"
+      "st1 {v8.4s, v9.4s, v10.4s, v11.4s}, [%[c]], #64\n"
+      "st1 {v12.4s, v13.4s, v14.4s, v15.4s}, [%[c]], #64\n"
+      "st1 {v16.4s, v17.4s, v18.4s, v19.4s}, [%[c]], #64\n"
+      "st1 {v20.4s, v21.4s, v22.4s, v23.4s}, [%[c]], #64\n"
+      "st1 {v24.4s, v25.4s, v26.4s, v27.4s}, [%[c]], #64\n"
+      "st1 {v28.4s, v29.4s, v30.4s, v31.4s}, [%[c]], #64\n"
+      : [n] "+r"(n4), [a0] "+r"(a0), [a1] "+r"(a1), [a2] "+r"(a2), [a3] "+r"(a3), [a4] "+r"(a4), [a5] "+r"(a5),
+        [b] "+r"(Bp), [c] "+r"(acc)
+      :
+      : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13",
+        "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
+        "v29", "v30", "v31");
+}
+#endif
+
 static void kern_neon(int kc, const float* A, int lda, int mr, const float* Bp, float* C, int ldc, int nr, int mode) {
   const float* a[MR];
   for (int i = 0; i < MR; ++i) a[i] = A + (size_t)(i < mr ? i : 0) * lda;
-  float32x4_t c[MR][4];
-  for (int i = 0; i < MR; ++i)
-    for (int j = 0; j < 4; ++j) c[i][j] = vdupq_n_f32(0.f);
-  for (int k = 0; k < kc; ++k) {
-    float32x4_t b0 = vld1q_f32(Bp), b1 = vld1q_f32(Bp + 4), b2 = vld1q_f32(Bp + 8), b3 = vld1q_f32(Bp + 12);
-    for (int i = 0; i < MR; ++i) {
-      float32x4_t x = vdupq_n_f32(a[i][k]);
-      c[i][0] = vfmaq_f32(c[i][0], x, b0);
-      c[i][1] = vfmaq_f32(c[i][1], x, b1);
-      c[i][2] = vfmaq_f32(c[i][2], x, b2);
-      c[i][3] = vfmaq_f32(c[i][3], x, b3);
+  _Alignas(16) float acc[MR][NR];
+  int k = 0;
+#ifdef ST_NEON_ASM
+  int n4 = kc / 4;
+  kern_neon_k4(n4, a[0], a[1], a[2], a[3], a[4], a[5], Bp, &acc[0][0]);
+  k = 4 * n4;
+  Bp += (size_t)k * NR;
+#else
+  memset(acc, 0, sizeof acc);
+#endif
+  if (k < kc) {   /* the last kc % 4 values (all of them without the assembly) */
+    float32x4_t c[MR][4];
+    for (int i = 0; i < MR; ++i)
+      for (int j = 0; j < 4; ++j) c[i][j] = vld1q_f32(acc[i] + 4 * j);
+    for (; k < kc; ++k) {
+      float32x4_t b0 = vld1q_f32(Bp), b1 = vld1q_f32(Bp + 4), b2 = vld1q_f32(Bp + 8), b3 = vld1q_f32(Bp + 12);
+      for (int i = 0; i < MR; ++i) {
+        float32x4_t x = vld1q_dup_f32(a[i] + k);
+        c[i][0] = vfmaq_f32(c[i][0], x, b0);
+        c[i][1] = vfmaq_f32(c[i][1], x, b1);
+        c[i][2] = vfmaq_f32(c[i][2], x, b2);
+        c[i][3] = vfmaq_f32(c[i][3], x, b3);
+      }
+      Bp += NR;
     }
-    Bp += NR;
+    for (int i = 0; i < MR; ++i)
+      for (int j = 0; j < 4; ++j) vst1q_f32(acc[i] + 4 * j, c[i][j]);
   }
-  float acc[MR][NR];
-  for (int i = 0; i < MR; ++i)
-    for (int j = 0; j < 4; ++j) vst1q_f32(acc[i] + 4 * j, c[i][j]);
+  if (nr == NR) {
+    for (int i = 0; i < mr; ++i) {
+      float* cr = C + (size_t)i * ldc;
+      for (int j = 0; j < 4; ++j) {
+        float32x4_t v = vld1q_f32(acc[i] + 4 * j);
+        if (mode) v = vaddq_f32(vld1q_f32(cr + 4 * j), v);
+        vst1q_f32(cr + 4 * j, v);
+      }
+    }
+    return;
+  }
   store_tile(acc, C, ldc, mr, nr, mode);
 }
 #endif
@@ -247,8 +446,6 @@ int st_cpu_avx2(void) {
   return v;
 }
 
-enum { KERN_UNSET, KERN_C, KERN_AVX2, KERN_NEON };
-static atomic_int g_kern = KERN_UNSET;   /* which micro-kernel; races only ever store the same value */
 
 static kern_fn pick_kernel(void) {
   int id = atomic_load_explicit(&g_kern, memory_order_relaxed);
@@ -562,10 +759,54 @@ ST_TARGET_AVX2 static size_t gelu_avx2(float* x, size_t n) {
 }
 #endif
 
+#ifdef ST_NEON
+/* the same polynomials, operation for operation, as exp_neg256 / gelu_avx2 (so NEON and AVX2 builds agree) */
+static float32x4_t exp_neg128(float32x4_t x) {
+  x = vmaxq_f32(x, vdupq_n_f32(-87.0f));
+  float32x4_t fx = vrndnq_f32(vmulq_f32(x, vdupq_n_f32(1.44269504088896341f)));
+  x = vfmsq_f32(x, fx, vdupq_n_f32(0.693359375f));
+  x = vfmsq_f32(x, fx, vdupq_n_f32(-2.12194440e-4f));
+  float32x4_t y = vdupq_n_f32(1.9875691500E-4f);
+  y = vfmaq_f32(vdupq_n_f32(1.3981999507E-3f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(8.3334519073E-3f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(4.1665795894E-2f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(1.6666665459E-1f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(5.0000001201E-1f), y, x);
+  y = vfmaq_f32(vaddq_f32(x, vdupq_n_f32(1.f)), y, vmulq_f32(x, x));
+  int32x4_t e = vshlq_n_s32(vaddq_s32(vcvtnq_s32_f32(fx), vdupq_n_s32(127)), 23);
+  return vmulq_f32(y, vreinterpretq_f32_s32(e));
+}
+
+static size_t gelu_neon(float* x, size_t n) {
+  const uint32x4_t sgn = vdupq_n_u32(0x80000000u);
+  const float32x4_t one = vdupq_n_f32(1.f), half = vdupq_n_f32(0.5f);
+  size_t i = 0;
+  for (; i + 4 <= n; i += 4) {
+    float32x4_t v = vld1q_f32(x + i);
+    float32x4_t z = vmulq_f32(v, vdupq_n_f32(0.70710678118654752f));
+    uint32x4_t zu = vreinterpretq_u32_f32(z), s = vandq_u32(sgn, zu);
+    float32x4_t a = vreinterpretq_f32_u32(veorq_u32(s, zu));
+    float32x4_t t = vdivq_f32(one, vfmaq_f32(one, vdupq_n_f32(0.3275911f), a));
+    float32x4_t r = vfmaq_f32(vdupq_n_f32(-1.453152027f), vdupq_n_f32(1.061405429f), t);
+    r = vfmaq_f32(vdupq_n_f32(1.421413741f), r, t);
+    r = vfmaq_f32(vdupq_n_f32(-0.284496736f), r, t);
+    r = vfmaq_f32(vdupq_n_f32(0.254829592f), r, t);
+    float32x4_t ex = exp_neg128(vnegq_f32(vmulq_f32(z, z)));
+    float32x4_t e = vfmaq_f32(one, vmulq_f32(vnegq_f32(ex), t), r);
+    e = vreinterpretq_f32_u32(veorq_u32(s, vreinterpretq_u32_f32(e)));
+    vst1q_f32(x + i, vmulq_f32(vmulq_f32(v, half), vaddq_f32(one, e)));
+  }
+  return i;
+}
+#endif
+
 void st_gelu(float* x, size_t n) {
   size_t i = 0;
 #ifdef ST_X86
   if (pick_kernel() == kern_avx2) i = gelu_avx2(x, n);
+#endif
+#ifdef ST_NEON
+  if (pick_kernel() == kern_neon) i = gelu_neon(x, n);
 #endif
   for (; i < n; ++i) x[i] = 0.5f * x[i] * (1.f + erff(x[i] * 0.70710678118654752f));
 }

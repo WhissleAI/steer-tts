@@ -32,43 +32,96 @@ static void istft_task(void* ctx, int task, int n_tasks) {
   }
 }
 
-int st_istft(st_pool* p, const float* re, const float* im, int ld, int T, int n_fft, int hop, float* out) {
-  size_t n_out = st_istft_len(T, hop);
-  if (n_out == 0) return 0;
-  size_t size = (size_t)n_fft + (size_t)hop * (size_t)(T - 1);
-  st_fft* fft = st_fft_create(n_fft);
-  float* win = (float*)st_malloc(sizeof(float) * (size_t)n_fft);
-  float* frames = (float*)st_malloc(sizeof(float) * (size_t)T * n_fft);
-  float* y = (float*)st_calloc(sizeof(float) * size);
-  float* env = (float*)st_calloc(sizeof(float) * size);
-  int tasks = st_pool_size(p) * 4;
-  if (tasks > T) tasks = T;
-  double* scratch = (double*)st_malloc(sizeof(double) * (size_t)tasks * (size_t)(4 * n_fft + 4));
+/* Incremental iSTFT: frames are added in order, chunk by chunk; the samples that no later frame touches are final and
+ * written out. Adding all T frames at once is the plain iSTFT; any split gives the same samples bit for bit (each
+ * frame's iFFT is independent, and the overlap-add still sums every sample's frames in frame order). */
+struct st_istft_state {
+  int T, n_fft, hop, next;   /* next: the first frame not added yet */
+  size_t emitted, n_out;
+  st_fft* fft;
+  float *win, *y, *env;
+};
+
+st_istft_state* st_istft_begin(int T, int n_fft, int hop) {
+  st_istft_state* s = (st_istft_state*)st_calloc(sizeof *s);
+  if (!s) return NULL;
+  s->T = T, s->n_fft = n_fft, s->hop = hop;
+  s->n_out = st_istft_len(T, hop);
+  size_t size = (size_t)n_fft + (size_t)hop * (size_t)(T > 0 ? T - 1 : 0);
+  s->fft = st_fft_create(n_fft);
+  s->win = (float*)st_malloc(sizeof(float) * (size_t)n_fft);
+  s->y = (float*)st_calloc(sizeof(float) * size);
+  s->env = (float*)st_calloc(sizeof(float) * size);
+  if (!s->fft || !s->win || !s->y || !s->env) {
+    st_istft_end(s);
+    return NULL;
+  }
+  st_hann_periodic(s->win, n_fft);
+  return s;
+}
+
+void st_istft_end(st_istft_state* s) {
+  if (!s) return;
+  st_fft_destroy(s->fft);
+  st_free(s->win);
+  st_free(s->y);
+  st_free(s->env);
+  st_free(s);
+}
+
+int st_istft_add(st_istft_state* s, st_pool* p, const float* re, const float* im, int ld, int nf, float* out,
+                 size_t* ready) {
+  int n_fft = s->n_fft, hop = s->hop, t0 = s->next;
+  if (nf < 0 || nf > s->T - t0) {
+    st_seterr("istft: %d frames added past the end (%d of %d)", nf, t0, s->T);
+    return -1;
+  }
   int rc = -1;
-  if (!fft || !win || !frames || !y || !env || !scratch) goto done;
-  st_hann_periodic(win, n_fft);
-  istft_job j = {fft, re, im, win, ld, T, n_fft, frames, scratch};
-  st_parallel_for(p, tasks, istft_task, &j);
-  /* overlap-add in frame order (float, as torch's fold), envelope = sum of window^2 */
-  for (int t = 0; t < T; ++t) {
-    float* yo = y + (size_t)t * hop;
-    float* eo = env + (size_t)t * hop;
-    const float* f = frames + (size_t)t * n_fft;
-    for (int i = 0; i < n_fft; ++i) {
-      yo[i] += f[i];
-      eo[i] += win[i] * win[i];
+  float* frames = NULL;
+  double* scratch = NULL;
+  if (nf > 0) {
+    frames = (float*)st_malloc(sizeof(float) * (size_t)nf * n_fft);
+    int tasks = st_pool_size(p) * 4;
+    if (tasks > nf) tasks = nf;
+    scratch = (double*)st_malloc(sizeof(double) * (size_t)tasks * (size_t)(4 * n_fft + 4));
+    if (!frames || !scratch) goto done;
+    istft_job j = {s->fft, re, im, s->win, ld, nf, n_fft, frames, scratch};
+    st_parallel_for(p, tasks, istft_task, &j);
+    /* overlap-add in frame order (float, as torch's fold), envelope = sum of window^2 */
+    for (int t = 0; t < nf; ++t) {
+      float* yo = s->y + (size_t)(t0 + t) * hop;
+      float* eo = s->env + (size_t)(t0 + t) * hop;
+      const float* f = frames + (size_t)t * n_fft;
+      for (int i = 0; i < n_fft; ++i) {
+        yo[i] += f[i];
+        eo[i] += s->win[i] * s->win[i];
+      }
     }
   }
-  size_t a0 = (size_t)n_fft / 2;
-  for (size_t i = 0; i < n_out; ++i) out[i] = y[a0 + i] / env[a0 + i];
+  s->next = t0 + nf;
+  /* frames from `next` on start at next * hop: samples before that are final (output i is position n_fft/2 + i) */
+  size_t a0 = (size_t)n_fft / 2, end = s->n_out;
+  if (s->next < s->T) {
+    size_t fin = (size_t)s->next * (size_t)hop;
+    end = fin > a0 ? fin - a0 : 0;
+    if (end > s->n_out) end = s->n_out;
+  }
+  for (size_t i = s->emitted; i < end; ++i) out[i] = s->y[a0 + i] / s->env[a0 + i];
+  s->emitted = end > s->emitted ? end : s->emitted;
+  if (ready) *ready = s->emitted;
   rc = 0;
 done:
-  st_free(scratch);
-  st_fft_destroy(fft);
-  st_free(win);
   st_free(frames);
-  st_free(y);
-  st_free(env);
+  st_free(scratch);
+  return rc;
+}
+
+int st_istft(st_pool* p, const float* re, const float* im, int ld, int T, int n_fft, int hop, float* out) {
+  if (st_istft_len(T, hop) == 0) return 0;
+  st_istft_state* s = st_istft_begin(T, n_fft, hop);
+  if (!s) return -1;
+  int rc = st_istft_add(s, p, re, im, ld, T, out, NULL);
+  st_istft_end(s);
   return rc;
 }
 

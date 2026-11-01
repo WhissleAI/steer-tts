@@ -39,7 +39,10 @@ target_link_libraries(app steertts::steertts)          # shared; steertts::steer
 
 or `cc app.c $(pkg-config --cflags --libs steertts)`, or vendor the directory with `add_subdirectory(c)`
 (tests are then off by default). CMake options: `STEERTTS_BUILD_SHARED`, `STEERTTS_BUILD_CLI`,
-`STEERTTS_BUILD_EXAMPLES`, `STEERTTS_BUILD_TESTS`. The shared library exports only the `steertts_*` API.
+`STEERTTS_BUILD_EXAMPLES`, `STEERTTS_BUILD_TESTS`, `STEERTTS_BUILD_SERVER` (`steertts-pi`, POSIX), and `STEERTTS_CPU`
+(`-mcpu=` / `-march=` target such as `cortex-a72`, `cortex-a76` or `native`; it changes instruction selection only, so
+a tuned build renders the same samples). The shared library exports only the `steertts_*` API. Presets for the
+Raspberry Pi: `cmake --preset pi4|pi5|pi4-cross|pi5-cross` (see [raspberry-pi.md](raspberry-pi.md)).
 
 ### Examples
 
@@ -175,6 +178,10 @@ steertts_destroy(e);
   word_shift; `steertts_default_options` fills in the defaults.
 - `steertts_stream_ex` / `steertts_stream_json` also pass each chunk's segment (text, tag, controls, pause) and its
   render time.
+- `steertts_set_first_chunk_ms(e, ms)`: streaming hands the first sentence over in pieces (the first about `ms` of
+  audio, each next one twice as long; `info->more` is 1 until the sentence's last piece), so audio can start before
+  the whole first sentence is vocoded. The samples are the same as with one chunk per sentence (each piece is
+  vocoded with its full receptive field, and the inverse STFT is incremental). Default 0 (off).
 - `steertts_resolve_json`, `steertts_map_prompt`, `steertts_speaker_vector` (512-d x-vector of a clip, usable as
   `spk_vec` with either model), `steertts_phonemes`, `steertts_load_wav` / `steertts_save_wav`, voice / tag / control
   listing.
@@ -325,6 +332,8 @@ threads, once per reference clip) and the prompted flow.
 | `src/st_wavlm.c`, `st_audio.c` | WavLM x-vectors, WAV reading, resampling |
 | `src/st_api.c` | requests, rendering, streaming |
 | `tools/steertts_cli.c` | the command line |
+| `tools/steertts_pi.c` | `steertts-pi`, the HTTP / stdin speech server ([raspberry-pi.md](raspberry-pi.md#the-steertts-pi-server)) |
+| `pi/` | Raspberry Pi install, cross-build (Docker) and benchmark scripts, systemd unit |
 | `examples/` | example programs |
 | `python/steertts_c.py` | ctypes binding |
 | `eval/` | the evaluation below: render with C and Python, score WER / UTMOSv2 / parity |

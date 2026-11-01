@@ -80,6 +80,12 @@ STEERTTS_API void steertts_destroy(steertts_engine* e);
  * the CPUs the process may use change (Android moves background apps to its slow cores). The new workers inherit the
  * calling thread's CPU affinity and priority. Not while the engine is synthesizing. 0 on success. */
 STEERTTS_API int steertts_set_threads(steertts_engine* e, int threads);
+/* Streaming latency: with ms > 0, steertts_stream* hand the first sentence over in pieces instead of as one chunk:
+ * the first piece holds about `ms` of audio, each next one twice as much, every piece is passed on as soon as it is
+ * final (info->more = 1 until the sentence's last piece). The audio is the same, sample for sample; the time to the
+ * first audio drops by most of the vocoder's share of the first sentence, at the cost of re-running ~0.3 s of
+ * vocoder context per extra piece. 0 (the default) = one chunk per sentence. 0 on success. */
+STEERTTS_API int steertts_set_first_chunk_ms(steertts_engine* e, int ms);
 STEERTTS_API int steertts_threads(const steertts_engine* e);   /* worker threads in use (1 = the calling thread) */
 /* Linux / Android: kernel thread ids of the engine's worker threads (the calling thread is not among them), e.g. for
  * Android's APerformanceHint sessions. Returns how many were written (at most max); 0 on other systems. */
@@ -144,6 +150,8 @@ typedef struct {
   int index;                /* 0-based segment index */
   double synth_ms;          /* time spent rendering this chunk */
   const char* event;        /* a recorded sound event chunk ("laugh", "dog" ...), else NULL */
+  int more;                 /* 1: more audio of this same segment follows in the next chunk (see
+                               steertts_set_first_chunk_ms); 0: the segment is complete */
 } steertts_chunk_info;
 typedef int (*steertts_chunk_ex_fn)(const float* audio, size_t n, const steertts_chunk_info* info, void* user);
 STEERTTS_API int steertts_stream_ex(steertts_engine* e, const char* text, const steertts_options* o,

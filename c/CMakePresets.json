@@ -1,0 +1,49 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {"major": 3, "minor": 21, "patch": 0},
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Portable release build",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}
+    },
+    {
+      "name": "pi4",
+      "displayName": "Raspberry Pi 4 (Cortex-A72), built on the Pi",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build-pi4",
+      "cacheVariables": {"STEERTTS_CPU": "cortex-a72"}
+    },
+    {
+      "name": "pi5",
+      "displayName": "Raspberry Pi 5 (Cortex-A76), built on the Pi",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build-pi5",
+      "cacheVariables": {"STEERTTS_CPU": "cortex-a76"}
+    },
+    {
+      "name": "pi4-cross",
+      "displayName": "Raspberry Pi 4, cross-compiled (aarch64-linux-gnu-gcc)",
+      "inherits": "pi4",
+      "binaryDir": "${sourceDir}/build-pi4-cross",
+      "toolchainFile": "${sourceDir}/cmake/aarch64-linux-gnu.cmake",
+      "cacheVariables": {"STEERTTS_BUILD_TESTS": "ON"}
+    },
+    {
+      "name": "pi5-cross",
+      "displayName": "Raspberry Pi 5, cross-compiled (aarch64-linux-gnu-gcc)",
+      "inherits": "pi5",
+      "binaryDir": "${sourceDir}/build-pi5-cross",
+      "toolchainFile": "${sourceDir}/cmake/aarch64-linux-gnu.cmake",
+      "cacheVariables": {"STEERTTS_BUILD_TESTS": "ON"}
+    }
+  ],
+  "buildPresets": [
+    {"name": "default", "configurePreset": "default"},
+    {"name": "pi4", "configurePreset": "pi4"},
+    {"name": "pi5", "configurePreset": "pi5"},
+    {"name": "pi4-cross", "configurePreset": "pi4-cross"},
+    {"name": "pi5-cross", "configurePreset": "pi5-cross"}
+  ]
+}
