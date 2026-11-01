@@ -1,0 +1,5 @@
+engine,wer_qwen_seed100,wer_whisper_seed100,utmos_seed100,utmos_seed100_sd,n_seed100,wer_qwen_long,utmos_long,utmos_long_sd,n_long
+steer-tts-edge,1.33,1.23,4.288,0.192,100,0.31,4.256,0.166,3
+phonon-31m-en,1.42,1.52,4.42,0.145,100,0.0,4.485,0.025,3
+kokoro-82m,1.42,1.52,4.501,0.024,100,0.0,4.526,0.008,3
+kokoro-82m-onnx,1.42,1.33,4.487,0.03,100,0.0,4.532,0.003,3
