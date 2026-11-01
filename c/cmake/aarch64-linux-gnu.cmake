@@ -1,5 +1,5 @@
 # Cross-compiling for 64-bit Raspberry Pi OS (or any aarch64 Linux) with the GNU cross compiler:
-#   Debian / Ubuntu: sudo apt install crossbuild-essential-arm64   (or use pi/Dockerfile.cross)
+#   Debian / Ubuntu: sudo apt install crossbuild-essential-arm64   (or use raspberry-pi/cross/cross-build.sh)
 #   cmake --preset pi4-cross   (or: cmake -B build-pi -DCMAKE_TOOLCHAIN_FILE=cmake/aarch64-linux-gnu.cmake
 #                                       -DSTEERTTS_CPU=cortex-a72)
 # Building on Debian bookworm keeps the binaries on the glibc of Raspberry Pi OS bookworm.

@@ -28,6 +28,11 @@
  * messages, checked in the same order. A NULL engine, request or output pointer is an error, not a crash; output
  * pointers are reset (NULL / 0) before anything can fail. Numbers are parsed and printed independently of the C
  * locale, so an application may use setlocale() freely.
+ * Raspberry Pi and other small boards: build with cmake --preset pi4 / pi5 (or make PI=4 / PI=5), which gives
+ * libsteertts.a, libsteertts.so and this header (cmake --install, or raspberry-pi/install.sh); link with -lsteertts
+ * -lm -lpthread or pkg-config steertts. The edge model needs ~25 MB of memory. For playback while rendering, use
+ * steertts_stream_ex with steertts_set_first_chunk_ms(e, 300): the first audio is ready after a fraction of the first
+ * sentence. raspberry-pi/examples/ has complete programs; raspberry-pi/README.md the measured speeds.
  * Threads: an engine may be used by one thread at a time (it has its own worker pool, see steertts_config.threads);
  * use one engine per thread for concurrent synthesis, or serialize calls. Different engines are independent. */
 #ifndef STEERTTS_H
