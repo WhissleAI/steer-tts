@@ -261,6 +261,7 @@ struct steertts_engine {
   st_wavlm* wavlm;
   st_json* cfg_json;
   xv_cache xv;
+  int first_chunk_ms;        /* streaming: > 0 hands the first sentence over in pieces (steertts_set_first_chunk_ms) */
 };
 
 static char* path_join(const char* a, const char* b) {
@@ -618,6 +619,12 @@ int steertts_set_threads(steertts_engine* e, int threads) {
   st_pool_destroy(e->pool);
   e->pool = p;
   e->cfg.threads = threads;
+  return 0;
+}
+
+int steertts_set_first_chunk_ms(steertts_engine* e, int ms) {
+  if (!e || ms < 0) return -1;
+  e->first_chunk_ms = ms;
   return 0;
 }
 
@@ -1455,9 +1462,10 @@ static int speaker_of(steertts_engine* e, const req_t* r, spk_t* s) {
 /* one forward pass (SteerTTS._render / EdgeTTS._render) -> *y (st_malloc'd, may be n = 0) */
 static int render(steertts_engine* e, const char* text, const spk_t* spk, const char* tag, int n_ctrl, const int* dims,
                   const double* vals, double pace, const wshift* ws, int n_ws, double guidance, int flow, int64_t seed,
-                  float** y, size_t* n) {
+                  float** y, size_t* n, st_piece_fn pf, void* pu, int* pieced) {
   *y = NULL;
   *n = 0;
+  if (pieced) *pieced = 0;
   st_phonemes ph;
   if (st_front_phonemes(e->front, text, &ph)) return -1;
   int rc = -1;
@@ -1529,6 +1537,15 @@ static int render(steertts_engine* e, const char* text, const spk_t* spk, const 
       if (frc) goto done;
     }
   }
+  if (pf && e->first_chunk_ms > 0) {
+    int first = (int)((long long)e->first_chunk_ms * SR / 1000 / st_vocoder_hop(e->voc)) + 1;
+    if (T > first + st_vocoder_context(e->voc)) {   /* long enough to be worth splitting */
+      if (st_vocoder_decode_pieces(e->voc, e->pool, mel, T, first, pf, pu)) goto done;
+      *pieced = 1;
+      rc = 0;
+      goto done;
+    }
+  }
   if (st_vocoder_decode(e->voc, e->pool, mel, T, y, n)) goto done;
   rc = 0;
 done:
@@ -1536,6 +1553,19 @@ done:
   st_free(mel);
   st_phonemes_free(&ph);
   return rc;
+}
+
+/* the samples [off, off + n) of a segment of `total` samples, faded as fade_ends fades the whole segment */
+static void fade_part(float* y, size_t n, size_t off, size_t total) {
+  const int fade = SR / 100;
+  if (total <= (size_t)(2 * fade)) return;
+  const double step = 1.0 / (fade - 1);
+  for (int i = 0; i < fade; ++i) {
+    float r = i == fade - 1 ? 1.0f : (float)(i * step);
+    size_t a = (size_t)i, b = total - 1 - (size_t)i;
+    if (a >= off && a < off + n) y[a - off] *= r;
+    if (b >= off && b < off + n) y[b - off] *= r;
+  }
 }
 
 static void fade_ends(float* y, size_t n) {
@@ -1596,7 +1626,7 @@ static int emit_event(steertts_engine* e, ev_state* ev, const st_segment* s, int
   int rc = st_vocoder_decode(e->voc, e->pool, mel, T, &y, &n);
   st_free(mel);
   if (rc) return -1;
-  steertts_chunk_info info = {"", "none", "", 0, index, st_time_ms() - t0, s->event};
+  steertts_chunk_info info = {"", "none", "", 0, index, st_time_ms() - t0, s->event, 0};
   int st = sink(user, y, n, &info);
   st_free(y);
   return st < 0 ? -1 : st ? STOP : 0;
@@ -1648,6 +1678,43 @@ static int style_of_prompt(void* user, const char* prompt, char** tag, int* n_ct
 }
 
 /* markup segments in order (MarkupSynth.stream): pauses as zeros, speech with 10 ms fades */
+static void ctrl_string(const st_segment* s, char* out, size_t cap) {
+  size_t k = 0;
+  out[0] = 0;
+  for (int c = 0; c < s->n_ctrl && k < cap; ++c) {
+    char rep[48];
+    float_short(rep, sizeof rep, s->ctrl_val[c]);
+    k += (size_t)snprintf(out + k, cap - k, "%s%s=%s", c ? "," : "", s->ctrl_name[c], rep);
+  }
+}
+
+/* streaming the first sentence in pieces (steertts_set_first_chunk_ms): each piece faded as its part of the
+ * sentence and handed to the sink with info.more set until the last one */
+typedef struct {
+  chunk_sink sink;
+  void* user;
+  steertts_chunk_info info;
+  double t0;
+  int stopped;
+} piece_ctx;
+
+static int piece_sink(void* user, const float* y, size_t n, size_t off, size_t total, int last) {
+  piece_ctx* c = (piece_ctx*)user;
+  float* tmp = (float*)st_malloc(sizeof(float) * (n ? n : 1));
+  if (!tmp) return -1;
+  if (n) memcpy(tmp, y, sizeof(float) * n);
+  fade_part(tmp, n, off, total);
+  c->info.more = !last;
+  c->info.synth_ms = st_time_ms() - c->t0;
+  int st = c->sink(c->user, tmp, n, &c->info);
+  st_free(tmp);
+  c->t0 = st_time_ms();
+  if (st > 0) c->stopped = 1;
+  return st;
+}
+
+static int collect_sink(void* user, const float* y, size_t n, const steertts_chunk_info* info);
+
 static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, chunk_sink sink, void* user) {
   const char* names[N_CTRL];
   float vals[N_CTRL];
@@ -1670,6 +1737,7 @@ static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, ch
     st_segments_free(segs, ns);
     return -1;
   }
+  int spoke = 0;   /* a speech segment has been rendered */
   for (int i = 0; i <= ns && rc == 0; ++i) {
     if (i == ns) {  /* text that is only events: no speech level to match, the clip's own level is kept */
       for (int w = 0; w < n_wait && rc == 0; ++w) rc = emit_event(e, &ev, &segs[waiting[w]], waiting[w], sink, user);
@@ -1712,9 +1780,28 @@ static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, ch
           ws[k].word = s->ws[k].word, ws[k].pitch = s->ws[k].pitch, ws[k].energy = s->ws[k].energy,
           ws[k].dur = s->ws[k].dur;
       }
-      rc = render(e, s->text, spk, s->tag, nc, dims, dv, r->pace, ws, s->n_ws, r->guidance, r->flow, r->seed, &y, &n);
+      /* only the first sentence needs pieces (later ones render while earlier ones play); not before events,
+       * which wait for the whole sentence's level */
+      int pieces = sink != collect_sink && !spoke && !(e->events && n_wait > 0);
+      piece_ctx pc2 = {sink, user, {s->text ? s->text : "", s->tag ? s->tag : "none", "", 0, i, 0, NULL, 0}, t0, 0};
+      char ctrl_p[512] = "";
+      if (pieces) {
+        ctrl_string(s, ctrl_p, sizeof ctrl_p);
+        pc2.info.ctrl = ctrl_p;
+      }
+      int pieced = 0;
+      rc = render(e, s->text, spk, s->tag, nc, dims, dv, r->pace, ws, s->n_ws, r->guidance, r->flow, r->seed, &y, &n,
+                  pieces ? piece_sink : NULL, &pc2, &pieced);
       st_free(ws);
       if (rc) break;
+      spoke = 1;
+      if (pieced) {   /* already handed over; the events' level is not needed (none wait) */
+        if (pc2.stopped) {
+          rc = STOP;
+          break;
+        }
+        continue;
+      }
       fade_ends(y, n);
       if (e->events && n && !ev.has_level) {
         if (speech_level(y, n, &ev.level)) {
@@ -1732,14 +1819,9 @@ static int run_segments(steertts_engine* e, const req_t* r, const spk_t* spk, ch
       }
     }
     char ctrl_s[512] = "";
-    size_t k = 0;
-    for (int c = 0; c < s->n_ctrl && k < sizeof ctrl_s; ++c) {
-      char rep[48];
-      float_short(rep, sizeof rep, s->ctrl_val[c]);
-      k += (size_t)snprintf(ctrl_s + k, sizeof ctrl_s - k, "%s%s=%s", c ? "," : "", s->ctrl_name[c], rep);
-    }
+    ctrl_string(s, ctrl_s, sizeof ctrl_s);
     steertts_chunk_info info = {s->text ? s->text : "", s->tag ? s->tag : "none", ctrl_s, s->pause_ms, i,
-                                st_time_ms() - t0, NULL};
+                                st_time_ms() - t0, NULL, 0};
     int st = sink(user, y, n, &info);
     st_free(y);
     if (st < 0) {
@@ -1788,7 +1870,7 @@ static int synth_req(steertts_engine* e, req_t* r, float** audio, size_t* n) {
     free(b.y);
   } else {
     rc = render(e, r->text, &spk, r->tag, r->n_ctrl, r->ctrl_dim, r->ctrl_val, r->pace, r->ws, r->n_ws, r->guidance,
-                r->flow, r->seed, audio, n);
+                r->flow, r->seed, audio, n, NULL, NULL, NULL);
   }
   st_free(spk.owned_ref);
   return rc;

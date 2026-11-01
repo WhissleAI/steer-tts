@@ -44,6 +44,7 @@ static const char* usage =
     "                [--prompt TEXT] [--ref-wav WAV] [--word-shift W:key=v,...;...] [--seed N] [--no-flow]\n"
     "                [--flow-steps N] [--precision fp32|int8] [--assets DIR] [--json REQUEST] [--resolve]\n"
     "                [--play] [-i] [--list voices|tags|controls] [--gender female|male] [--bench] [--bench-json]\n"
+    "                [--first-chunk-ms MS]\n"
     "                [--perform FILE [--plan] [--genre G] [--strength S] [--director PATH]] [--version]\n"
     "\n"
     "  TEXT           text to speak ('-' reads stdin)\n"
@@ -58,6 +59,8 @@ static const char* usage =
     "  --guidance S   style guidance scale (1.0 = off)\n"
     "  --pace X       global duration divisor (1.2 = 20% faster)\n"
     "  --threads N    worker threads (default 1, 0 = all CPUs)\n"
+    "  --first-chunk-ms MS  streaming: hand the first sentence over in pieces, the first about MS of audio (lower\n"
+    "                 time to first audio, same samples; 0 = one chunk per sentence, the default)\n"
     "  --prompt T     v1: free-text direction, mapped to a style tag + controls\n"
     "  --ref-wav W    v1: clone the voice of a WAV file\n"
     "  --no-flow      v1: skip the flow refiner (~12x less compute)\n"
@@ -687,6 +690,7 @@ int main(int argc, char** argv) {
   const char *text = NULL, *out = "out.wav", *model = NULL, *list = NULL, *json = NULL, *ctrl = NULL, *gender = NULL;
   char ctrl_buf[512];
   double rate = 0;
+  int first_chunk_ms = 0;
   int have_rate = 0, stream = 0, do_bench = 0, bench_json = 0, resolve = 0, play = 0, inter = 0, out_set = 0;
   const char *perform_file = NULL, *director_path = NULL, *genre = NULL;
   int plan_only = 0;
@@ -723,6 +727,7 @@ int main(int argc, char** argv) {
     else if (!strcmp(a, "--play")) play = 1;
     else if (!strcmp(a, "-i") || !strcmp(a, "--interactive")) inter = 1;
     else if (!strcmp(a, "--threads")) cfg.threads = (int)num_arg(a, NEXT());
+    else if (!strcmp(a, "--first-chunk-ms")) first_chunk_ms = (int)num_arg(a, NEXT());
     else if (!strcmp(a, "--prompt")) o.prompt = NEXT();
     else if (!strcmp(a, "--ref-wav")) o.ref_wav = NEXT();
     else if (!strcmp(a, "--word-shift")) o.word_shift = NEXT();
@@ -784,6 +789,7 @@ int main(int argc, char** argv) {
   }
   double load = (now_ms() - t0) / 1000;
   int rc = 0;
+  if (first_chunk_ms > 0) steertts_set_first_chunk_ms(e, first_chunk_ms);
   if (list) {
     if (!strcmp(list, "voices") && gender && strcmp(gender, "female") && strcmp(gender, "male")) {
       fprintf(stderr, "steertts: --gender takes female or male\n");

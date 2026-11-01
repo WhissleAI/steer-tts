@@ -50,7 +50,7 @@ class _Config(ctypes.Structure):
 
 class _ChunkInfo(ctypes.Structure):
     _fields_ = [("text", c_char_p), ("tag", c_char_p), ("ctrl", c_char_p), ("pause_ms", c_int), ("index", c_int),
-                ("synth_ms", ctypes.c_double), ("event", c_char_p)]
+                ("synth_ms", ctypes.c_double), ("event", c_char_p), ("more", c_int)]
 
 
 class _Sentence(ctypes.Structure):
@@ -87,6 +87,7 @@ def _api():
         L.steertts_num_voices.argtypes = L.steertts_num_tags.argtypes = [c_void_p]
         L.steertts_control.argtypes = [c_int]
         L.steertts_has.argtypes = [c_void_p, c_char_p]
+        L.steertts_set_first_chunk_ms.argtypes = [c_void_p, c_int]
         L.steertts_director_load.argtypes = [c_char_p, c_char_p, c_size_t]
         L.steertts_director_load.restype = c_void_p
         L.steertts_director_free.argtypes = [c_void_p]
@@ -156,6 +157,12 @@ class Engine:
 
     __del__ = close
 
+    def first_chunk_ms(self, ms):
+        """Streaming: hand the first sentence over in pieces, the first about `ms` of audio (0 = one chunk per
+        sentence, the default). The audio is the same; the time to the first chunk drops."""
+        if _api().steertts_set_first_chunk_ms(self._e, int(ms)):
+            raise SteerTTSError("first_chunk_ms takes a number >= 0")
+
     def has(self, feature):
         """'prompt', 'clone' or 'flow'."""
         return bool(_api().steertts_has(self._e, feature.encode()))
@@ -176,7 +183,8 @@ class Engine:
 
     def stream(self, text=None, request=None, **kw):
         """Yields (audio, info) per sentence / pause / style span; info: text, tag, ctrl, pause_ms, index, synth_ms,
-        event (the sound event name of a recorded event chunk, else "").
+        event (the sound event name of a recorded event chunk, else ""), more (True when the next chunk continues
+        this segment: see first_chunk_ms).
         (The whole text is rendered before the generator returns its first item; use stream_cb for true
         incremental playback.)"""
         chunks = []
@@ -194,7 +202,7 @@ class Engine:
             try:
                 i = info.contents
                 d = dict(text=i.text.decode(), tag=i.tag.decode(), ctrl=i.ctrl.decode(), pause_ms=i.pause_ms,
-                         index=i.index, synth_ms=i.synth_ms, event=(i.event or b"").decode())
+                         index=i.index, synth_ms=i.synth_ms, event=(i.event or b"").decode(), more=bool(i.more))
                 return 1 if fn(_array(ptr, n), d) else 0
             except BaseException as e:   # stop the stream and re-raise in the caller
                 failure.append(e)

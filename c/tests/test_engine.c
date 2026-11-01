@@ -171,6 +171,51 @@ static int determinism(const char* model, const char* json) {
   return !same;
 }
 
+/* steertts_set_first_chunk_ms: the first sentence in pieces gives the same samples as one chunk per sentence */
+typedef struct {
+  float* y;
+  size_t n, cap;
+  int chunks, more, bad_more;
+  int last_index;
+} pieces;
+
+static int collect_piece(const float* a, size_t n, const steertts_chunk_info* info, void* u) {
+  pieces* p = (pieces*)u;
+  if (p->more && info->index != p->last_index) p->bad_more = 1;   /* a piece promised more of its segment */
+  p->more = info->more, p->last_index = info->index;
+  p->chunks++;
+  if (p->n + n > p->cap) {
+    p->cap = (p->n + n) * 2;
+    p->y = (float*)realloc(p->y, sizeof(float) * p->cap);
+  }
+  memcpy(p->y + p->n, a, sizeof(float) * n);
+  p->n += n;
+  return 0;
+}
+
+static int first_chunk(const char* model, int threads) {
+  const char* json = "{\"text\": \"The engineers tested the new design for three weeks before approving it, then once "
+                     "more. A second sentence. <whisper>And a third.</whisper>\"}";
+  char err[512];
+  steertts_engine* e = steertts_create(model, threads, err, sizeof err);
+  pieces r[3];
+  memset(r, 0, sizeof r);
+  int ms[3] = {0, 40, 400}, fail = !e;
+  for (int k = 0; k < 3 && !fail; ++k) {
+    steertts_set_first_chunk_ms(e, ms[k]);
+    if (steertts_stream_json(e, json, collect_piece, &r[k], err, sizeof err)) fail = 1;
+  }
+  if (!fail)
+    for (int k = 1; k < 3; ++k)
+      if (r[k].n != r[0].n || memcmp(r[k].y, r[0].y, sizeof(float) * r[0].n) || r[k].bad_more || r[k].more) fail = 1;
+  if (!fail && !(r[1].chunks > r[0].chunks)) fail = 1;   /* 40 ms pieces must split the first sentence */
+  printf("%s first chunk pieces (%d threads): %d / %d / %d chunks, %s\n", fail ? "FAIL" : "ok  ", threads, r[0].chunks,
+         r[1].chunks, r[2].chunks, fail ? (e ? "audio or flags differ" : err) : "bit-identical audio");
+  for (int k = 0; k < 3; ++k) free(r[k].y);
+  steertts_destroy(e);
+  return fail;
+}
+
 int main(void) {
   const char* v1 = getenv("STEERTTS_V1_MODEL");
   const char* edge = getenv("STEERTTS_EDGE_MODEL");
@@ -195,6 +240,8 @@ int main(void) {
     fails += run(edge, "fp32", "golden/engine/edge.safetensors", 1, 60, 60, 60, &checked, &skipped);
     fails += determinism(edge, "{\"text\": \"Well, *that* was fast. [pause 300ms] <whisper>Quiet.</whisper>\", "
                                "\"markup\": true}");
+    fails += first_chunk(edge, 1);
+    fails += first_chunk(edge, 3);
   } else
     printf("skip edge (no model at %s)\n", edge);
   if (!checked) {

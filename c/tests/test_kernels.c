@@ -1,5 +1,10 @@
 /* Kernel self-test: GEMM (all weight storages, edge sizes, threads) against a double-precision reference, plus
  * conv1d, attention and FFT round trips. Prints GFLOP/s for a model-sized matmul. */
+/* GCC 12 (Debian / Raspberry Pi OS bookworm) on aarch64 hits an internal compiler error vectorizing a reduction in
+ * main() at -O2; the test does not need the vectorizer */
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 13 && defined(__aarch64__)
+#pragma GCC optimize("no-tree-vectorize")
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -38,6 +38,9 @@
 
 enum { MR = 6, NR = 16, KC = 256, MC = 96, NC = 64 };
 
+enum { KERN_UNSET, KERN_C, KERN_AVX2, KERN_NEON };
+static atomic_int g_kern = KERN_UNSET;   /* which micro-kernel; races only ever store the same value */
+
 /* ------------------------------------------------------------------ B sources */
 typedef enum { SRC_NT, SRC_NN, SRC_MAT } src_kind;
 typedef struct {
@@ -47,9 +50,89 @@ typedef struct {
   const st_mat* m;  /* SRC_MAT */
 } bsrc;
 
+#ifdef ST_NEON
+/* 4 rows of B (4 consecutive k each) -> 4 panel rows dst[(kk + i) * NR + j .. j + 3] */
+static inline void store_t4(float* d, float32x4_t r0, float32x4_t r1, float32x4_t r2, float32x4_t r3) {
+  float32x4_t t0 = vtrn1q_f32(r0, r1), t1 = vtrn2q_f32(r0, r1), t2 = vtrn1q_f32(r2, r3), t3 = vtrn2q_f32(r2, r3);
+  vst1q_f32(d, vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f32(t0), vreinterpretq_f64_f32(t2))));
+  vst1q_f32(d + NR, vreinterpretq_f32_f64(vtrn1q_f64(vreinterpretq_f64_f32(t1), vreinterpretq_f64_f32(t3))));
+  vst1q_f32(d + 2 * NR, vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f32(t0), vreinterpretq_f64_f32(t2))));
+  vst1q_f32(d + 3 * NR, vreinterpretq_f32_f64(vtrn2q_f64(vreinterpretq_f64_f32(t1), vreinterpretq_f64_f32(t3))));
+}
+
+/* 16 consecutive weights of one row as floats, exactly as the scalar code computes them ((float)q * scale) */
+static inline void row16_i4(const uint8_t* b, float sc, float32x4_t v[4]) {   /* b: 8 bytes, low nibble first */
+  uint8x8_t raw = vld1_u8(b);
+  uint8x8x2_t z = vzip_u8(vand_u8(raw, vdup_n_u8(15)), vshr_n_u8(raw, 4));
+  int8x16_t q = vsubq_s8(vreinterpretq_s8_u8(vcombine_u8(z.val[0], z.val[1])), vdupq_n_s8(8));
+  int16x8_t lo = vmovl_s8(vget_low_s8(q)), hi = vmovl_s8(vget_high_s8(q));
+  float32x4_t s = vdupq_n_f32(sc);
+  v[0] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(lo))), s);
+  v[1] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(lo))), s);
+  v[2] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(hi))), s);
+  v[3] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(hi))), s);
+}
+
+static inline void row16_i8(const int8_t* r, float sc, float32x4_t v[4]) {
+  int8x16_t q = vld1q_s8(r);
+  int16x8_t lo = vmovl_s8(vget_low_s8(q)), hi = vmovl_s8(vget_high_s8(q));
+  float32x4_t s = vdupq_n_f32(sc);
+  v[0] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(lo))), s);
+  v[1] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(lo))), s);
+  v[2] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(hi))), s);
+  v[3] = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(hi))), s);
+}
+
+/* the vector path of pack_b for row-major sources (NT and weight matrices): blocks of 4 columns x 16 k, transposed
+ * in registers. Handles kk in [0, kc16) where kc16 = kc rounded down to 16 (and, for int4, a group boundary never
+ * falls inside a 16-block: g % 16 == 0, k0 % 16 == 0); returns kc16, the caller finishes the tail. Bit-identical to
+ * the scalar loops (the same conversions and products). */
+static int pack_b_neon(const bsrc* s, int n0, int nn, int k0, int kc, float* dst) {
+  const st_mat* m = s->kind == SRC_MAT ? s->m : NULL;
+  if (s->kind == SRC_NN || (k0 & 15)) return 0;
+  if (m && m->type == ST_W_I4 && (m->g & 15)) return 0;
+  int kc16 = kc & ~15;
+  for (int j = 0; j < nn; j += 4) {
+    for (int kk = 0; kk < kc16; kk += 16) {
+      float32x4_t v[4][4];
+      for (int r = 0; r < 4; ++r) {
+        int row = n0 + j + r;
+        if (j + r >= nn) {
+          v[r][0] = v[r][1] = v[r][2] = v[r][3] = vdupq_n_f32(0.f);
+        } else if (!m) {
+          const float* p = s->b + (size_t)row * s->ldb + k0 + kk;
+          v[r][0] = vld1q_f32(p), v[r][1] = vld1q_f32(p + 4), v[r][2] = vld1q_f32(p + 8), v[r][3] = vld1q_f32(p + 12);
+        } else if (m->type == ST_W_F32) {
+          const float* p = m->w + (size_t)row * m->K + k0 + kk;
+          v[r][0] = vld1q_f32(p), v[r][1] = vld1q_f32(p + 4), v[r][2] = vld1q_f32(p + 8), v[r][3] = vld1q_f32(p + 12);
+        } else if (m->type == ST_W_I8) {
+          row16_i8(m->q8 + (size_t)row * m->K + k0 + kk, m->s[row], v[r]);
+        } else {
+          size_t idx = (size_t)row * m->Kp + (size_t)(k0 + kk);   /* even: Kp and k0 are multiples of 16 */
+          row16_i4(m->q4 + (idx >> 1), m->s[(size_t)row * (m->Kp / m->g) + (k0 + kk) / m->g], v[r]);
+        }
+      }
+      for (int q = 0; q < 4; ++q) store_t4(dst + (size_t)(kk + 4 * q) * NR + j, v[0][q], v[1][q], v[2][q], v[3][q]);
+    }
+  }
+  return kc16;
+}
+#endif
+
 /* dst[kk*NR + j] = B(n0 + j, k0 + kk), zero for j >= nn */
 static void pack_b(const bsrc* s, int n0, int nn, int k0, int kc, float* dst) {
   if (nn < NR) memset(dst, 0, sizeof(float) * (size_t)kc * NR);
+#ifdef ST_NEON
+  if (atomic_load_explicit(&g_kern, memory_order_relaxed) == KERN_NEON) {
+    int done = pack_b_neon(s, n0, nn, k0, kc, dst);
+    if (done) {
+      if (done == kc) return;
+      /* the tail (fewer than 16 k values) with the scalar loops on a shifted view */
+      pack_b(s, n0, nn, k0 + done, kc - done, dst + (size_t)done * NR);
+      return;
+    }
+  }
+#endif
   switch (s->kind) {
     case SRC_NT:
       for (int j = 0; j < nn; ++j) {
@@ -247,8 +330,6 @@ int st_cpu_avx2(void) {
   return v;
 }
 
-enum { KERN_UNSET, KERN_C, KERN_AVX2, KERN_NEON };
-static atomic_int g_kern = KERN_UNSET;   /* which micro-kernel; races only ever store the same value */
 
 static kern_fn pick_kernel(void) {
   int id = atomic_load_explicit(&g_kern, memory_order_relaxed);
@@ -562,10 +643,54 @@ ST_TARGET_AVX2 static size_t gelu_avx2(float* x, size_t n) {
 }
 #endif
 
+#ifdef ST_NEON
+/* the same polynomials, operation for operation, as exp_neg256 / gelu_avx2 (so NEON and AVX2 builds agree) */
+static float32x4_t exp_neg128(float32x4_t x) {
+  x = vmaxq_f32(x, vdupq_n_f32(-87.0f));
+  float32x4_t fx = vrndnq_f32(vmulq_f32(x, vdupq_n_f32(1.44269504088896341f)));
+  x = vfmsq_f32(x, fx, vdupq_n_f32(0.693359375f));
+  x = vfmsq_f32(x, fx, vdupq_n_f32(-2.12194440e-4f));
+  float32x4_t y = vdupq_n_f32(1.9875691500E-4f);
+  y = vfmaq_f32(vdupq_n_f32(1.3981999507E-3f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(8.3334519073E-3f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(4.1665795894E-2f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(1.6666665459E-1f), y, x);
+  y = vfmaq_f32(vdupq_n_f32(5.0000001201E-1f), y, x);
+  y = vfmaq_f32(vaddq_f32(x, vdupq_n_f32(1.f)), y, vmulq_f32(x, x));
+  int32x4_t e = vshlq_n_s32(vaddq_s32(vcvtnq_s32_f32(fx), vdupq_n_s32(127)), 23);
+  return vmulq_f32(y, vreinterpretq_f32_s32(e));
+}
+
+static size_t gelu_neon(float* x, size_t n) {
+  const uint32x4_t sgn = vdupq_n_u32(0x80000000u);
+  const float32x4_t one = vdupq_n_f32(1.f), half = vdupq_n_f32(0.5f);
+  size_t i = 0;
+  for (; i + 4 <= n; i += 4) {
+    float32x4_t v = vld1q_f32(x + i);
+    float32x4_t z = vmulq_f32(v, vdupq_n_f32(0.70710678118654752f));
+    uint32x4_t zu = vreinterpretq_u32_f32(z), s = vandq_u32(sgn, zu);
+    float32x4_t a = vreinterpretq_f32_u32(veorq_u32(s, zu));
+    float32x4_t t = vdivq_f32(one, vfmaq_f32(one, vdupq_n_f32(0.3275911f), a));
+    float32x4_t r = vfmaq_f32(vdupq_n_f32(-1.453152027f), vdupq_n_f32(1.061405429f), t);
+    r = vfmaq_f32(vdupq_n_f32(1.421413741f), r, t);
+    r = vfmaq_f32(vdupq_n_f32(-0.284496736f), r, t);
+    r = vfmaq_f32(vdupq_n_f32(0.254829592f), r, t);
+    float32x4_t ex = exp_neg128(vnegq_f32(vmulq_f32(z, z)));
+    float32x4_t e = vfmaq_f32(one, vmulq_f32(vnegq_f32(ex), t), r);
+    e = vreinterpretq_f32_u32(veorq_u32(s, vreinterpretq_u32_f32(e)));
+    vst1q_f32(x + i, vmulq_f32(vmulq_f32(v, half), vaddq_f32(one, e)));
+  }
+  return i;
+}
+#endif
+
 void st_gelu(float* x, size_t n) {
   size_t i = 0;
 #ifdef ST_X86
   if (pick_kernel() == kern_avx2) i = gelu_avx2(x, n);
+#endif
+#ifdef ST_NEON
+  if (pick_kernel() == kern_neon) i = gelu_neon(x, n);
 #endif
   for (; i < n; ++i) x[i] = 0.5f * x[i] * (1.f + erff(x[i] * 0.70710678118654752f));
 }
