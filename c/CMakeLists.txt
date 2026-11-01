@@ -15,6 +15,12 @@ else()
   set(ST_TOP OFF)   # added with add_subdirectory(): no tests by default
 endif()
 option(STEERTTS_BUILD_TESTS "build tests/ (ctest)" ${ST_TOP})
+option(STEERTTS_BUILD_SERVER "build steertts-pi, the HTTP / stdin server (POSIX)" ON)
+# Tune the code for one CPU: "cortex-a72" (Raspberry Pi 4), "cortex-a76" (Pi 5), "native" (this machine), or empty
+# (portable: any CPU of the target architecture). Only instruction selection and scheduling change, never the
+# arithmetic (no fast-math, no FMA contraction), so a tuned build renders the same samples as a portable one.
+# A cortex-a76 build does not run on a Pi 4.
+set(STEERTTS_CPU "" CACHE STRING "-mcpu= target (cortex-a72, cortex-a76, native, or empty)")
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release)
@@ -28,6 +34,13 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
   add_compile_options(-Wall -Wextra -Wno-unused-parameter -ffp-contract=off)
   # no -ffast-math: renders must stay deterministic and close to the reference
   set(CMAKE_C_FLAGS_RELEASE "-O2")
+  if(STEERTTS_CPU)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+      add_compile_options(-mcpu=${STEERTTS_CPU})
+    else()
+      add_compile_options(-march=${STEERTTS_CPU})   # x86: -march=native etc.
+    endif()
+  endif()
 endif()
 
 include(GNUInstallDirs)
@@ -81,6 +94,18 @@ if(STEERTTS_BUILD_CLI)
   install(TARGETS steertts_cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
+# Raspberry Pi layer (../raspberry-pi): the steertts-pi server and the C API examples. Absent when c/ is vendored alone.
+set(ST_PI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../raspberry-pi)
+if(NOT EXISTS ${ST_PI_DIR}/server/steertts_pi.c)
+  set(STEERTTS_BUILD_SERVER OFF)
+endif()
+if(STEERTTS_BUILD_SERVER AND NOT WIN32)
+  add_executable(steertts_pi ${ST_PI_DIR}/server/steertts_pi.c)
+  set_target_properties(steertts_pi PROPERTIES OUTPUT_NAME steertts-pi)
+  target_link_libraries(steertts_pi steertts_static)
+  install(TARGETS steertts_pi RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+
 if(STEERTTS_BUILD_EXAMPLES)
   set(ST_EXAMPLES simple stream json_request)
   if(NOT WIN32)
@@ -90,6 +115,12 @@ if(STEERTTS_BUILD_EXAMPLES)
     add_executable(example_${ex} examples/${ex}.c)
     target_link_libraries(example_${ex} steertts::steertts $<$<NOT:$<PLATFORM_ID:Windows>>:m>)
   endforeach()
+  if(EXISTS ${ST_PI_DIR}/examples/hello.c)   # build-pi*/pi_hello, pi_streaming
+    foreach(ex hello streaming)
+      add_executable(pi_${ex} ${ST_PI_DIR}/examples/${ex}.c)
+      target_link_libraries(pi_${ex} steertts::steertts $<$<NOT:$<PLATFORM_ID:Windows>>:m>)
+    endforeach()
+  endif()
 endif()
 
 # install: library, header, CMake package (steertts::steertts, steertts::steertts_static), pkg-config file
@@ -132,4 +163,9 @@ if(STEERTTS_BUILD_TESTS)
     add_test(NAME ${name} COMMAND ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     set_tests_properties(${name} PROPERTIES SKIP_RETURN_CODE 77)
   endforeach()
+  if(TARGET steertts_pi)
+    add_test(NAME test_pi_server COMMAND sh ${ST_PI_DIR}/server/test_pi_server.sh $<TARGET_FILE:steertts_pi>
+             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    set_tests_properties(test_pi_server PROPERTIES SKIP_RETURN_CODE 77)
+  endif()
 endif()

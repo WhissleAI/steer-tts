@@ -146,22 +146,15 @@ static void rows(st_pool* p, row_job* j) {
   st_parallel_for(tasks > 1 ? p : NULL, tasks, row_task, j);
 }
 
-int st_vocoder_decode(st_vocoder* v, st_pool* p, const float* mel, int T, float** wav, size_t* n) {
-  *wav = NULL;
-  *n = 0;
-  if (T <= 0) {
-    st_seterr("vocoder: empty mel");
-    return -1;
-  }
+/* backbone + head for T frames of mel -> half spectra ri: re [T, nb] then im [T, nb] */
+static int spectra(st_vocoder* v, st_pool* p, const float* mel, int T, float* ri) {
   int D = v->dim, I = v->inter, nb = v->n_fft / 2 + 1, rc = -1;
   size_t ho = (size_t)T * (size_t)(v->n_fft + 2);
   size_t scratch = (size_t)T * I > ho ? (size_t)T * I : ho;
   float* x = (float*)st_malloc(sizeof(float) * (size_t)T * D);
   float* y = (float*)st_malloc(sizeof(float) * (size_t)T * D);
   float* s = (float*)st_malloc(sizeof(float) * scratch);
-  float* ri = (float*)st_malloc(sizeof(float) * (size_t)T * nb * 2);
-  float* out = NULL;
-  if (!x || !y || !s || !ri) goto done;
+  if (!x || !y || !s) goto done;
   if (st_conv1d(p, mel, T, N_MELS, N_MELS, v->embed, 7, 1, 1, 3, 3, v->embed_b, x, D) < 0) goto done;
   row_job ln = {x, T, D, v->ln_w, v->ln_b, 0, NULL, NULL, 0};
   rows(p, &ln);
@@ -188,6 +181,25 @@ int st_vocoder_decode(st_vocoder* v, st_pool* p, const float* mel, int T, float*
   st_linear(p, x, T, D, v->out, v->out_b, s, v->n_fft + 2, 0);
   row_job hd = {s, T, v->n_fft + 2, NULL, NULL, 2, ri, ri + (size_t)T * nb, nb};
   rows(p, &hd);
+  rc = 0;
+done:
+  st_free(x);
+  st_free(y);
+  st_free(s);
+  return rc;
+}
+
+int st_vocoder_decode(st_vocoder* v, st_pool* p, const float* mel, int T, float** wav, size_t* n) {
+  *wav = NULL;
+  *n = 0;
+  if (T <= 0) {
+    st_seterr("vocoder: empty mel");
+    return -1;
+  }
+  int nb = v->n_fft / 2 + 1, rc = -1;
+  float* ri = (float*)st_malloc(sizeof(float) * (size_t)T * nb * 2);
+  float* out = NULL;
+  if (!ri || spectra(v, p, mel, T, ri)) goto done;
   size_t len = st_istft_len(T, v->hop);
   out = (float*)st_malloc(sizeof(float) * (len ? len : 1));
   if (!out) goto done;
@@ -197,9 +209,56 @@ int st_vocoder_decode(st_vocoder* v, st_pool* p, const float* mel, int T, float*
   out = NULL;
   rc = 0;
 done:
-  st_free(x);
-  st_free(y);
-  st_free(s);
+  st_free(ri);
+  st_free(out);
+  return rc;
+}
+
+int st_vocoder_context(const st_vocoder* v) { return 3 * (1 + v->layers); }
+int st_vocoder_hop(const st_vocoder* v) { return v->hop; }
+
+/* Pieces: frames [a, b) are exact when their spectra come from mel frames [a - ctx, b + ctx) (clipped to the
+ * utterance, where the zero padding is the real one): every layer is per frame except the k = 7 convolutions (the
+ * embedding and one per block, +-3 frames each). The GEMMs compute each output the same way whatever the number of
+ * rows, so the samples equal st_vocoder_decode's bit for bit. */
+int st_vocoder_decode_pieces(st_vocoder* v, st_pool* p, const float* mel, int T, int first, st_piece_fn fn,
+                             void* user) {
+  if (T <= 0) {
+    st_seterr("vocoder: empty mel");
+    return -1;
+  }
+  int nb = v->n_fft / 2 + 1, ctx = st_vocoder_context(v), rc = -1;
+  if (first < 4) first = 4;
+  size_t len = st_istft_len(T, v->hop);
+  float* out = (float*)st_malloc(sizeof(float) * (len ? len : 1));
+  float* ri = (float*)st_malloc(sizeof(float) * (size_t)(first + 2 * ctx) * nb * 2);
+  size_t ri_cap = (size_t)(first + 2 * ctx);
+  st_istft_state* is = st_istft_begin(T, v->n_fft, v->hop);
+  size_t emitted = 0;
+  if (!out || !ri || !is) goto done;
+  for (int a = 0, size = first; a < T; size = size > T ? T : 2 * size) {
+    int b = T - a <= size + ctx ? T : a + size;   /* no last piece shorter than the context */
+    int lo = a - ctx > 0 ? a - ctx : 0, hi = b + ctx < T ? b + ctx : T, m = hi - lo;
+    if ((size_t)m > ri_cap) {
+      st_free(ri);
+      ri_cap = (size_t)m;
+      if (!(ri = (float*)st_malloc(sizeof(float) * ri_cap * nb * 2))) goto done;
+    }
+    if (spectra(v, p, mel + (size_t)lo * N_MELS, m, ri)) goto done;
+    size_t ready;
+    if (st_istft_add(is, p, ri + (size_t)(a - lo) * nb, ri + (size_t)m * nb + (size_t)(a - lo) * nb, nb, b - a, out,
+                     &ready))
+      goto done;
+    int last = b == T, st = 0;
+    if (ready > emitted || last) st = fn(user, out + emitted, ready - emitted, emitted, len, last);
+    emitted = ready;
+    if (st < 0) goto done;
+    if (st > 0) break;   /* the sink stopped */
+    a = b;
+  }
+  rc = 0;
+done:
+  st_istft_end(is);
   st_free(ri);
   st_free(out);
   return rc;

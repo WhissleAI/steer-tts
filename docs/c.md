@@ -39,7 +39,11 @@ target_link_libraries(app steertts::steertts)          # shared; steertts::steer
 
 or `cc app.c $(pkg-config --cflags --libs steertts)`, or vendor the directory with `add_subdirectory(c)`
 (tests are then off by default). CMake options: `STEERTTS_BUILD_SHARED`, `STEERTTS_BUILD_CLI`,
-`STEERTTS_BUILD_EXAMPLES`, `STEERTTS_BUILD_TESTS`. The shared library exports only the `steertts_*` API.
+`STEERTTS_BUILD_EXAMPLES`, `STEERTTS_BUILD_TESTS`, `STEERTTS_BUILD_SERVER` (`steertts-pi`, POSIX), and `STEERTTS_CPU`
+(`-mcpu=` / `-march=` target such as `cortex-a72`, `cortex-a76` or `native`; it changes instruction selection only, so
+a tuned build renders the same samples). The shared library exports only the `steertts_*` API. Presets for the
+Raspberry Pi: `cmake --preset pi4|pi5|pi4-cross|pi5-cross`; the Pi layer (install script, examples, the
+`steertts-pi` server, cross-build) lives in [`raspberry-pi/`](../raspberry-pi) and builds with these targets.
 
 ### Examples
 
@@ -175,6 +179,10 @@ steertts_destroy(e);
   word_shift; `steertts_default_options` fills in the defaults.
 - `steertts_stream_ex` / `steertts_stream_json` also pass each chunk's segment (text, tag, controls, pause) and its
   render time.
+- `steertts_set_first_chunk_ms(e, ms)`: streaming hands the first sentence over in pieces (the first about `ms` of
+  audio, each next one twice as long; `info->more` is 1 until the sentence's last piece), so audio can start before
+  the whole first sentence is vocoded. The samples are the same as with one chunk per sentence (each piece is
+  vocoded with its full receptive field, and the inverse STFT is incremental). Default 0 (off).
 - `steertts_resolve_json`, `steertts_map_prompt`, `steertts_speaker_vector` (512-d x-vector of a clip, usable as
   `spk_vec` with either model), `steertts_phonemes`, `steertts_load_wav` / `steertts_save_wav`, voice / tag / control
   listing.
@@ -268,7 +276,7 @@ Whisper's English normaliser for WER, and UTMOSv2 for naturalness. Scripts: [`c/
   both models), mutated safetensors files and JSON run clean. `c/tests/fuzz_requests.c` reproduces the request fuzz.
 - **Compilers and targets.** GCC 11 and Clang (Zig 0.14), warning-free with `-Wall -Wextra -pedantic`, also at -O3;
   native x86-64 (AVX2) and ARM64 (NEON) tested, the latter under QEMU as Raspberry Pi 4 / Pi 5 CPUs with the full
-  end-to-end test. The library and CLI also compile and link warning-free for macOS (ARM64 and x86-64), Windows (MinGW)
+  end-to-end test, and natively on a Raspberry Pi 5 (GCC 14; the full `ctest`, with the same audio as macOS arm64). The library and CLI also compile and link warning-free for macOS (ARM64 and x86-64), Windows (MinGW)
   and static musl Linux (a fully static musl binary renders correctly, 19 MB RAM). `.github/workflows/c.yml` builds and
   tests Linux x86-64, Linux ARM64 and macOS on every push.
 - **API robustness** (`test_api`): comma-decimal locale, NULL arguments, outputs reset on failure, streaming stop, error

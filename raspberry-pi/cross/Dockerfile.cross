@@ -1,0 +1,6 @@
+# Cross-compiler for 64-bit Raspberry Pi OS from any x86-64 (or arm64) machine with Docker: Debian bookworm, the base
+# of Raspberry Pi OS bookworm. The binaries need glibc 2.34 or later, so they also run on Ubuntu for Raspberry Pi
+# (22.04 and later). Used by cross-build.sh.
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends crossbuild-essential-arm64 cmake make \
+    && rm -rf /var/lib/apt/lists/*

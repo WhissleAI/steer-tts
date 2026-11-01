@@ -1,0 +1,13 @@
+# systemd unit for steertts-pi (filled in by raspberry-pi/install.sh --service)
+[Unit]
+Description=SteerTTS speech server (steertts-pi)
+After=network.target
+
+[Service]
+User=@USER@
+ExecStart=@BIN@ --model @MODEL@ --host 127.0.0.1 --port 8080 --quiet
+Restart=on-failure
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target
