@@ -263,26 +263,142 @@ ST_TARGET_AVX2 static void kern_avx2(int kc, const float* A, int lda, int mr, co
 #endif
 
 #ifdef ST_NEON
+#if defined(__GNUC__) && defined(__aarch64__)
+#define ST_NEON_ASM 1
+/* The 6 x 16 tile's k loop, 4 k per iteration, in assembly: v8-v31 hold the 24 accumulators (row i in v(8+4i) ..
+ * v(11+4i)), v0-v5 four k values of each A row (used by lane), v6-v7 half a B row. Compilers do not keep this in
+ * registers reliably (GCC 12 at -O2 spills about half the accumulators every iteration). Each C element is the
+ * chain of fused multiply-adds in k order, as in the C kernels. acc: [6][16] floats, written. */
+static void kern_neon_k4(int n4, const float* a0, const float* a1, const float* a2, const float* a3,
+                         const float* a4, const float* a5, const float* Bp, float* acc) {
+  __asm__ volatile(
+      "movi v8.4s, #0\n movi v9.4s, #0\n movi v10.4s, #0\n movi v11.4s, #0\n"
+      "movi v12.4s, #0\n movi v13.4s, #0\n movi v14.4s, #0\n movi v15.4s, #0\n"
+      "movi v16.4s, #0\n movi v17.4s, #0\n movi v18.4s, #0\n movi v19.4s, #0\n"
+      "movi v20.4s, #0\n movi v21.4s, #0\n movi v22.4s, #0\n movi v23.4s, #0\n"
+      "movi v24.4s, #0\n movi v25.4s, #0\n movi v26.4s, #0\n movi v27.4s, #0\n"
+      "movi v28.4s, #0\n movi v29.4s, #0\n movi v30.4s, #0\n movi v31.4s, #0\n"
+      "cbz %w[n], 2f\n"
+      "1:\n"
+      "ldr q0, [%[a0]], #16\n ldr q1, [%[a1]], #16\n ldr q2, [%[a2]], #16\n"
+      "ldr q3, [%[a3]], #16\n ldr q4, [%[a4]], #16\n ldr q5, [%[a5]], #16\n"
+      "ldp q6, q7, [%[b], #0]\n"
+      "fmla v8.4s, v6.4s, v0.s[0]\n fmla v9.4s, v7.4s, v0.s[0]\n"
+      "fmla v12.4s, v6.4s, v1.s[0]\n fmla v13.4s, v7.4s, v1.s[0]\n"
+      "fmla v16.4s, v6.4s, v2.s[0]\n fmla v17.4s, v7.4s, v2.s[0]\n"
+      "fmla v20.4s, v6.4s, v3.s[0]\n fmla v21.4s, v7.4s, v3.s[0]\n"
+      "fmla v24.4s, v6.4s, v4.s[0]\n fmla v25.4s, v7.4s, v4.s[0]\n"
+      "fmla v28.4s, v6.4s, v5.s[0]\n fmla v29.4s, v7.4s, v5.s[0]\n"
+      "ldp q6, q7, [%[b], #32]\n"
+      "fmla v10.4s, v6.4s, v0.s[0]\n fmla v11.4s, v7.4s, v0.s[0]\n"
+      "fmla v14.4s, v6.4s, v1.s[0]\n fmla v15.4s, v7.4s, v1.s[0]\n"
+      "fmla v18.4s, v6.4s, v2.s[0]\n fmla v19.4s, v7.4s, v2.s[0]\n"
+      "fmla v22.4s, v6.4s, v3.s[0]\n fmla v23.4s, v7.4s, v3.s[0]\n"
+      "fmla v26.4s, v6.4s, v4.s[0]\n fmla v27.4s, v7.4s, v4.s[0]\n"
+      "fmla v30.4s, v6.4s, v5.s[0]\n fmla v31.4s, v7.4s, v5.s[0]\n"
+      "ldp q6, q7, [%[b], #64]\n"
+      "fmla v8.4s, v6.4s, v0.s[1]\n fmla v9.4s, v7.4s, v0.s[1]\n"
+      "fmla v12.4s, v6.4s, v1.s[1]\n fmla v13.4s, v7.4s, v1.s[1]\n"
+      "fmla v16.4s, v6.4s, v2.s[1]\n fmla v17.4s, v7.4s, v2.s[1]\n"
+      "fmla v20.4s, v6.4s, v3.s[1]\n fmla v21.4s, v7.4s, v3.s[1]\n"
+      "fmla v24.4s, v6.4s, v4.s[1]\n fmla v25.4s, v7.4s, v4.s[1]\n"
+      "fmla v28.4s, v6.4s, v5.s[1]\n fmla v29.4s, v7.4s, v5.s[1]\n"
+      "ldp q6, q7, [%[b], #96]\n"
+      "fmla v10.4s, v6.4s, v0.s[1]\n fmla v11.4s, v7.4s, v0.s[1]\n"
+      "fmla v14.4s, v6.4s, v1.s[1]\n fmla v15.4s, v7.4s, v1.s[1]\n"
+      "fmla v18.4s, v6.4s, v2.s[1]\n fmla v19.4s, v7.4s, v2.s[1]\n"
+      "fmla v22.4s, v6.4s, v3.s[1]\n fmla v23.4s, v7.4s, v3.s[1]\n"
+      "fmla v26.4s, v6.4s, v4.s[1]\n fmla v27.4s, v7.4s, v4.s[1]\n"
+      "fmla v30.4s, v6.4s, v5.s[1]\n fmla v31.4s, v7.4s, v5.s[1]\n"
+      "ldp q6, q7, [%[b], #128]\n"
+      "fmla v8.4s, v6.4s, v0.s[2]\n fmla v9.4s, v7.4s, v0.s[2]\n"
+      "fmla v12.4s, v6.4s, v1.s[2]\n fmla v13.4s, v7.4s, v1.s[2]\n"
+      "fmla v16.4s, v6.4s, v2.s[2]\n fmla v17.4s, v7.4s, v2.s[2]\n"
+      "fmla v20.4s, v6.4s, v3.s[2]\n fmla v21.4s, v7.4s, v3.s[2]\n"
+      "fmla v24.4s, v6.4s, v4.s[2]\n fmla v25.4s, v7.4s, v4.s[2]\n"
+      "fmla v28.4s, v6.4s, v5.s[2]\n fmla v29.4s, v7.4s, v5.s[2]\n"
+      "ldp q6, q7, [%[b], #160]\n"
+      "fmla v10.4s, v6.4s, v0.s[2]\n fmla v11.4s, v7.4s, v0.s[2]\n"
+      "fmla v14.4s, v6.4s, v1.s[2]\n fmla v15.4s, v7.4s, v1.s[2]\n"
+      "fmla v18.4s, v6.4s, v2.s[2]\n fmla v19.4s, v7.4s, v2.s[2]\n"
+      "fmla v22.4s, v6.4s, v3.s[2]\n fmla v23.4s, v7.4s, v3.s[2]\n"
+      "fmla v26.4s, v6.4s, v4.s[2]\n fmla v27.4s, v7.4s, v4.s[2]\n"
+      "fmla v30.4s, v6.4s, v5.s[2]\n fmla v31.4s, v7.4s, v5.s[2]\n"
+      "ldp q6, q7, [%[b], #192]\n"
+      "fmla v8.4s, v6.4s, v0.s[3]\n fmla v9.4s, v7.4s, v0.s[3]\n"
+      "fmla v12.4s, v6.4s, v1.s[3]\n fmla v13.4s, v7.4s, v1.s[3]\n"
+      "fmla v16.4s, v6.4s, v2.s[3]\n fmla v17.4s, v7.4s, v2.s[3]\n"
+      "fmla v20.4s, v6.4s, v3.s[3]\n fmla v21.4s, v7.4s, v3.s[3]\n"
+      "fmla v24.4s, v6.4s, v4.s[3]\n fmla v25.4s, v7.4s, v4.s[3]\n"
+      "fmla v28.4s, v6.4s, v5.s[3]\n fmla v29.4s, v7.4s, v5.s[3]\n"
+      "ldp q6, q7, [%[b], #224]\n"
+      "fmla v10.4s, v6.4s, v0.s[3]\n fmla v11.4s, v7.4s, v0.s[3]\n"
+      "fmla v14.4s, v6.4s, v1.s[3]\n fmla v15.4s, v7.4s, v1.s[3]\n"
+      "fmla v18.4s, v6.4s, v2.s[3]\n fmla v19.4s, v7.4s, v2.s[3]\n"
+      "fmla v22.4s, v6.4s, v3.s[3]\n fmla v23.4s, v7.4s, v3.s[3]\n"
+      "fmla v26.4s, v6.4s, v4.s[3]\n fmla v27.4s, v7.4s, v4.s[3]\n"
+      "fmla v30.4s, v6.4s, v5.s[3]\n fmla v31.4s, v7.4s, v5.s[3]\n"
+      "add %[b], %[b], #256\n"
+      "subs %w[n], %w[n], #1\n"
+      "b.ne 1b\n"
+      "2:\n"
+      "st1 {v8.4s, v9.4s, v10.4s, v11.4s}, [%[c]], #64\n"
+      "st1 {v12.4s, v13.4s, v14.4s, v15.4s}, [%[c]], #64\n"
+      "st1 {v16.4s, v17.4s, v18.4s, v19.4s}, [%[c]], #64\n"
+      "st1 {v20.4s, v21.4s, v22.4s, v23.4s}, [%[c]], #64\n"
+      "st1 {v24.4s, v25.4s, v26.4s, v27.4s}, [%[c]], #64\n"
+      "st1 {v28.4s, v29.4s, v30.4s, v31.4s}, [%[c]], #64\n"
+      : [n] "+r"(n4), [a0] "+r"(a0), [a1] "+r"(a1), [a2] "+r"(a2), [a3] "+r"(a3), [a4] "+r"(a4), [a5] "+r"(a5),
+        [b] "+r"(Bp), [c] "+r"(acc)
+      :
+      : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13",
+        "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
+        "v29", "v30", "v31");
+}
+#endif
+
 static void kern_neon(int kc, const float* A, int lda, int mr, const float* Bp, float* C, int ldc, int nr, int mode) {
   const float* a[MR];
   for (int i = 0; i < MR; ++i) a[i] = A + (size_t)(i < mr ? i : 0) * lda;
-  float32x4_t c[MR][4];
-  for (int i = 0; i < MR; ++i)
-    for (int j = 0; j < 4; ++j) c[i][j] = vdupq_n_f32(0.f);
-  for (int k = 0; k < kc; ++k) {
-    float32x4_t b0 = vld1q_f32(Bp), b1 = vld1q_f32(Bp + 4), b2 = vld1q_f32(Bp + 8), b3 = vld1q_f32(Bp + 12);
-    for (int i = 0; i < MR; ++i) {
-      float32x4_t x = vdupq_n_f32(a[i][k]);
-      c[i][0] = vfmaq_f32(c[i][0], x, b0);
-      c[i][1] = vfmaq_f32(c[i][1], x, b1);
-      c[i][2] = vfmaq_f32(c[i][2], x, b2);
-      c[i][3] = vfmaq_f32(c[i][3], x, b3);
+  _Alignas(16) float acc[MR][NR];
+  int k = 0;
+#ifdef ST_NEON_ASM
+  int n4 = kc / 4;
+  kern_neon_k4(n4, a[0], a[1], a[2], a[3], a[4], a[5], Bp, &acc[0][0]);
+  k = 4 * n4;
+  Bp += (size_t)k * NR;
+#else
+  memset(acc, 0, sizeof acc);
+#endif
+  if (k < kc) {   /* the last kc % 4 values (all of them without the assembly) */
+    float32x4_t c[MR][4];
+    for (int i = 0; i < MR; ++i)
+      for (int j = 0; j < 4; ++j) c[i][j] = vld1q_f32(acc[i] + 4 * j);
+    for (; k < kc; ++k) {
+      float32x4_t b0 = vld1q_f32(Bp), b1 = vld1q_f32(Bp + 4), b2 = vld1q_f32(Bp + 8), b3 = vld1q_f32(Bp + 12);
+      for (int i = 0; i < MR; ++i) {
+        float32x4_t x = vld1q_dup_f32(a[i] + k);
+        c[i][0] = vfmaq_f32(c[i][0], x, b0);
+        c[i][1] = vfmaq_f32(c[i][1], x, b1);
+        c[i][2] = vfmaq_f32(c[i][2], x, b2);
+        c[i][3] = vfmaq_f32(c[i][3], x, b3);
+      }
+      Bp += NR;
     }
-    Bp += NR;
+    for (int i = 0; i < MR; ++i)
+      for (int j = 0; j < 4; ++j) vst1q_f32(acc[i] + 4 * j, c[i][j]);
   }
-  float acc[MR][NR];
-  for (int i = 0; i < MR; ++i)
-    for (int j = 0; j < 4; ++j) vst1q_f32(acc[i] + 4 * j, c[i][j]);
+  if (nr == NR) {
+    for (int i = 0; i < mr; ++i) {
+      float* cr = C + (size_t)i * ldc;
+      for (int j = 0; j < 4; ++j) {
+        float32x4_t v = vld1q_f32(acc[i] + 4 * j);
+        if (mode) v = vaddq_f32(vld1q_f32(cr + 4 * j), v);
+        vst1q_f32(cr + 4 * j, v);
+      }
+    }
+    return;
+  }
   store_tile(acc, C, ldc, mr, nr, mode);
 }
 #endif
