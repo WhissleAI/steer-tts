@@ -1,6 +1,7 @@
 #!/bin/sh
 # Build and install SteerTTS (C library, steertts CLI, steertts-pi server) on a Raspberry Pi, and download the edge
-# model. Run it from a clone of the repo, on the Pi (64-bit Raspberry Pi OS, or another aarch64 Linux):
+# model. Run it from a clone of the repo, on the Pi (64-bit Raspberry Pi OS, Ubuntu for Raspberry Pi, or another aarch64
+# Linux with apt):
 #
 #   git clone https://github.com/WhissleAI/steer-tts && cd steer-tts
 #   c/pi/install.sh                    # build (tuned for this Pi), test, install to ~/.local, download the model
@@ -35,14 +36,20 @@ if [ -z "${CPU+x}" ]; then
     *) CPU= ;;
   esac
 fi
-echo "board: $board ($arch); tuning: ${CPU:-portable}; install prefix: $PREFIX"
+os=$( (. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME") || uname -s)
+echo "board: $board ($arch, $os); tuning: ${CPU:-portable}; install prefix: $PREFIX"
 [ "$arch" = aarch64 ] || echo "note: not aarch64 ($arch): building a portable build (32-bit Raspberry Pi OS is not a target)"
 
 need=""
 for t in cmake cc make curl; do command -v $t >/dev/null 2>&1 || need="$need $t"; done
 if [ -n "$need" ]; then
   echo "installing build tools:$need"
-  sudo apt-get update && sudo apt-get install -y cmake gcc make curl
+  if command -v apt-get >/dev/null 2>&1; then   # Raspberry Pi OS, Ubuntu, Debian
+    sudo apt-get update && sudo apt-get install -y cmake gcc make curl
+  else
+    echo "install$need with your package manager, then run this again" >&2
+    exit 1
+  fi
 fi
 
 build=$c/build-pi

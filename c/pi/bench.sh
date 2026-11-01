@@ -7,7 +7,8 @@
 #
 # Environment: STEERTTS_BIN (default: build-pi*/steertts or build/steertts), STEERTTS_MODEL (default
 # models/steer-tts-edge), THREADS (sustained run, default 4), OUT (log directory, default bench-<date>).
-# Nothing is played; WAVs are not written.
+# Nothing is played; WAVs are not written. Temperature, clock and throttling come from vcgencmd when it works, else
+# from /sys (thermal_zone0, cpufreq, the firmware's get_throttled).
 set -eu
 cd "$(dirname "$0")/.."
 minutes=0
@@ -30,7 +31,13 @@ soc() {   # temp_C arm_MHz throttled_hex
     th=$(vcgencmd get_throttled | sed 's/.*=//')
     echo "$t $((f / 1000000)) $th"
   elif [ -r /sys/class/thermal/thermal_zone0/temp ]; then
-    echo "$(($(cat /sys/class/thermal/thermal_zone0/temp) / 1000)) $(($(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0) / 1000)) n/a"
+    # no vcgencmd (e.g. Ubuntu without libraspberrypi-bin): sysfs temperature and clock; the Raspberry Pi kernels
+    # (Raspberry Pi OS and Ubuntu's raspi kernel) also expose the firmware's throttled flags
+    th=n/a
+    for f in /sys/devices/platform/soc/soc:firmware/get_throttled /sys/devices/platform/soc:firmware/get_throttled; do
+      [ -r "$f" ] && { th=0x$(cat "$f"); break; }
+    done
+    echo "$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp) $(($(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0) / 1000)) $th"
   else
     echo "n/a n/a n/a"
   fi
