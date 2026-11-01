@@ -67,6 +67,7 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 - [The director](docs/director.md): reading longer text as a performance (a 0.5 MB model that plans each sentence's controls and pauses)
 - [Native C++ + ONNX Runtime](docs/native.md): the edge build on ONNX Runtime
 - [Raspberry Pi](docs/raspberry-pi.md): what runs on a Pi 4 / Pi 5, measured and estimated
+- [Benchmarks](docs/benchmarks.md): speed, latency, memory and quality against Phonon 31M and Kokoro 82M on a Pi 5, an x86 desktop and an M3 Pro
 - [FAQ](docs/faq.md): memory, speed, licensing, limitations
 
 ## Repository layout

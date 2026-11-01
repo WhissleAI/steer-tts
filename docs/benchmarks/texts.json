@@ -1,0 +1,32 @@
+{
+ "about": "Fixed English text set for bench_tts.py. bench20, short and stream_probe are the sentences and probes of `steertts --bench` (c/tools/steertts_cli.c), so the numbers line up with the C library's own --bench-json. long: three paragraphs written for this benchmark. The quality set is 100 Seed-TTS-eval English sentences (ids in seed_tts_en_ids.txt: rows sorted by id, every 10th; the dataset is not redistributed) plus these paragraphs.",
+ "short": "Hello, how are you?",
+ "stream_probe": "Hello, how are you? And a second sentence follows.",
+ "bench20": [
+  "The weather was calm when we left the harbour this morning.",
+  "Please remember to bring the documents to the meeting on Thursday.",
+  "I never thought a small garden could grow so many tomatoes.",
+  "She opened the letter slowly and read it twice before speaking.",
+  "Our train was delayed by forty minutes because of the snow.",
+  "He laughed, shook his head, and walked back into the kitchen.",
+  "Thanks for calling. How can I help you today?",
+  "The museum opens at nine and closes at half past five.",
+  "If you turn left at the bakery, you will see the station.",
+  "Nobody expected the quiet student to win the debate.",
+  "Could you send me the report before lunch?",
+  "The river had risen overnight, and the old bridge was closed.",
+  "We should probably leave now if we want to catch the last bus.",
+  "Her grandmother kept every letter in a wooden box under the bed.",
+  "That was the best soup I have had in years.",
+  "The engineers tested the new design for three weeks before approving it.",
+  "Wait, did you hear that noise outside?",
+  "A small dog followed us all the way home from the park.",
+  "The price of coffee went up again this month.",
+  "When the lights came back on, everyone started clapping."
+ ],
+ "long": [
+  "The lighthouse stood at the end of a narrow spit of land, and for most of the year the only visitors were gulls. Every evening the keeper climbed the spiral stairs, wound the clockwork, and lit the lamp before the sun had fully set. He kept a logbook of every ship that passed, the direction of the wind, and the height of the waves. Some nights the fog rolled in so thickly that he could barely see his own hands, and on those nights he sounded the horn every thirty seconds until dawn. When the first automatic lights were installed along the coast, he was asked to stay on for one more winter, just in case.",
+  "Before you begin, make sure the device is unplugged and has been switched off for at least ten minutes. Remove the four screws on the back panel, keeping them somewhere safe, and gently lift the cover away from the frame. You should see a small green board with two cables attached to it. Disconnect the wider cable first, then the narrow one, pulling on the plastic connectors rather than the wires themselves. Slide the old battery out of its tray and insert the new one with the label facing up. Reconnect both cables in the reverse order, replace the cover, and tighten the screws until they are snug but not forced.",
+  "Good morning, and welcome to the weekly update. Sales in the northern region rose for the third quarter in a row, while the southern stores held steady despite the heavy rain in September. The new delivery service is now available in twelve cities, and early feedback has been mostly positive, although several customers asked for later evening slots. Next month we will open two more locations and start a small trial of reusable packaging. Thank you all for your hard work, and please send any questions to the operations team before Friday."
+ ]
+}
