@@ -58,6 +58,9 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 ./build/steertts --model models/steer-tts-edge "Hello from C." -o hello.wav
 ```
 
+**Raspberry Pi** (4 / 5, 64-bit OS): `raspberry-pi/install.sh` builds, tests and installs the C library and
+downloads the model; 11× real time on one Pi 5 core. See [raspberry-pi/](raspberry-pi/README.md).
+
 ## Documentation
 
 - [Models and builds](docs/models.md): what each build includes, quality, memory and speed, how the edge graphs are made
@@ -66,7 +69,8 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 - [C library](docs/c.md): the dependency-free C11 library and CLI for both models, API, parity, speed
 - [The director](docs/director.md): reading longer text as a performance (a 0.5 MB model that plans each sentence's controls and pauses)
 - [Native C++ + ONNX Runtime](docs/native.md): the edge build on ONNX Runtime
-- [Raspberry Pi](docs/raspberry-pi.md): what runs on a Pi 4 / Pi 5, measured and estimated
+- [Raspberry Pi](docs/raspberry-pi.md): install, the C API and the `steertts-pi` server on a Pi 4 / Pi 5, with measured
+  numbers ([raspberry-pi/](raspberry-pi))
 - [FAQ](docs/faq.md): memory, speed, licensing, limitations
 
 ## Repository layout
@@ -76,6 +80,7 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 | `steertts/` | v1 inference package (Python) |
 | `edge/` | `steertts_edge`: edge runtimes (ONNX Runtime, PyTorch), tests, ONNX export and packing tools |
 | `c/` | stand-alone C11 library + CLI for v1 and edge, helper-model converters, parity tests |
+| `raspberry-pi/` | Raspberry Pi install, examples, `steertts-pi` server, cross-build, benchmark |
 | `native/` | C++17 runtime on ONNX Runtime (edge): text front end port, engine, CLI, tests |
 | `docs/` | Documentation and the [samples page](https://whissleai.github.io/steer-tts/) |
 | `leaderboard/` | Open TTS Leaderboard evaluation container |

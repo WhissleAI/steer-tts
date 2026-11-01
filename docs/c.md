@@ -42,7 +42,8 @@ or `cc app.c $(pkg-config --cflags --libs steertts)`, or vendor the directory wi
 `STEERTTS_BUILD_EXAMPLES`, `STEERTTS_BUILD_TESTS`, `STEERTTS_BUILD_SERVER` (`steertts-pi`, POSIX), and `STEERTTS_CPU`
 (`-mcpu=` / `-march=` target such as `cortex-a72`, `cortex-a76` or `native`; it changes instruction selection only, so
 a tuned build renders the same samples). The shared library exports only the `steertts_*` API. Presets for the
-Raspberry Pi: `cmake --preset pi4|pi5|pi4-cross|pi5-cross` (see [raspberry-pi.md](raspberry-pi.md)).
+Raspberry Pi: `cmake --preset pi4|pi5|pi4-cross|pi5-cross`; the Pi layer (install script, examples, the
+`steertts-pi` server, cross-build) lives in [`raspberry-pi/`](../raspberry-pi) and builds with these targets.
 
 ### Examples
 
@@ -275,7 +276,7 @@ Whisper's English normaliser for WER, and UTMOSv2 for naturalness. Scripts: [`c/
   both models), mutated safetensors files and JSON run clean. `c/tests/fuzz_requests.c` reproduces the request fuzz.
 - **Compilers and targets.** GCC 11 and Clang (Zig 0.14), warning-free with `-Wall -Wextra -pedantic`, also at -O3;
   native x86-64 (AVX2) and ARM64 (NEON) tested, the latter under QEMU as Raspberry Pi 4 / Pi 5 CPUs with the full
-  end-to-end test. The library and CLI also compile and link warning-free for macOS (ARM64 and x86-64), Windows (MinGW)
+  end-to-end test, and natively on a Raspberry Pi 5 (GCC 14; the full `ctest`, with the same audio as macOS arm64). The library and CLI also compile and link warning-free for macOS (ARM64 and x86-64), Windows (MinGW)
   and static musl Linux (a fully static musl binary renders correctly, 19 MB RAM). `.github/workflows/c.yml` builds and
   tests Linux x86-64, Linux ARM64 and macOS on every push.
 - **API robustness** (`test_api`): comma-decimal locale, NULL arguments, outputs reset on failure, streaming stop, error
@@ -332,8 +333,6 @@ threads, once per reference clip) and the prompted flow.
 | `src/st_wavlm.c`, `st_audio.c` | WavLM x-vectors, WAV reading, resampling |
 | `src/st_api.c` | requests, rendering, streaming |
 | `tools/steertts_cli.c` | the command line |
-| `tools/steertts_pi.c` | `steertts-pi`, the HTTP / stdin speech server ([raspberry-pi.md](raspberry-pi.md#the-steertts-pi-server)) |
-| `pi/` | Raspberry Pi install, cross-build (Docker) and benchmark scripts, systemd unit |
 | `examples/` | example programs |
 | `python/steertts_c.py` | ctypes binding |
 | `eval/` | the evaluation below: render with C and Python, score WER / UTMOSv2 / parity |

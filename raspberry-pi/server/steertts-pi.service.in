@@ -1,4 +1,4 @@
-# systemd unit for steertts-pi (filled in by c/pi/install.sh --service)
+# systemd unit for steertts-pi (filled in by raspberry-pi/install.sh --service)
 [Unit]
 Description=SteerTTS speech server (steertts-pi)
 After=network.target

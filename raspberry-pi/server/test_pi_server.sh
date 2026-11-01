@@ -1,11 +1,11 @@
 #!/bin/sh
 # steertts-pi end to end: HTTP endpoints (curl) and --stdin mode, against the edge model.
-#   sh tests/test_pi_server.sh [path/to/steertts-pi]      (ctest runs it; exit 77 = skipped)
-# Model: $STEERTTS_EDGE_MODEL, else ../models/steer-tts-edge (relative to tests/).
+#   sh raspberry-pi/server/test_pi_server.sh [path/to/steertts-pi]      (ctest runs it as test_pi_server; 77 = skipped)
+# Model: $STEERTTS_EDGE_MODEL, else c/models/steer-tts-edge.
 set -u
-cd "$(dirname "$0")"
-BIN=${1:-../build/steertts-pi}
-MODEL=${STEERTTS_EDGE_MODEL:-../models/steer-tts-edge}
+here=$(cd "$(dirname "$0")" && pwd)
+BIN=${1:-$here/../../c/build/steertts-pi}
+MODEL=${STEERTTS_EDGE_MODEL:-$here/../../c/models/steer-tts-edge}
 [ -f "$MODEL/config.json" ] || { echo "skip: no edge model at $MODEL"; exit 77; }
 [ -x "$BIN" ] || { echo "skip: no $BIN"; exit 77; }
 command -v curl >/dev/null || { echo "skip: curl not found"; exit 77; }

@@ -204,12 +204,8 @@ typedef pthread_t st_thread_t;
 #endif
 
 enum { ST_POOL_STACK = 1 << 20 };   /* worker stack: the GEMM tile keeps a 64 KB panel on the stack (musl: 128 KB) */
-#ifndef ST_WORKER_SPIN_MS
 #define ST_WORKER_SPIN_MS 0.1       /* a worker spins this long for the next job before sleeping */
-#endif
-#ifndef ST_CALLER_SPIN_MS
 #define ST_CALLER_SPIN_MS 0.5       /* the caller spins this long for the workers to finish before sleeping */
-#endif
 
 struct st_pool {
   int n;                   /* threads including the caller (1 + workers that actually started) */

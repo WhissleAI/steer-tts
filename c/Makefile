@@ -27,7 +27,8 @@ else
 endif
 
 all: $(OUT)/libsteertts.a $(SHARED) $(OUT)/steertts $(OUT)/steertts-pi $(OUT)/example_simple $(OUT)/example_stream \
-     $(OUT)/example_json_request $(OUT)/example_speak
+     $(OUT)/example_json_request $(OUT)/example_speak $(OUT)/pi_hello \
+     $(OUT)/pi_streaming
 
 $(OUT)/obj/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -42,7 +43,10 @@ $(SHARED): $(OBJ)
 $(OUT)/steertts: tools/steertts_cli.c $(OUT)/libsteertts.a
 	$(CC) $(ST_CFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(OUT)/steertts-pi: tools/steertts_pi.c $(OUT)/libsteertts.a
+$(OUT)/steertts-pi: ../raspberry-pi/server/steertts_pi.c $(OUT)/libsteertts.a
+	$(CC) $(ST_CFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+$(OUT)/pi_%: ../raspberry-pi/examples/%.c $(OUT)/libsteertts.a
 	$(CC) $(ST_CFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(OUT)/example_%: examples/%.c $(OUT)/libsteertts.a
