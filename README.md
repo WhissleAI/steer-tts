@@ -7,6 +7,7 @@ Raspberry Pi-class CPU without Python. Both run from one dependency-free C libra
 
 **[Listen to samples](https://whissleai.github.io/steer-tts/)** (no login) ·
 [v1 weights](https://huggingface.co/WhissleAI/steer-tts) · [edge weights](https://huggingface.co/WhissleAI/steer-tts-edge) ·
+[Nano weights](https://huggingface.co/WhissleAI/steer-tts-nano) ·
 [Issues](../../issues)
 
 ## Pick a build
@@ -17,6 +18,7 @@ Raspberry Pi-class CPU without Python. Both run from one dependency-free C libra
 | [edge, Python](docs/python.md#steertts_edge-edge) | 12.6 MB | Python + ONNX Runtime (or PyTorch) | Small and fast CPU synthesis from Python, 200 voices |
 | [**C library**](docs/c.md) (v1 or edge) | v1 or edge files | C11, no dependencies | Apps, devices, Raspberry Pi; every feature of both models, no Python, ~27 MB RAM for edge |
 | [edge, native](docs/native.md) | 13.9 MB | C++17 / C API + ONNX Runtime | The edge build on ONNX Runtime |
+| [**Nano**, ESP32-S3](esp32/README.md) ([weights](https://huggingface.co/WhissleAI/steer-tts-nano)) | 2.97 MB + 1.8 MB front end, in flash | C11 on ESP32-S3 (ESP-IDF / Arduino) | Microcontrollers without PSRAM: 122 KB RAM, 0.66 real-time factor on one core, 2 voices |
 
 Every build takes the same [request](docs/request.md) (text, voice, tag, controls, guidance, markup) and renders
 sentence by sentence for streaming. The edge build (2.0.0) carries the v2 acoustic model in 12 MB: Seed-TTS / CV3-Eval
@@ -61,6 +63,14 @@ hf download WhissleAI/steer-tts-edge --local-dir models/steer-tts-edge \
 **Raspberry Pi** (4 / 5, 64-bit OS): `raspberry-pi/install.sh` builds, tests and installs the C library and
 downloads the model; 11× real time on one Pi 5 core. See [raspberry-pi/](raspberry-pi/README.md).
 
+## Microcontrollers: SteerTTS Nano on the ESP32-S3
+
+[`esp32/`](esp32/README.md) runs SteerTTS Nano ([weights](https://huggingface.co/WhissleAI/steer-tts-nano), 2.97 MB
+int8) on an ESP32-S3 with 8 MB flash and no PSRAM, from text with the same steering (voice, 51 tags, 12 controls,
+per-word shifts, markup). Weights and the text front end are read from flash; synthesis needs 122 KB of RAM and runs
+at 0.66× real time on one 240 MHz core, with first audio after 0.35 s. It comes as an ESP-IDF component and a
+PlatformIO / Arduino library, with an I2S example and a benchmark.
+
 ## Documentation
 
 - [Models and builds](docs/models.md): what each build includes, quality, memory and speed, how the edge graphs are made
@@ -72,6 +82,7 @@ downloads the model; 11× real time on one Pi 5 core. See [raspberry-pi/](raspbe
 - [Raspberry Pi](docs/raspberry-pi.md): install, the C API and the `steertts-pi` server on a Pi 4 / Pi 5, with measured
   numbers ([raspberry-pi/](raspberry-pi))
 - [Benchmarks](docs/benchmarks.md): speed, latency, memory and quality against Phonon 31M and Kokoro 82M on a Pi 5, an x86 desktop and an M3 Pro
+- [ESP32-S3 (Nano)](esp32/README.md): the microcontroller runtime, C API, Arduino and ESP-IDF examples, measured numbers
 - [FAQ](docs/faq.md): memory, speed, licensing, limitations
 
 ## Repository layout
@@ -83,6 +94,7 @@ downloads the model; 11× real time on one Pi 5 core. See [raspberry-pi/](raspbe
 | `c/` | stand-alone C11 library + CLI for v1 and edge, helper-model converters, parity tests |
 | `raspberry-pi/` | Raspberry Pi install, examples, `steertts-pi` server, cross-build, benchmark |
 | `native/` | C++17 runtime on ONNX Runtime (edge): text front end port, engine, CLI, tests |
+| `esp32/` | SteerTTS Nano runtime for the ESP32-S3 (no PSRAM): C component, ESP-IDF and PlatformIO examples, host tests |
 | `docs/` | Documentation and the [samples page](https://whissleai.github.io/steer-tts/) |
 | `leaderboard/` | Open TTS Leaderboard evaluation container |
 | `tests/` | v1 tests |

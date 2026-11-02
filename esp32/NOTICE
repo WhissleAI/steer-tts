@@ -1,0 +1,40 @@
+SteerTTS Nano ESP32 runtime (esp32/): CC BY-NC 4.0 + Whissle terms, see ../LICENSE. Copyright (c) 2026 Whissle Inc.
+Commercial use requires a separate licence from Whissle Inc. (ksingla@whissle.ai).
+
+The runtime is original code. It is built with, links or can link, the following third-party components, which keep
+their own licences (none of their source code is copied into this directory):
+
+* ESP-IDF (Espressif Systems, Apache License 2.0, https://github.com/espressif/esp-idf): build system, FreeRTOS port,
+  heap, flash partition, memory-mapping and I2S APIs used by components/steertts_nano/port, bench/, main/ and
+  the examples.
+  FreeRTOS kernel (MIT License) is part of ESP-IDF.
+* esp-dsp (Espressif Systems, Apache License 2.0, https://github.com/espressif/esp-dsp): its optimized radix-2 complex
+  FFT kernel (dsps_fft2r_fc32) is used on the ESP32-S3 when the component is available; tools/gen_tables.py writes the
+  twiddle table in esp-dsp's layout. The ESP-IDF build fetches it through the component manager
+  (components/steertts_nano/idf_component.yml); Arduino-ESP32 ships it.
+* esp-nn (Espressif Systems, Apache License 2.0, https://github.com/espressif/esp-nn): not linked. The int8
+  requantization follows the same TFLite / gemmlowp reference arithmetic that esp-nn implements (bit-exact path), so
+  results match esp-nn and TensorFlow Lite Micro kernels.
+* Arduino-ESP32 (Espressif Systems, LGPL 2.1, https://github.com/espressif/arduino-esp32) and PlatformIO
+  (Apache License 2.0): used only by the example in examples/platformio; not part of the runtime.
+
+Text front end (front/ and front.bin, built by tools/make_front_bin.py from the edge model's native/front assets):
+the rules are an independent C port of the SteerTTS edge front end; front.bin holds the same data as those assets,
+re-encoded, and their notices (../native/NOTICE) apply unchanged:
+* the lexicon is derived from the CMU Pronouncing Dictionary (Copyright (C) 1993-2015 Carnegie Mellon University;
+  BSD-style license);
+* the G2P model is an int8 re-encoding of the g2p_en GRU weights (Copyright 2019 Kyubyong Park and Jongseok Kim;
+  Apache License 2.0);
+* the heteronym tables are derived from decisions of NLTK's averaged-perceptron tagger (Apache License 2.0); the
+  tokenizer follows NLTK's TweetTokenizer expressions;
+* number reading ports g2p_en's normalize_numbers (from keithito/tacotron, MIT License) and inflect's
+  number_to_words logic (MIT License); cardinal / ordinal words are an independent implementation matching
+  num2words' English output (no num2words code is included);
+* the Unicode tables are derived from CPython's unicodedata (PSF License).
+
+Vocoder: the runtime's vocoder (src/nano_synth.c, src/nano_dsp.c) implements the Vocos architecture (ConvNeXt backbone
++ iSTFT head; Copyright (c) 2023 Charactr Inc.; MIT License, https://github.com/gemelo-ai/vocos) in int8. No Vocos
+code or weights are included.
+
+Model weights (nano.bin, downloaded from the Hugging Face Hub, WhissleAI/steer-tts-nano) are covered by their model
+card and ../LICENSE.

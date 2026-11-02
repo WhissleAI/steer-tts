@@ -1,0 +1,15 @@
+{
+  "name": "steertts_nano",
+  "version": "1.0.0",
+  "description": "SteerTTS Nano: int8 streaming text-to-speech runtime for the ESP32-S3 without PSRAM",
+  "keywords": ["tts", "speech", "esp32-s3", "int8"],
+  "license": "CC-BY-NC-4.0",
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"],
+  "build": {
+    "srcDir": ".",
+    "includeDir": "include",
+    "srcFilter": ["+<src/*.c>", "+<port/*.c>", "+<bench/*.c>", "+<front/*.c>"],
+    "flags": ["-Isrc", "-Ifront", "-O2", "-ffp-contract=off", "-Wno-format-truncation"]
+  }
+}
