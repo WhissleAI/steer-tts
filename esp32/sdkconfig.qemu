@@ -1,0 +1,3 @@
+# QEMU: the emulated flash does not support QIO
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=n

@@ -1,0 +1,5 @@
+description: SteerTTS Nano int8 streaming TTS runtime (ESP32-S3, no PSRAM)
+dependencies:
+  idf: ">=4.4"
+  espressif/esp-dsp:
+    version: ">=1.4.0"

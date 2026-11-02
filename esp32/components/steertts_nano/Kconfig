@@ -1,0 +1,8 @@
+menu "SteerTTS Nano"
+config NANO_BENCH_SECONDS
+    int "Seconds of audio to synthesize"
+    default 10
+config NANO_BENCH_TASK_STACK
+    int "Benchmark task stack (bytes)"
+    default 12288
+endmenu

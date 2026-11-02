@@ -7,7 +7,7 @@ this section. Non-commercial use only. Third-party components keep their own lic
 Whissle terms
 -------------
 
-1. Rights holder. SteerTTS (including SteerTTS edge, the C library, the native runtime and the Android and macOS apps:
+1. Rights holder. SteerTTS (including SteerTTS edge, SteerTTS Nano and its ESP32 runtime, the C library, the native runtime and the Android and macOS apps:
    code, model weights, voices and documentation) is developed and owned by Whissle Inc.
 
 2. Commercial use. Any commercial use requires a separate written licence from Whissle Inc. Contact

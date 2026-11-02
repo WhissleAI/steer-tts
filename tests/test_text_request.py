@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +12,25 @@ def test_front_end_expands_numbers_units_acronyms():
     t = normalize("It costs $3,000, 20% more than 1990-1995, at 65 mph, a 4x4 via the IOC.")
     assert "three thousand dollars" in t and "twenty percent" in t and "nineteen ninety to nineteen ninety five" in t
     assert "sixty five miles per hour" in t and "four by four" in t and "I O C" in t and "-" not in t
+
+
+# normalisation cases shared by every runtime's tests (Python, edge, C, C++): the expected spoken form of each text
+FRONT_CASES = json.loads((Path(__file__).parent / "front_cases.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("case", FRONT_CASES, ids=[c["text"] for c in FRONT_CASES])
+def test_front_cases(case):
+    assert normalize(case["text"]) == case["norm"]
+
+
+def test_letters_times_and_apostrophes_read_as_spoken():
+    def phones(t):
+        return [SYMBOLS[i] for i in to_phonemes(t)[0]]
+    assert phones("aren’t you") == phones("aren't you")             # curly apostrophe = ASCII apostrophe
+    assert phones("5 a.m.") == phones("5 AM") == phones("5am")      # a.m. / AM / am after a number: the letters A M
+    assert phones("4:50 am")[-5:] == ["EY1", "<sp>", "EH1", "M", "<sp>"]
+    assert phones("5 p.m.")[-6:] == ["P", "IY1", "<sp>", "EH1", "M", "<sp>"]
+    assert "<sp> AE1 M <sp>" in " ".join(phones("I am here"))       # the word "am" is untouched
 
 
 def test_phonemes_and_word_index():

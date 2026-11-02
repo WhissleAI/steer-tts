@@ -87,9 +87,10 @@ void st_front_free(st_front* f) {
                   f->comma_num, f->decimal,  f->long_digits, f->camel_acr, f->acronym, f->ws,    f->event,   f->emph,
                   f->token,  f->sent_end};
   for (size_t k = 0; k < sizeof all / sizeof all[0]; ++k) st_rx_free(all[k]);
-  for (int k = 0; k < 15; ++k) st_rx_free(f->units[k]);
+  for (int k = 0; k < ST_N_UNITS; ++k) st_rx_free(f->units[k]);
   st_rx* pre[] = {f->phone,   f->time,  f->colon, f->ampm, f->deg_cf, f->deg,      f->letter_amp, f->amp,       f->tilde,
-                  f->scale,   f->version, f->roman, f->ww,   f->fraction, f->num_hyphen, f->num_comma};
+                  f->scale,   f->version, f->roman, f->ww,   f->fraction, f->num_hyphen, f->num_comma,
+                  f->decade4, f->decade2, f->digit_groups, f->sign, f->letter_digit};
   for (size_t k = 0; k < sizeof pre / sizeof pre[0]; ++k) st_rx_free(pre[k]);
   for (int k = 0; k < ST_N_ABBREV; ++k) st_rx_free(f->abbrev[k]);
   for (int k = 0; k < ST_N_SYMBOLS; ++k) st_free(f->symbols[k]);
@@ -169,6 +170,11 @@ st_front* st_front_load(const char* dir) {
       {&f->fraction, "(?<![0-9/])([1-9])/(10|[2-9])(?![0-9/])", 0},
       {&f->num_hyphen, "(?<=[a-z])-(?=[a-z])", 0},
       {&f->num_comma, "\\b(thousand|million|billion|trillion),(?= [a-z])", 0},
+      {&f->decade4, "\\b(1[1-9]|20)([0-9])0'?s\\b", 0},                         /* 1990s, 1800s, 2000s */
+      {&f->decade2, "(?<![0-9A-Za-z])'?([1-9])0'?s\\b", 0},                       /* '90s, 80s */
+      {&f->digit_groups, "(\\b(?:[Nn]umber|[Cc]all|[Pp]hone|[Tt]el|[Dd]ial|[Ff]ax)\\.?:?\\s+)?(?<![0-9.,-])([0-9]+(?:-[0-9]+)+)(?![0-9-]|[.,][0-9])", 0},
+      {&f->sign, "(?<![^\\s(])([+\xe2\x88\x92-])(?=[0-9])", 0},              /* +30, -5, U+2212 minus */
+      {&f->letter_digit, "\\b(?=[A-Z0-9]*[A-Z])(?=[A-Z0-9]*[0-9])[A-Z0-9]+\\b", 0},  /* Q4, 5G, MP3 */
   };
   for (size_t k = 0; k < sizeof t / sizeof t[0]; ++k)
     if (!(*t[k].r = st_rx_compile(u, t[k].p, t[k].icase))) goto fail;
@@ -178,12 +184,13 @@ st_front* st_front_load(const char* dir) {
       {"mph", "miles per hour"},       {"km", "kilometers"},             {"kg", "kilograms"},
       {"cm", "centimeters"},           {"mm", "millimeters"},            {"ft", "feet"},
       {"lbs", "pounds"},               {"lb", "pounds"},                 {"kHz", "kilohertz"},
-      {"Hz", "hertz"},                 {"GB", "gigabytes"},              {"MB", "megabytes"}};
-  int order[15], n = 0;
+      {"Hz", "hertz"},                 {"GB", "gigabytes"},              {"MB", "megabytes"},
+      {"kph", "kilometers per hour"}};
+  int order[ST_N_UNITS], n = 0;
   for (int len = 8; len >= 1; --len)
-    for (int k = 0; k < 15; ++k)
+    for (int k = 0; k < ST_N_UNITS; ++k)
       if ((int)strlen(units[k][0]) == len) order[n++] = k;
-  for (int k = 0; k < 15; ++k) {
+  for (int k = 0; k < ST_N_UNITS; ++k) {
     char pat[64] = "(\\d)\\s?";
     for (const char* c = units[order[k]][0]; *c; ++c) strcat(pat, *c == '/' ? "[ /]" : (char[2]){*c, 0});
     strcat(pat, "\\b");
@@ -209,6 +216,31 @@ st_front* st_front_load(const char* dir) {
       {"\\bFig\\.(?=\\s*[0-9])", "figure"},
       {"\\bVol\\.(?=\\s*[0-9])", "volume"},
       {"\\bpp\\.(?=\\s*[0-9])", "pages"},
+      /* month abbreviations before a day / year ("Nov 3", "Nov. 3, 2024") or after a day ("3 Nov") */
+      {"\\bJan(?:\\.\\s*|\\s+)(?=[0-9])", "January "},
+      {"\\bFeb(?:\\.\\s*|\\s+)(?=[0-9])", "February "},
+      {"\\bMar(?:\\.\\s*|\\s+)(?=[0-9])", "March "},
+      {"\\bApr(?:\\.\\s*|\\s+)(?=[0-9])", "April "},
+      {"\\bJun(?:\\.\\s*|\\s+)(?=[0-9])", "June "},
+      {"\\bJul(?:\\.\\s*|\\s+)(?=[0-9])", "July "},
+      {"\\bAug(?:\\.\\s*|\\s+)(?=[0-9])", "August "},
+      {"\\bSept(?:\\.\\s*|\\s+)(?=[0-9])", "September "},
+      {"\\bSep(?:\\.\\s*|\\s+)(?=[0-9])", "September "},
+      {"\\bOct(?:\\.\\s*|\\s+)(?=[0-9])", "October "},
+      {"\\bNov(?:\\.\\s*|\\s+)(?=[0-9])", "November "},
+      {"\\bDec(?:\\.\\s*|\\s+)(?=[0-9])", "December "},
+      {"(?<=[0-9] )Jan\\b", "January"},
+      {"(?<=[0-9] )Feb\\b", "February"},
+      {"(?<=[0-9] )Mar\\b", "March"},
+      {"(?<=[0-9] )Apr\\b", "April"},
+      {"(?<=[0-9] )Jun\\b", "June"},
+      {"(?<=[0-9] )Jul\\b", "July"},
+      {"(?<=[0-9] )Aug\\b", "August"},
+      {"(?<=[0-9] )Sept\\b", "September"},
+      {"(?<=[0-9] )Sep\\b", "September"},
+      {"(?<=[0-9] )Oct\\b", "October"},
+      {"(?<=[0-9] )Nov\\b", "November"},
+      {"(?<=[0-9] )Dec\\b", "December"},
       {"\\bJan\\.", "January"},
       {"\\bFeb\\.", "February"},
       {"\\bMar\\.(?=\\s*[0-9])", "March"},
@@ -393,7 +425,8 @@ static void r_phone(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) 
     }
   }
 }
-static void put_ampm(fx* x, st_u32s* o, u32 c) { u32s_ascii(x, o, c == 'A' || c == 'a' ? " ay em" : " pee em"); }
+/* spelled as letters (a lone "A" is the article, so it is written "ay") */
+static void put_ampm(fx* x, st_u32s* o, u32 c) { u32s_ascii(x, o, c == 'A' || c == 'a' ? " ay M" : " P M"); }
 static void r_time(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
   const u32 *h = rxm_ptr(m, s, 1), *mm = rxm_ptr(m, s, 2);
   int hn = rxm_len(m, 1), hv = ascii_int(h, hn);
@@ -484,6 +517,76 @@ static void r_fraction(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* 
 }
 static void r_group1(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) { rxm_put(x, o, m, s, 1); }
 
+static const char* tens_plural(u32 d) {
+  static const char* t[] = {"", "tens", "twenties", "thirties", "forties", "fifties", "sixties", "seventies", "eighties",
+                            "nineties"};
+  return t[d - '0'];
+}
+/* 1990s -> 19 nineties, 2000s -> two thousands, 1800s -> 18 hundreds */
+static void r_decade4(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  const u32* c = rxm_ptr(m, s, 1);
+  u32 t = s[m->caps[4]];
+  if (t != '0') {
+    rxm_put(x, o, m, s, 1);
+    u32s_push(x, o, ' ');
+    u32s_ascii(x, o, tens_plural(t));
+  } else if (c[0] == '2' && c[1] == '0') {
+    u32s_ascii(x, o, "two thousands");
+  } else {
+    rxm_put(x, o, m, s, 1);
+    u32s_ascii(x, o, " hundreds");
+  }
+}
+static void r_decade2(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  u32s_ascii(x, o, tens_plural(s[m->caps[2]]));
+}
+/* digit groups joined by hyphens: an ID / phone number read digit by digit after "number" / "call" / "phone"
+ * (No. 90-5551, call 555-1234) or when a group starts with 0 (555-0198); otherwise unchanged (a range, read later).
+ * Dates (31-03-2018, 2023-10-22) are left as they are. */
+static void r_id_digits(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  int a = m->caps[4], b = m->caps[5];
+  int ng = 1, lead0 = 0, len[3] = {0, 0, 0}, gl = 0;
+  for (int i = a; i < b; ++i) {
+    if (s[i] == '-') {
+      if (ng <= 3) len[ng - 1] = gl;
+      ++ng;
+      gl = 0;
+    } else {
+      if (gl == 0 && s[i] == '0' && i + 1 < b && s[i + 1] != '-') lead0 = 1;
+      ++gl;
+    }
+  }
+  if (ng <= 3) len[ng - 1] = gl;
+  int date = ng == 3 && ((len[2] == 4 && len[0] <= 2 && len[1] <= 2) || (len[0] == 4 && len[1] <= 2 && len[2] <= 2));
+  if (!(rxm_has(m, 1) || (!date && lead0))) {
+    u32s_put(x, o, s + m->start, m->end - m->start);
+    return;
+  }
+  rxm_put(x, o, m, s, 1);
+  for (int i = a; i < b; ++i) {
+    if (s[i] == '-') {
+      u32s_ascii(x, o, ", ");
+    } else {
+      if (i > a && s[i - 1] != '-') u32s_push(x, o, ' ');
+      u32s_push(x, o, s[i]);
+    }
+  }
+}
+static void r_sign(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  u32s_ascii(x, o, s[m->start] == '+' ? "plus " : "minus ");
+}
+/* Q4 -> Q 4, 5G -> 5 G, MP3 -> M P 3: letters one by one, the digits as a number */
+static void r_letter_digit(fx* x, void* ud, const st_rxm* m, const u32* s, st_u32s* o) {
+  for (int i = m->start; i < m->end; ++i) {
+    int dig = s[i] >= '0' && s[i] <= '9';
+    if (i > m->start && !(dig && s[i - 1] >= '0' && s[i - 1] <= '9')) u32s_push(x, o, ' ');
+    if (dig)
+      u32s_push(x, o, s[i]);
+    else
+      put_letter(x, o, s[i]);
+  }
+}
+
 static void pre(fx* x, const st_front* f, st_u32s* t) {
   sub_inplace(x, f->phone, t, r_phone, NULL);
   sub_inplace(x, f->time, t, r_time, NULL);
@@ -500,17 +603,22 @@ static void pre(fx* x, const st_front* f, st_u32s* t) {
   sub_inplace(x, f->roman, t, r_roman, NULL);
   sub_inplace(x, f->ww, t, r_ww, NULL);
   sub_inplace(x, f->fraction, t, r_fraction, NULL);
+  sub_inplace(x, f->decade4, t, r_decade4, NULL);
+  sub_inplace(x, f->decade2, t, r_decade2, NULL);
 }
 
 static void expand(fx* x, const st_front* f, st_u32s* t) {
   void* F = (void*)f;
   pre(x, f, t);
+  sub_inplace(x, f->digit_groups, t, r_id_digits, NULL);  /* No. 90-5551, 555-0198 */
   sub_inplace(x, f->range, t, r_range, NULL);
   sub_inplace(x, f->by, t, r_by, NULL);
+  sub_inplace(x, f->sign, t, r_sign, NULL);
   sub_inplace(x, f->compound, t, repl_space, NULL);
   sub_inplace(x, f->currency, t, r_currency, NULL);
   sub_inplace(x, f->percent, t, r_percent, NULL);
-  for (int k = 0; k < 15; ++k) sub_inplace(x, f->units[k], t, r_unit, (void*)f->unit_words[k]);
+  for (int k = 0; k < ST_N_UNITS; ++k) sub_inplace(x, f->units[k], t, r_unit, (void*)f->unit_words[k]);
+  sub_inplace(x, f->letter_digit, t, r_letter_digit, NULL);  /* after the units: 5GB is gigabytes */
   sub_inplace(x, f->ordinal, t, r_ordinal, F);
   sub_inplace(x, f->comma_num, t, r_comma_num, F);
   sub_inplace(x, f->decimal, t, r_decimal, F);

@@ -43,7 +43,8 @@ def _g2p():
 
 _UNITS = {"km/h": "kilometers per hour", "km/hr": "kilometers per hour", "m/s": "meters per second", "mph": "miles per hour",
           "km": "kilometers", "kg": "kilograms", "cm": "centimeters", "mm": "millimeters", "ft": "feet", "lbs": "pounds",
-          "lb": "pounds", "kHz": "kilohertz", "Hz": "hertz", "GB": "gigabytes", "MB": "megabytes"}
+          "lb": "pounds", "kHz": "kilohertz", "Hz": "hertz", "GB": "gigabytes", "MB": "megabytes",
+          "kph": "kilometers per hour"}
 _CURRENCY = {"$": "dollars", "£": "pounds", "€": "euros"}
 
 
@@ -59,13 +60,28 @@ _ABBREV = [  # (pattern, words); a title before a name keeps its meaning without
     (r"\bJr\.", "Junior"), (r"\bSr\.", "Senior"), (r"\bvs\.", "versus"), (r"\be\.g\.", "for example"),
     (r"\bi\.e\.", "that is"), (r"\betc\.(?=\s*[,;:!?)]|\s+[a-z])", "et cetera"), (r"\betc\.", "et cetera."),
     (r"\bapprox\.", "approximately"), (r"\bNo\.(?=\s*[0-9])", "number"), (r"\bFig\.(?=\s*[0-9])", "figure"),
-    (r"\bVol\.(?=\s*[0-9])", "volume"), (r"\bpp\.(?=\s*[0-9])", "pages"), (r"\bJan\.", "January"), (r"\bFeb\.", "February"),
+    (r"\bVol\.(?=\s*[0-9])", "volume"), (r"\bpp\.(?=\s*[0-9])", "pages")]
+_MONTHS = [("Jan", "January"), ("Feb", "February"), ("Mar", "March"), ("Apr", "April"), ("Jun", "June"), ("Jul", "July"),
+           ("Aug", "August"), ("Sept", "September"), ("Sep", "September"), ("Oct", "October"), ("Nov", "November"),
+           ("Dec", "December")]
+_ABBREV += [(rf"\b{a}(?:\.\s*|\s+)(?=[0-9])", w + " ") for a, w in _MONTHS]  # "Nov 3", "Nov. 3, 2024"
+_ABBREV += [(rf"(?<=[0-9] ){a}\b", w) for a, w in _MONTHS]                       # "3 Nov" (a final period stays)
+_ABBREV += [(r"\bJan\.", "January"), (r"\bFeb\.", "February"),
     (r"\bMar\.(?=\s*[0-9])", "March"), (r"\bApr\.", "April"), (r"\bJun\.(?=\s*[0-9])", "June"), (r"\bJul\.(?=\s*[0-9])", "July"),
     (r"\bAug\.", "August"), (r"\bSept?\.", "September"), (r"\bOct\.", "October"), (r"\bNov\.", "November"),
     (r"\bDec\.", "December")]
 _PHONE = r"(?<![0-9-])(?:\(([0-9]{3})\)\s?|([0-9]{3})[-.])([0-9]{3})[-.]([0-9]{4})(?![0-9-])"  # (555) 123-4567, 555-123-4567
 _TIME = r"(?<![0-9:])\b([01]?[0-9]|2[0-3]):([0-5][0-9])(?!:[0-9])(?:\s?([AaPp])(?:\.[Mm]\.?|[Mm])(?![A-Za-z]))?"  # 9:55 AM (not 0:13:54)
 _AMPM = r"\b([0-9]{1,2})\s?([AaPp])(?:\.[Mm]\.?|[Mm])(?![A-Za-z])"                     # 7am, 2 PM
+_AP = {"A": " ay M", "P": " P M"}  # spelled as letters (a lone "A" is the article, so it is written "ay")
+# hyphen-joined digit groups: a range ("1990-1995") unless they read as an ID / phone number (see _id_digits)
+_DIGIT_GROUPS = (r"(\b(?:[Nn]umber|[Cc]all|[Pp]hone|[Tt]el|[Dd]ial|[Ff]ax)\.?:?\s+)?"
+                 r"(?<![0-9.,-])([0-9]+(?:-[0-9]+)+)(?![0-9-]|[.,][0-9])")
+_DECADE4 = r"\b(1[1-9]|20)([0-9])0'?s\b"                          # 1990s, 1800s, 2000s, 2010s
+_DECADE2 = r"(?<![0-9A-Za-z])'?([1-9])0'?s\b"                     # '90s, 80s, 80's
+_TENS_PL = {"1": "tens", "2": "twenties", "3": "thirties", "4": "forties", "5": "fifties", "6": "sixties",
+            "7": "seventies", "8": "eighties", "9": "nineties"}
+_LETTER_DIGIT = r"\b(?=[A-Z0-9]*[A-Z])(?=[A-Z0-9]*[0-9])[A-Z0-9]+\b"  # Q4, 5G, D31, MP3
 _ROMAN = (r"\b(Chapter|Part|Book|Volume|Act|Scene|Section|Article|Phase|Season|Episode|Level|Stage|Round)\s+"
           r"(?=[IVXLCDM])(M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))\b")
 _FRACTION = r"(?<![0-9/])([1-9])/(10|[2-9])(?![0-9/])"                              # 3/4, 1/2 (not dates like 1/2/2020)
@@ -92,7 +108,7 @@ def _time(m):
         w += (" oh " + mm[1]) if mm[0] == "0" else " " + mm
     elif not ap:
         w += " hundred" if int(h) > 12 or int(h) == 0 or h[0] == "0" else " o'clock"
-    return w + ("" if not ap else " ay em" if ap in "Aa" else " pee em")
+    return w + ("" if not ap else _AP[ap.upper()])
 
 
 def _pre(text: str) -> str:
@@ -101,7 +117,7 @@ def _pre(text: str) -> str:
     text = re.sub(_PHONE, lambda m: ", ".join(" ".join(g) for g in m.groups() if g), text)
     text = re.sub(_TIME, _time, text)
     text = re.sub(r"(?<=[0-9]):(?=[0-9])", " ", text)  # what is left: durations (1:23:45), ratios (3:2)
-    text = re.sub(_AMPM, lambda m: str(int(m.group(1))) + (" ay em" if m.group(2) in "Aa" else " pee em"), text)
+    text = re.sub(_AMPM, lambda m: str(int(m.group(1))) + _AP[m.group(2).upper()], text)
     for pat, words in _ABBREV:
         text = re.sub(pat, words, text)
     text = re.sub(r"([0-9])\s?°\s?([CF])(?![A-Za-z])", lambda m: m.group(1) + " degrees " +
@@ -115,7 +131,34 @@ def _pre(text: str) -> str:
     text = re.sub(_ROMAN, lambda m: m.group(1) + " " + str(_roman(m.group(2))), text)
     text = re.sub(r"\bWW(II|I|1|2)\b", lambda m: "World War " + ("2" if m.group(1) in ("II", "2") else "1"), text)
     text = re.sub(_FRACTION, lambda m: m.group(1) + " " + _DENOM[m.group(2)][m.group(1) != "1"], text)
+    text = re.sub(_DECADE4, _decade, text)
+    text = re.sub(_DECADE2, lambda m: _TENS_PL[m.group(1)], text)
     return text
+
+
+def _decade(m):
+    c, t = m.group(1), m.group(2)
+    if t != "0":
+        return c + " " + _TENS_PL[t]                       # 1990s -> 19 nineties
+    return "two thousands" if c == "20" else c + " hundreds"  # 2000s, 1800s -> 18 hundreds
+
+
+def _id_digits(m):
+    """Digit groups joined by hyphens are an ID or phone number, read digit by digit, after "number" / "call" / "phone"
+    (No. 90-5551, call 555-1234) or when a group starts with 0 (555-0198); otherwise they stay a range (1990-1995).
+    Dates (31-03-2018, 2023-10-22) are left as they are."""
+    g = m.group(2).split("-")
+    n = [len(x) for x in g]
+    date = len(g) == 3 and (n[2] == 4 and max(n[:2]) <= 2 or n[0] == 4 and max(n[1:]) <= 2)
+    if not (m.group(1) or (not date and any(len(x) > 1 and x[0] == "0" for x in g))):
+        return m.group(0)
+    return (m.group(1) or "") + ", ".join(" ".join(x) for x in g)
+
+
+def _letters_digits(m):
+    """Q4 -> Q 4, 5G -> 5 G, MP3 -> M P 3: letters one by one, the digits as a number."""
+    return " ".join(" ".join("ay" if c == "A" else c for c in p) if p[0].isalpha() else p
+                    for p in re.findall(r"[A-Z]+|[0-9]+", m.group(0)))
 
 
 def _expand(text: str) -> str:
@@ -124,8 +167,10 @@ def _expand(text: str) -> str:
     compound ("pay-per-view" -> P EY V ER P IY, "low-tech" -> L OW T CH EH) and "4x4" / "Il-76" / "km/h". It only
     expands bare integers, reading "2,243" as "two" + "two hundred forty three"."""
     text = _pre(text)
+    text = re.sub(_DIGIT_GROUPS, _id_digits, text)                              # No. 90-5551, 555-0198
     text = re.sub(r"(\d)\s*[-–]\s*(\d)", r"\1 to \2", text)                     # ranges: 1990-1995, 10-20
     text = re.sub(r"(\d+)\s*[x×]\s*(\d+)", r"\1 by \2", text)                   # 4x4, 1920x1080
+    text = re.sub(r"(?<![^\s(])([+−-])(?=[0-9])", lambda m: "plus " if m.group(1) == "+" else "minus ", text)
     text = re.sub(r"(?<=[A-Za-z0-9])[-‐/](?=[A-Za-z0-9])", " ", text)           # compounds: pay-per-view, Il-76, and/or
     # the amount ends on a digit (a trailing comma is punctuation), and the space after it is only consumed together
     # with a following "million/billion/thousand" (otherwise "$3,000, 20%" read "three thousand, dollars20")
@@ -135,6 +180,7 @@ def _expand(text: str) -> str:
     for u in sorted(_UNITS, key=len, reverse=True):                            # 165 km h (after the / split) / 165 km/h
         pat = re.escape(u).replace("/", "[ /]")
         text = re.sub(rf"(\d)\s?{pat}\b", rf"\1 {_UNITS[u]}", text)
+    text = re.sub(_LETTER_DIGIT, _letters_digits, text)                        # after the units: 5GB is gigabytes
     text = re.sub(r"\b(\d+)(st|nd|rd|th)\b", lambda m: _num(int(m.group(1)), "ordinal"), text)
     text = re.sub(r"\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b", lambda m: _num(float(m.group(0).replace(",", "")))
                   if "." in m.group(0) else _num(int(m.group(0).replace(",", ""))), text)

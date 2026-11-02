@@ -216,12 +216,14 @@ struct st_front {
   st_g2p g2p;
   st_rx *quotes, *range, *by, *compound, *currency, *percent, *ordinal, *comma_num, *decimal, *long_digits, *camel_acr, *acronym,
       *ws, *event;
-  st_rx* units[15];
-  const char* unit_words[15];
+  st_rx *digit_groups, *sign, *letter_digit;
+#define ST_N_UNITS 16
+  st_rx* units[ST_N_UNITS];
+  const char* unit_words[ST_N_UNITS];
   /* text._pre: phone numbers, clock times, abbreviations, degrees, "&", "$4.2M", versions, Roman numerals, fractions */
   st_rx *phone, *time, *colon, *ampm, *deg_cf, *deg, *letter_amp, *amp, *tilde, *scale, *version, *roman, *ww, *fraction, *num_hyphen,
-      *num_comma;
-#define ST_N_ABBREV 29
+      *num_comma, *decade4, *decade2;
+#define ST_N_ABBREV 53
   st_rx* abbrev[ST_N_ABBREV];
   const char* abbrev_words[ST_N_ABBREV];
   st_rx *emph, *token, *sent_end;   /* markup */

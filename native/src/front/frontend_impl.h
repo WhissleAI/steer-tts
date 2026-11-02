@@ -35,6 +35,7 @@ struct Frontend::Impl {
   // text._pre: phone numbers, clock times, abbreviations, degrees, "&", "$4.2M", versions, Roman numerals, fractions
   detail::u32str pre(const detail::u32str& text) const;
   detail::Regex phone, time, colon, ampm, deg_cf, deg, letter_amp, amp, tilde, scale, version, roman, ww, fraction, num_hyphen, num_comma;
+  detail::Regex decade4, decade2, digit_groups, sign, letter_digit;
   std::vector<std::pair<detail::Regex, std::string>> abbrev;
   // markup
   detail::Regex emph, token, sent_end;

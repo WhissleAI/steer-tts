@@ -15,6 +15,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -400,6 +401,31 @@ int main(int argc, char** argv) {
       }
       s.ok += why.empty();
       if (!why.empty()) report("markup", text, why);
+    }
+  }
+  // shared normalisation cases (tests/front_cases.json, next to the repo's Python tests): expected spoken forms
+  {
+    std::string dir = golden.substr(0, golden.find_last_of('/') == std::string::npos ? 0 : golden.find_last_of('/') + 1);
+    std::string cpath = (dir.empty() ? std::string("./") : dir) + "../../../tests/front_cases.json";
+    std::ifstream cf(cpath);
+    if (!cf) {
+      std::fprintf(stderr, "cannot open %s\n", cpath.c_str());
+      return 2;
+    }
+    std::string all_text((std::istreambuf_iterator<char>(cf)), std::istreambuf_iterator<char>());
+    J cases = parse(all_text);
+    auto& s = st["shared"];
+    for (const J& c : cases.a) {
+      std::string got, gerr;
+      try {
+        got = fe.normalize(c["text"].s);
+      } catch (const std::exception& e) {
+        gerr = err_name(e) + e.what();
+      }
+      bool ok = gerr.empty() && got == c["norm"].s;
+      ++s.n;
+      s.ok += ok;
+      if (!ok) report("shared", c["text"].s, "want=\"" + c["norm"].s + "\"\n    c++ =\"" + (gerr.empty() ? got : gerr) + "\"");
     }
   }
   long n_g2p = 0, ok_g2p = 0;

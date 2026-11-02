@@ -1,7 +1,8 @@
 # Models and builds
 
 SteerTTS v1 comes in two models and five runnable forms. They share the request format ([request.md](request.md)),
-the voices' names, the style tags and the 12 controls.
+the voices' names, the style tags and the 12 controls. SteerTTS Nano, a much smaller third model (2 voices, the same
+tags, controls and markup), runs on microcontrollers ([esp32/](../esp32/README.md)).
 
 | Build | Weights | Download | Runtime | Where it runs | Install |
 |---|---|---|---|---|---|
@@ -10,6 +11,7 @@ the voices' names, the style tags and the 12 controls.
 | **edge, ONNX Runtime** | [WhissleAI/steer-tts-edge](https://huggingface.co/WhissleAI/steer-tts-edge) | 12.6 MB | Python, ONNX Runtime | CPU (x86-64, ARM64) | `pip install "steertts-edge[hub] @ git+https://github.com/WhissleAI/steer-tts#subdirectory=edge"` |
 | **edge, PyTorch** | same repo | 11.8 MB | Python, PyTorch | CPU | same, plus the `[torch]` extra |
 | **edge, native C/C++** | same repo | 13.9 MB | C++17 + ONNX Runtime, C API | CPU (Linux x86-64 / ARM64) | [native.md](native.md) |
+| **Nano, int8** | [WhissleAI/steer-tts-nano](https://huggingface.co/WhissleAI/steer-tts-nano) | 2.97 MB (+ 1.8 MB front end) | C11, ESP-IDF / Arduino | ESP32-S3, no PSRAM, 8 MB flash | [esp32/](../esp32/README.md) |
 
 ## Which one?
 
@@ -19,6 +21,8 @@ the voices' names, the style tags and the 12 controls.
   about 0.1 lower UTMOS, every control at ≥ 95 % of the v1 effect.
 - **Inside an app, a device, or anything that isn't Python:** the native C/C++ runtime. Same graphs and numerics as
   the Python ONNX runtime, no Python, a C API for bindings.
+- **A microcontroller (ESP32-S3 without PSRAM):** Nano. 2.97 MB in flash, 122 KB of RAM, 0.66 real-time factor
+  on one core; 2 voices and 16 kHz output.
 - **Reference / research:** edge with PyTorch is the evaluated reference the ONNX graphs are checked against.
 
 ## What each build includes
