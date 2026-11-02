@@ -179,11 +179,3 @@ All working memory is one arena; `nano_arena_bytes(model, chunk)` returns its si
 less (there the sentence-level predictor buffers set the size), 130 KB at chunk 48, 146 KB at chunk 64. A larger
 chunk means fewer weight passes: at 32 frames the decoder and vocoder weights are read about twice per second of
 audio, at 64 once.
-
-## Exporter checklist
-
-* `write_nano_bin(path, cfg, fcfg, tensors)` with exactly `expected_tensors(cfg)`; it checks names, dtypes, shapes.
-* Use `requant_params(s_in, ws, s_out)` for every `.m` / `.s`; bias `round(b / (s_in * ws))` as int32.
-* Keep the scale chain above (one scale per hand-over tensor); fold BatchNorm / layer scales into weights.
-* Golden test: run `nano_host nano.bin --ids "..."` and compare the PCM with the reference; the int8 path is exact
-  integer arithmetic, so the int8 tensors must match bit for bit.

@@ -42,24 +42,19 @@ The second core stays free for I2S output and your application.
 All commands run from this folder (`esp32/`). You need Python 3 and the Hugging Face CLI (`pip install
 huggingface_hub`). The model repositories ask you to accept the licence once; run `hf auth login` first.
 
-**1. Weights.** Download `nano.bin`:
+**1. Weights and text front end.** Download `nano.bin` and the device front end image `front.bin`:
 
 ```bash
-hf download WhissleAI/steer-tts-nano nano.bin --local-dir models/steer-tts-nano
+hf download WhissleAI/steer-tts-nano nano.bin front.bin --local-dir models/steer-tts-nano
 ```
 
-**2. Text front end.** Build `front.bin` (lexicon, G2P model, heteronym and Unicode tables) from the edge model's
-front end assets:
-
-```bash
-hf download WhissleAI/steer-tts-edge --include "native/front/*" --local-dir models/steer-tts-edge
-python tools/make_front_bin.py models/steer-tts-edge/native/front -o models/front.bin
-```
+**2. (Optional) Rebuild `front.bin`** from the edge model's front end assets with
+`python tools/make_front_bin.py <steer-tts-edge>/native/front -o models/steer-tts-nano/front.bin`.
 
 **3. Partition image.** Pack both into one image of the `steertts` flash partition:
 
 ```bash
-python tools/pack_partition.py models/steer-tts-nano/nano.bin models/front.bin -o models/steertts_partition.bin
+python tools/pack_partition.py models/steer-tts-nano/nano.bin models/steer-tts-nano/front.bin -o models/steertts_partition.bin
 ```
 
 **4a. Flash with PlatformIO** (Arduino-ESP32). The project in `examples/platformio` has two programs: `speak` says a
@@ -242,7 +237,7 @@ PCM hash matches too when the firmware is built with the portable FFT (`idf.py -
 
 ```bash
 cmake -S host -B build-host && cmake --build build-host -j && ctest --test-dir build-host
-./build-host/nano_host models/steer-tts-nano/nano.bin --front models/front.bin \
+./build-host/nano_host models/steer-tts-nano/nano.bin --front models/steer-tts-nano/front.bin \
     --text "Hello <slow>there</slow>! It's 4:15 pm." -o hello.wav
 ./build-host/nano_host models/steer-tts-nano/nano.bin -s 10 -o /dev/null --check-chunks   # streaming self-check
 ```
