@@ -7,9 +7,9 @@ from importlib import resources
 
 from .config import CONTROL_DIMS, CONTROL_RANGE
 
-DEFAULTS = dict(pace=1.0, guidance=1.0, flow=True, seed=0, markup=False)
+DEFAULTS = dict(pace=1.0, guidance=1.0, flow=True, seed=0, markup=False, level="auto")
 FIELDS = {"text", "voice", "ref_wav", "prompt", "tag", "ctrl", "pace", "guidance", "word_shift", "markup", "flow",
-          "seed", "prompt_mapping", "$schema"}
+          "seed", "level", "gain_db", "prompt_mapping", "$schema"}
 WORD_SHIFT_KEYS = {"pitch": (-12.0, 12.0), "energy": (-20.0, 20.0), "dur": (0.25, 4.0)}
 
 
@@ -63,7 +63,7 @@ def normalize_request(req, tts=None):
     out["ctrl"] = {k: _num(f"ctrl.{k}", v, *CONTROL_RANGE) for k, v in ctrl.items()}
     defaults = dict(DEFAULTS)
     if tts is not None:  # the loaded model's own defaults (SteerTTS(guidance=..., flow=...))
-        defaults.update(guidance=tts.guidance, flow=bool(tts.use_flow))
+        defaults.update(guidance=tts.guidance, flow=bool(tts.use_flow), level=getattr(tts, "level", "auto"))
     for k, v in defaults.items():
         if out.get(k) is None:
             out[k] = v
@@ -72,6 +72,12 @@ def normalize_request(req, tts=None):
     for k in ("flow", "markup"):
         if not isinstance(out[k], bool):
             raise ValueError(f"{k} must be true or false")
+    from .output import check_level
+    if out.get("gain_db") is None:
+        out.pop("gain_db", None)
+    check_level(out["level"], out.get("gain_db"))
+    if "gain_db" in out:
+        out["gain_db"] = float(out["gain_db"])
     if isinstance(out["seed"], bool) or not isinstance(out["seed"], int) or out["seed"] < 0:
         raise ValueError("seed must be a non-negative integer")
     ws = out.get("word_shift")

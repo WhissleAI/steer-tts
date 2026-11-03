@@ -9,6 +9,7 @@
   steertts stream "First sentence. Second sentence." -o s.wav                 # prints per-chunk timing
   steertts play "First sentence. Second sentence." --voice voice_1688         # speak through the speakers, streaming
   steertts say "Hello there." --play                                         # play instead of (or with -o, as well as) saving
+  steertts say "Hello there." --level off -o raw.wav                          # raw output level (default auto: -17 LUFS)
   steertts voices [--gender female] | steertts tags | steertts schema | steertts prompt "soft and sad"
   steertts measure out.wav --text "..." --voice voice_1688                    # read the 12 controls back (z)
 
@@ -52,7 +53,7 @@ def _load(a, **kw):
 def _request(a):
     req = json.load(open(a.request)) if a.request else {}
     for k, v in dict(text=a.text, voice=a.voice, ref_wav=a.ref_wav, prompt=a.prompt, tag=a.tag,
-                     pace=a.pace, guidance=a.guidance, seed=a.seed).items():
+                     pace=a.pace, guidance=a.guidance, seed=a.seed, level=a.level, gain_db=a.gain_db).items():
         if v is not None:
             req[k] = v
     if a.ctrl:
@@ -84,6 +85,10 @@ def main(argv=None):
         p.add_argument("--pace", type=float)
         p.add_argument("--guidance", type=float)
         p.add_argument("--seed", type=int)
+        p.add_argument("--level", choices=["auto", "clip", "off"],
+                       help="output level: auto (default; neutral speech at -17 LUFS, peaks <= -1 dBTP), clip (every "
+                            "clip at exactly -17 LUFS), off (raw model output)")
+        p.add_argument("--gain-db", dest="gain_db", type=float, help="override the calibrated output gain (dB)")
         p.add_argument("--markup", action="store_true")
         p.add_argument("--show-request", action="store_true", help="print the resolved request JSON")
         p.add_argument("--play", action="store_true", help="play through the speakers as chunks are rendered")

@@ -41,6 +41,8 @@ steertts::Request make_request(const char* text, const steertts_options* o) {
   r.pace = o->pace;
   r.guidance = o->guidance;
   r.markup = o->markup != 0;
+  if (o->level) r.level = o->level;
+  if (o->use_gain_db) r.gain_db = o->gain_db;
   return r;
 }
 
@@ -68,6 +70,9 @@ void steertts_default_options(steertts_options* o) {
   o->pace = 1.0f;
   o->guidance = -1.0f;
   o->markup = 0;
+  o->level = nullptr;
+  o->use_gain_db = 0;
+  o->gain_db = 0.0f;
 }
 
 int steertts_sample_rate(void) { return steertts::kSampleRate; }

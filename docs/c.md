@@ -11,7 +11,10 @@ directories:
 | [edge](https://huggingface.co/WhissleAI/steer-tts-edge) | acoustic model + vocoder, int4 / int8 weights kept packed in memory | 12 MB + 2.6 MB front-end assets |
 
 Every request field of the Python packages is supported (text, voice, tag, ctrl, pace, guidance, word_shift, markup,
-prompt, ref_wav, flow, seed), with the same validation and error messages, plus sentence streaming.
+prompt, ref_wav, flow, seed, level, gain_db), with the same validation and error messages, plus sentence streaming.
+The output level is the Python packages' (`src/st_output.c`): neutral speech at -17 LUFS, peaks <= -1 dBTP,
+streaming with a fixed gain + soft limiter; `steertts_options.level = "off"` (or `--level off`, `"level": "off"`)
+gives the raw output.
 
 ## Build
 

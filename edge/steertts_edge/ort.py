@@ -53,7 +53,7 @@ class OnnxTTS:
     sample_rate = SR
     controls = list(CONTROL_DIMS)
 
-    def __init__(self, pkg, guidance=1.0, threads=None, onnx_dir="onnx"):
+    def __init__(self, pkg, guidance=1.0, threads=None, onnx_dir="onnx", level="auto"):
         import onnxruntime as ort
         from safetensors.numpy import load_file
         d = Path(pkg)
@@ -69,6 +69,9 @@ class OnnxTTS:
         self._mean = vt["spk_mean"].astype(np.float32)
         self._vi = {v: i for i, v in enumerate(self.voices)}
         self.default_voice = cfg.get("default_voice", self.voices[0])
+        from .output import Output, check_level
+        check_level(level)  # default output level: "auto" (-17 LUFS neutral, -1 dBTP), "clip", "off" (raw)
+        self.level, self.output = level, Output(cfg, SR)
         from .events import EventBank
         self.events = EventBank.find(d, cfg)  # recorded [laugh] [cough] ... (None: tokens stay silent)
         self.spk_ref = self._vi
@@ -133,23 +136,35 @@ class OnnxTTS:
                              f"(see tts.voices), e.g. {', '.join(self.voices[:3])}")
 
     def __call__(self, text, voice=None, tag="none", ctrl=None, pace=1.0, word_shift=None, guidance=None,
-                 spk_vec=None, markup=False, **_ignored):
+                 spk_vec=None, markup=False, level=None, gain_db=None, **_ignored):
         tag = tag or "none"
+        level = level or self.level
         self._check(voice if spk_vec is None else None, tag, dict(_ignored, word_shift=word_shift if markup else None))
         if markup or (self.events and not word_shift and self._has_event(text)):
             from .markup import MarkupSynth
-            return MarkupSynth(self).render(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
-                                            spk_vec=spk_vec)
-        return self._render(text, voice, tag, ctrl, pace, word_shift, guidance=guidance, spk_vec=spk_vec)
+            wav = MarkupSynth(self).render(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
+                                           spk_vec=spk_vec)
+        else:
+            wav = self._render(text, voice, tag, ctrl, pace, word_shift, guidance=guidance, spk_vec=spk_vec)
+        return self.output.clip(wav, self._level_voice(voice, spk_vec), level, gain_db)
 
     synthesize = __call__
 
-    def stream(self, text, voice=None, tag="none", ctrl=None, pace=1.0, guidance=None, spk_vec=None, **_ignored):
+    def stream(self, text, voice=None, tag="none", ctrl=None, pace=1.0, guidance=None, spk_vec=None, level=None,
+               gain_db=None, **_ignored):
         from .markup import MarkupSynth
         tag = tag or "none"
         self._check(voice if spk_vec is None else None, tag, _ignored)
-        return MarkupSynth(self).stream(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
-                                        spk_vec=spk_vec)
+        from .output import check_level, leveled
+        level = level or self.level
+        check_level(level, gain_db)
+        return leveled(MarkupSynth(self).stream(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
+                                                spk_vec=spk_vec), self.output, self._level_voice(voice, spk_vec),
+                       level, gain_db)
+
+    def _level_voice(self, voice, spk_vec):
+        """The voice whose calibrated output gain applies (None: a custom speaker vector -> the fallback gain)."""
+        return None if spk_vec is not None else (voice or self.default_voice)
 
     # ------------------------------------------------------------------ rendering (== model.infer, batch 1)
     def _enc(self, ids, spk, tag, c, m):

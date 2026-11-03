@@ -92,6 +92,7 @@ static int run(const char* model, const char* precision, const char* golden, int
   steertts_default_config(&c);
   c.threads = threads;
   c.precision = precision;
+  c.level = "off";   /* the goldens are the raw Python output */
   char err[1024];
   double t0 = st_time_ms();
   steertts_engine* e = steertts_create_ex(model, &c, err, sizeof err);

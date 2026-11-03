@@ -13,8 +13,12 @@
  *   POST /stream [?format=pcm]      the same request, streamed: sentence by sentence as each is rendered (chunked
  *                                   transfer; a WAV header with an open length, then PCM), the first sentence in
  *                                   pieces (--first-chunk-ms)
- *   GET  /synthesize?text=..&voice=..&tag=..&ctrl=k=z,k=z&pace=..&guidance=..&markup=1[&format=pcm]   and
+ *   GET  /synthesize?text=..&voice=..&tag=..&ctrl=k=z,k=z&pace=..&guidance=..&markup=1[&level=off][&gain_db=..]
+ *                                  [&format=pcm]   and
  *   GET  /stream?...                the same with query parameters
+ * Output level: by default (level auto) the voice's neutral speech plays at -17 LUFS with peaks <= -1 dBTP (/stream:
+ * the same fixed gain + soft limiter per chunk, no added latency); level=clip normalises every clip to -17 LUFS;
+ * level=off (query, JSON "level", or --level off for the whole server) gives the raw model output.
  * Errors: a JSON body {"error": "..."} with status 400 (bad request), 404, 405, 413 (too large) or 503 (too many
  * connections). The engine's messages are the Python packages' messages.
  *
@@ -53,7 +57,7 @@
 
 static const char* usage =
     "usage: steertts-pi --model DIR [--host ADDR] [--port N] [--threads N] [--first-chunk-ms MS] [--cpus LIST]\n"
-    "                   [--max-conn N] [--voice V] [--quiet]\n"
+    "                   [--max-conn N] [--voice V] [--level auto|clip|off] [--quiet]\n"
     "       steertts-pi --model DIR --stdin [--out-dir DIR] [--threads N] [--first-chunk-ms MS] [--voice V]\n"
     "\n"
     "  --model DIR         model directory (default $STEERTTS_MODEL, else ./models/steer-tts-edge)\n"
@@ -65,6 +69,7 @@ static const char* usage =
     "  --cpus LIST         Linux: run on these CPUs only, e.g. 1-3 or 0,2 (the engine's threads inherit it)\n"
     "  --max-conn N        connections handled at once (default 8; requests still render one at a time)\n"
     "  --voice V           default voice for requests that name none (a voice, or female / male)\n"
+    "  --level L           default output level: auto (-17 LUFS, peaks <= -1 dBTP; the default), clip, off (raw)\n"
     "  --stdin             read requests from stdin, one per line, instead of serving HTTP\n"
     "  --out-dir DIR       with --stdin: write DIR/NNNN.wav per line instead of PCM to stdout\n"
     "  --quiet             no request log on stderr\n";
@@ -337,7 +342,7 @@ static int read_request(int fd, http_req* r, char** buf_out) {
 typedef struct {
   /* GET query form: steertts_options + its strings */
   steertts_options o;
-  char text[8192], voice[128], tag[64], ctrl[512], num[64];
+  char text[8192], voice[128], tag[64], ctrl[512], num[64], level[16];
   int use_json;
   const char* json;
   int pcm;   /* format=pcm */
@@ -382,6 +387,12 @@ static int parse_synth(const http_req* r, synth_req* s, char* err, size_t err_le
     if (end == s->num || *end) return snprintf(err, err_len, "guidance: not a number"), -1;
   }
   if (query_get(r->query, "markup", s->num, sizeof s->num)) s->o.markup = !strcmp(s->num, "1") || !strcmp(s->num, "true");
+  if (query_get(r->query, "level", s->level, sizeof s->level)) s->o.level = s->level;
+  if (query_get(r->query, "gain_db", s->num, sizeof s->num)) {
+    s->o.gain_db = strtof(s->num, &end);
+    if (end == s->num || *end) return snprintf(err, err_len, "gain_db: not a number"), -1;
+    s->o.use_gain_db = 1;
+  }
   return 0;
 }
 
@@ -803,7 +814,7 @@ static int count_cpus(void) {
 }
 
 int main(int argc, char** argv) {
-  const char *model = NULL, *host = "127.0.0.1", *port = "8080", *cpus = NULL, *out_dir = NULL;
+  const char *model = NULL, *host = "127.0.0.1", *port = "8080", *cpus = NULL, *out_dir = NULL, *level = NULL;
   int threads = 0, first_ms = 300, use_stdin = 0;
   for (int i = 1; i < argc; ++i) {
     const char* a = argv[i];
@@ -822,6 +833,7 @@ int main(int argc, char** argv) {
     else if (!strcmp(a, "--cpus")) cpus = NEXT();
     else if (!strcmp(a, "--max-conn")) g_max_conn = atoi(NEXT());
     else if (!strcmp(a, "--voice")) g_voice = NEXT();
+    else if (!strcmp(a, "--level")) level = NEXT();
     else if (!strcmp(a, "--stdin")) use_stdin = 1;
     else if (!strcmp(a, "--out-dir")) out_dir = NEXT();
     else if (!strcmp(a, "--quiet")) g_quiet = 1;
@@ -850,7 +862,11 @@ int main(int argc, char** argv) {
   if (threads == 0) threads = count_cpus();   /* the CPUs this process may use (after --cpus) */
   char err[1024];
   double t0 = now_ms();
-  g_engine = steertts_create(model, threads, err, sizeof err);
+  steertts_config cfg;
+  steertts_default_config(&cfg);
+  cfg.threads = threads;
+  cfg.level = level;
+  g_engine = steertts_create_ex(model, &cfg, err, sizeof err);
   if (!g_engine) {
     fprintf(stderr, "steertts-pi: %s\n", err);
     return 1;

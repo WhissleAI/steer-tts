@@ -8,6 +8,10 @@
     for chunk in tts.stream("First sentence. <whisper>Second one.</whisper>"):   # sentence streaming + markup
         play(chunk.audio)
     wav = tts("Now in your voice.", ref_wav="me.wav")                 # zero-shot cloning
+    wav = tts("Hello there.", level="off")                            # the raw model output level
+
+Output level (steertts.output, config.json "output"): whole clips put the voice's neutral speech at -17 LUFS with a
+-1 dBTP true-peak cap; streamed chunks get the same fixed per-voice gain and soft limiter; level="off" opts out.
 
 The rendering path is deterministic for a given seed (text front end, model, flow sampler, Vocos), so outputs
 are reproducible bit for bit on the same device.
@@ -55,11 +59,13 @@ class SteerTTS:
     sample_rate = SR
     controls = list(CONTROL_DIMS)
 
-    def __init__(self, model_dir, device=None, flow=True, flow_steps=10, flow_temp=0.4, guidance=1.0, precision="fp32"):
+    def __init__(self, model_dir, device=None, flow=True, flow_steps=10, flow_temp=0.4, guidance=1.0, precision="fp32",
+                 level="auto"):
         """flow: use the flow-matching refiner (and, for cloning, the prompted flow) when the weights are present.
         guidance: default steering scale (1 = plain conditional render; see the model card for the trade-off).
         precision: "fp32" (default) or "int8" (packed int8 weights in int8/, external models rounded to int8 at load;
-        compute stays fp32; see steertts.quant)."""
+        compute stays fp32; see steertts.quant).
+        level: default output level of requests that do not set one ("auto", "clip" or "off"; see steertts.output)."""
         from safetensors.torch import load_file
         d = Path(model_dir)
         self.model_dir = d
@@ -86,6 +92,9 @@ class SteerTTS:
         self.flow = self._load_flow("refiner") if flow else None
         self._pflow, self._xv, self._pm, self._vec_cache = None, None, None, {}
         self.default_voice = self.cfg.get("default_voice", DEFAULT_VOICE)
+        from .output import Output, check_level
+        check_level(level)
+        self.level, self.output = level, Output(self.cfg, SR)
         from .events import EventBank
         self.events = EventBank.find(d, self.cfg)  # recorded [laugh] [cough] [dog] ... (None: tokens stay silent)
 
@@ -167,9 +176,11 @@ class SteerTTS:
         """Render a request -> float32 waveform at 24 kHz. Markup requests are rendered segment by segment."""
         req = self.resolve(request, **kw)
         if req["markup"] or (self.events and not req.get("word_shift") and self._has_event(req["text"])):
-            return self.markup().render(**self._stream_args(req))
-        return self._render(req["text"], self._voice(req), req["tag"], req["ctrl"], req["pace"], req.get("word_shift"),
-                            req.get("ref_wav"), req["guidance"], req["flow"], req["seed"])
+            wav = self.markup().render(**self._stream_args(req))
+        else:
+            wav = self._render(req["text"], self._voice(req), req["tag"], req["ctrl"], req["pace"],
+                               req.get("word_shift"), req.get("ref_wav"), req["guidance"], req["flow"], req["seed"])
+        return self.output.clip(wav, self._voice(req), req["level"], req.get("gain_db"))
 
     def __call__(self, text, voice=None, **kw):
         return self.synthesize(dict(kw, text=text, voice=voice) if voice else dict(kw, text=text))
@@ -178,14 +189,17 @@ class SteerTTS:
 
     def stream(self, text=None, request=None, **kw):
         """Sentence-level streaming with inline markup: yields Chunk(audio, segment, synth_ms) in order, the first
-        as soon as the first sentence / span is rendered."""
+        as soon as the first sentence / span is rendered. Each chunk gets the output stage's fixed gain + limiter
+        (no look-ahead: no added latency)."""
         if text is not None:
             kw["text"] = text
         req = self.resolve(request, **kw)
         if req.get("word_shift"):
             raise ValueError("stream() does not support word_shift (segments re-index words); use inline markup "
                              "such as <high>word</high> or *word*, or synthesize() for a whole-utterance word_shift")
-        return self.markup().stream(**self._stream_args(req))
+        from .output import leveled
+        return leveled(self.markup().stream(**self._stream_args(req)), self.output, self._voice(req), req["level"],
+                       req.get("gain_db"))
 
     def markup(self):
         from .markup import MarkupSynth

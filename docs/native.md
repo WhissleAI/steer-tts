@@ -17,6 +17,7 @@ What runs where:
 | Encoder + variance predictors, decoder, vocoder network | ONNX Runtime, three graphs with int4 / int8 `MatMulNBits` weights |
 | Duration rounding, per-word shifts, length regulation, guidance | C++ (`src/engine.cpp`) |
 | iSTFT, fades, WAV | C++ (`src/dsp.cpp`), no FFT library |
+| Output level: neutral speech at -17 LUFS, -1 dBTP cap; stream: fixed gain + soft limiter; `Request::level = "off"` for the raw output | C++ (`src/output.cpp`), the Python packages' stage |
 
 ## Build
 

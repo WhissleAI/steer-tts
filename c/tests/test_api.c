@@ -1,6 +1,7 @@
 /* Public-API robustness: comma-decimal locale, NULL arguments, output reset on failure, error messages that name the
  * cause, streaming stop / errors. Uses the edge model ($STEERTTS_EDGE_MODEL, default ../models/steer-tts-edge). */
 #include <locale.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -129,6 +130,45 @@ int main(void) {
   CHECK(steertts_synthesize_json(e, "{\"text\": \"x\", \"spk_vec\": [1, 2]}", &y, &n, err, sizeof err) != 0 &&
             !strcmp(err, "spk_vec must be a list of 512 numbers"),
         "spk_vec is validated");
+
+  /* output level: auto (default) vs off, gain override, validation, streaming == whole clip up to the
+   * true-peak guard */
+  {
+    const char* T = "{\"text\": \"The meeting has been moved to Thursday afternoon at three.\"";
+    char req[512];
+    float *ya = NULL, *yo = NULL;
+    size_t na = 0, no = 0;
+    snprintf(req, sizeof req, "%s}", T);
+    int ok = steertts_synthesize_json(e, req, &ya, &na, err, sizeof err) == 0;
+    snprintf(req, sizeof req, "%s, \"level\": \"off\"}", T);
+    ok = ok && steertts_synthesize_json(e, req, &yo, &no, err, sizeof err) == 0 && na == no && na > 0;
+    double ea = 0, eo = 0, pa = 0;
+    for (size_t i = 0; ok && i < na; ++i) {
+      ea += (double)ya[i] * ya[i], eo += (double)yo[i] * yo[i];
+      pa = fabs(ya[i]) > pa ? fabs(ya[i]) : pa;
+    }
+    CHECK(ok && ea > 4 * eo && pa <= 0.8913, "level auto is louder than off, peaks under -1 dBFS");
+    steertts_free(ya);
+    steertts_free(yo);
+    snprintf(req, sizeof req, "%s, \"level\": \"max\"}", T);
+    CHECK(steertts_synthesize_json(e, req, &ya, &na, err, sizeof err) != 0 &&
+              !strcmp(err, "level must be one of auto, clip, off, got 'max'"),
+          "level is validated");
+    snprintf(req, sizeof req, "%s, \"gain_db\": 30}", T);
+    CHECK(steertts_synthesize_json(e, req, &ya, &na, err, sizeof err) != 0 &&
+              !strcmp(err, "gain_db=30 is outside [-6.0, 18.0]"),
+          "gain_db is validated");
+    steertts_options lo;
+    steertts_default_options(&lo);
+    lo.level = "off";
+    CHECK(steertts_synthesize(e, "Hello there.", &lo, &ya, &na, err, sizeof err) == 0, "options.level");
+    steertts_free(ya);
+    char* rr = NULL;
+    CHECK(steertts_resolve_json(e, "{\"text\": \"x\", \"gain_db\": 3}", &rr, err, sizeof err) == 0 && rr &&
+              strstr(rr, "\"level\": \"auto\"") && strstr(rr, "\"gain_db\": 3.0"),
+          "resolve prints level and gain_db");
+    steertts_free(rr);
+  }
   steertts_destroy(e);
   printf(fails ? "%d FAILED\n" : "all ok\n", fails);
   return fails != 0;

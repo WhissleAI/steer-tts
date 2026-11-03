@@ -4,7 +4,7 @@
 #   cmake -B build && cmake --build build -j && cmake --install build --prefix /usr/local
 #   then: find_package(steertts) + target_link_libraries(app steertts::steertts), or pkg-config steertts
 cmake_minimum_required(VERSION 3.13)
-project(steertts VERSION 1.2.0 LANGUAGES C)
+project(steertts VERSION 1.3.0 LANGUAGES C)
 
 option(STEERTTS_BUILD_SHARED "build libsteertts.so / .dylib" ON)
 option(STEERTTS_BUILD_CLI "build the steertts command line" ON)
