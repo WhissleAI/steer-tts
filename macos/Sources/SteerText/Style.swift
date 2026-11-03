@@ -14,9 +14,9 @@ public final class Style {
     public var tag: String = "none"
     public var z = [Float](repeating: 0, count: Style.CONTROLS.count)
     public var contextual = true              // let ContextStyler adjust system utterances
-    public var pace: Float = Style.DEFAULT_PACE   // speaking speed (1 = the voice's own; the default voice is a slow speaker)
+    public var pace: Float = Style.DEFAULT_PACE   // speaking speed (1 = the package default: the default voice already plays at x1.1, config.json default_controls)
     public var preset = "Natural"             // the Voices screen's style chip (the tag and controls hold the delivery itself)
-    public static let DEFAULT_PACE: Float = 1.1, MIN_PACE: Float = 0.7, MAX_PACE: Float = 1.6
+    public static let DEFAULT_PACE: Float = 1.0, MIN_PACE: Float = 0.7, MAX_PACE: Float = 1.6
     public var smooth = false                 // "Smoother sound": the Smooth filter on every voice
     public var reason = ""                    // why a context style looks the way it does (shown in the app)
 
