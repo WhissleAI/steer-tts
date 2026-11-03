@@ -60,6 +60,8 @@ def _request(a):
         req["ctrl"] = {**req.get("ctrl", {}), **_ctrl(a.ctrl)}
     if getattr(a, "markup", False):
         req["markup"] = True
+    if getattr(a, "raw", False):
+        req["default_controls"] = False
     if a.no_flow:
         req["flow"] = False
     return req
@@ -90,6 +92,7 @@ def main(argv=None):
                             "clip at exactly -17 LUFS), off (raw model output)")
         p.add_argument("--gain-db", dest="gain_db", type=float, help="override the calibrated output gain (dB)")
         p.add_argument("--markup", action="store_true")
+        p.add_argument("--raw", action="store_true", help="skip the voice's default profile (config.json default_controls)")
         p.add_argument("--show-request", action="store_true", help="print the resolved request JSON")
         p.add_argument("--play", action="store_true", help="play through the speakers as chunks are rendered")
         p.add_argument("-o", "--out", help="output wav (default out.wav unless playing)")

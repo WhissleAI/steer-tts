@@ -243,6 +243,11 @@
    "maximum": 18,
    "description": "Overrides the calibrated output gain (dB) of level auto / clip; the limiter and true-peak cap still apply."
   },
+  "default_controls": {
+   "type": "boolean",
+   "default": true,
+   "description": "Apply the voice's default profile (config.json default_controls): its pace multiplies `pace`, its ctrl offsets are added to the controls this request sets (unset controls stay unset, so tags keep choosing them). false renders the raw model, as releases before the profile did. resolve() folds the profile into pace / ctrl and sets this false."
+  },
   "prompt_mapping": {
    "type": "object",
    "description": "Written by resolve(): what `prompt` mapped to {tag, ctrl, top_tags}. Informational; ignored on input.",

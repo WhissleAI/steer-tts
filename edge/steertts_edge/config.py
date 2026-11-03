@@ -24,4 +24,17 @@ CONTROL_DIMS = [
 ]
 CONTROL_RANGE = (-5.0, 5.0)  # accepted request range; values beyond +-3 are outside the well-tested range
 
-DEFAULT_VOICE = "voice_1688"  # v1.0.1 default (UTMOS sweep on non-test sentences); v1.0.0 and the leaderboard used voice_1361
+DEFAULT_VOICE = "voice_1688"  # chosen by a UTMOS sweep on non-test sentences
+
+
+def profiled(cfg, voice, spk_vec, ctrl, pace):
+    """The voice's config.json "default_controls": pace *= its pace, set controls += its offsets, unset controls
+    stay unset; no entry: unchanged. Opt out: default_controls=False."""
+    dc = cfg.get("default_controls") or {}
+    p = dc.get("clone") if spk_vec is not None else dc.get("voices", {}).get(voice, dc.get("*"))
+    if not p:
+        return ctrl, pace
+    off = p.get("ctrl")  # out of range: left to the check
+    if off and ctrl:
+        ctrl = {k: min(max(v + off.get(k, 0.0), -5.0), 5.0) if -5 <= v <= 5 else v for k, v in ctrl.items()}
+    return ctrl, min(max(float(1.0 if pace is None else pace) * p.get("pace", 1.0), 0.25), 4.0)

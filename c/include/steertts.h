@@ -142,6 +142,8 @@ typedef struct {
   const char* level;
   int use_gain_db;          /* 1: gain_db overrides the calibrated gain (dB, -6 .. 18) */
   float gain_db;
+  int raw;                  /* 1 = skip the voice's default profile (config.json default_controls; request field
+                               "default_controls": false); 0 (a zeroed struct) = apply it */
 } steertts_options;
 
 STEERTTS_API void steertts_default_options(steertts_options* o);

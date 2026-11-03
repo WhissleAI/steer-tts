@@ -41,6 +41,8 @@ struct Request {
   // whole clip at exactly -17 LUFS; "off": the raw model output
   std::string level;
   float gain_db = NAN;                                // overrides the calibrated gain (dB, -6 .. 18); NaN = calibrated
+  bool default_controls = true;                       // apply the voice's default profile (config.json default_controls):
+                                                      // pace *= profile pace, set controls += offsets; false = raw model
 };
 
 struct Chunk {

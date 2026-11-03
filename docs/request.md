@@ -20,6 +20,7 @@ required.
 | `flow`, `seed` | Flow-matching mel refiner (v1 default on) and its sampler seed. | ✓ | — |
 | `level` | Output level: `auto` (default; the voice's neutral speech at -17 LUFS, a soft limiter and a -1 dBTP true-peak cap, steering keeps its relative level; streamed chunks get the same fixed gain + limiter), `clip` (every whole clip at exactly -17 LUFS), `off` (the raw model output). | ✓ | ✓ |
 | `gain_db` | Overrides the calibrated output gain (dB, -6 .. 18); limiter and cap still apply. | ✓ | ✓ |
+| `default_controls` | `true` (default): the voice's default profile from config.json `default_controls` applies (its pace multiplies `pace`, ×1.10 for `voice_1688`; its control offsets, none shipped, add to the controls the request sets). `false`: the raw model at exactly the requested pace. `resolve()` folds the profile in and returns `false`. | ✓ | ✓ |
 
 ¹ The edge build leaves the prompt encoder (MiniLM) and the speaker encoder (WavLM) off the device. Resolve a prompt
 on a host with the full model (`SteerTTS.resolve()`) and send the resulting `tag` + `ctrl`; for cloning, compute the

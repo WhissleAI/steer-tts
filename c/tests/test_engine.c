@@ -120,6 +120,12 @@ static int run(const char* model, const char* precision, const char* golden, int
     char* js = NULL;
     size_t n = 0, cap = 0;
     dump(r, &js, &n, &cap, dir);
+    {   /* the goldens are the raw model: skip the voice's default profile (config.json default_controls) */
+      char* jr = (char*)malloc(n + 32);
+      snprintf(jr, n + 32, "{\"default_controls\": false, %s", js + 1);
+      free(js);
+      js = jr;
+    }
     const st_tensor* ref = st_file_find(f, st_name("case%d", i));
     float* y = NULL;
     size_t ny = 0;

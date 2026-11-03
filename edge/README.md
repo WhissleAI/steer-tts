@@ -13,6 +13,7 @@ from steertts_edge import OnnxTTS          # ONNX Runtime (default); EdgeTTS = t
 tts = OnnxTTS.from_pretrained("WhissleAI/steer-tts-edge")
 wav = tts("I can't believe it worked.", tag="happiness", ctrl={"rate": 1.0})
 raw = tts("I can't believe it worked.", level="off")   # default output: -17 LUFS / -1 dBTP; off = raw model output
+raw = tts("I can't believe it worked.", default_controls=False)   # voice_1688 renders at pace x1.10 by default
 ```
 
 Longer text as a performance, planned sentence by sentence by the director (`director.bin`, numpy only):

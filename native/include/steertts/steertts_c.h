@@ -33,6 +33,7 @@ typedef struct {
   const char* level;
   int use_gain_db;     /* 1: gain_db overrides the calibrated gain (dB, -6 .. 18) */
   float gain_db;
+  int raw;             /* 1: skip the voice's default profile (config.json default_controls); 0: apply it */
 } steertts_options;
 
 /* Returns NULL on failure (message in err). threads: ONNX Runtime intra-op threads. */
