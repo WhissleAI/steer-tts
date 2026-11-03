@@ -36,7 +36,7 @@ const char* kUsage =
     "usage: steertts-edge [TEXT | -] [-o OUT.wav | -o -] [--model DIR] [--voice NAME] [--tag TAG]\n"
     "                     [--ctrl name=z,...] [--rate Z] [--pace X] [--guidance S] [--markup] [--stream]\n"
     "                     [--threads N] [--list voices|tags|controls] [--bench] [--level auto|clip|off]\n"
-    "                     [--gain-db DB]\n"
+    "                     [--gain-db DB] [--raw]\n"
     "\n"
     "  TEXT          text to speak ('-' reads stdin)\n"
     "  -o OUT        output WAV (16-bit, 24 kHz; default out.wav). '-' writes raw 16-bit PCM to stdout\n"
@@ -47,6 +47,7 @@ const char* kUsage =
     "  --level L     output level: auto (default; neutral speech at -17 LUFS, peaks <= -1 dBTP), clip (every clip\n"
     "                at exactly -17 LUFS), off (raw model output)\n"
     "  --gain-db DB  override the calibrated output gain (-6 .. 18 dB)\n"
+    "  --raw         skip the voice's default profile (config.json default_controls)\n"
     "  --threads N   ONNX Runtime threads (default 1)\n"
     "  --bench       render 20 fixed sentences, print real-time factor, latency and peak memory\n"
     "  --bench-json  the same, as one JSON line (edge/tools/bench_speed.py --runtime native)\n";
@@ -186,6 +187,7 @@ int main(int argc, char** argv) {
       else if (a == "--markup") r.markup = true;
       else if (a == "--level") r.level = next();
       else if (a == "--gain-db") r.gain_db = std::stof(next());
+      else if (a == "--raw") r.default_controls = false;
       else if (a == "--stream") stream = true;
       else if (a == "--threads") opt.threads = std::stoi(next());
       else if (a == "--list") list = next();

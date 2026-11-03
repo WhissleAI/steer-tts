@@ -15,6 +15,8 @@ prompt, ref_wav, flow, seed, level, gain_db), with the same validation and error
 The output level is the Python packages' (`src/st_output.c`): neutral speech at -17 LUFS, peaks <= -1 dBTP,
 streaming with a fixed gain + soft limiter; `steertts_options.level = "off"` (or `--level off`, `"level": "off"`)
 gives the raw output.
+The voice's default profile (config.json `default_controls`: pace ×1.10 for `voice_1688`) applies as in the Python
+packages; `steertts_options.raw = 1` (or `--raw`, `"default_controls": false`) renders the raw model pace.
 
 ## Build
 

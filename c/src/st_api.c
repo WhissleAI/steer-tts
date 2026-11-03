@@ -774,6 +774,7 @@ typedef struct {
   int level;        /* ST_LEVEL_* */
   int has_gain;     /* gain_db given */
   double gain_db;
+  int no_profile;   /* request "default_controls": false */
   int64_t seed;
   int n_ws;
   wshift* ws;
@@ -855,7 +856,7 @@ static int json_num(const char* name, const st_json* v, double lo, double hi, co
 
 static const char* const k_fields[] = {"text", "voice", "ref_wav", "prompt", "tag", "ctrl", "pace", "guidance",
                                        "word_shift", "markup", "flow", "seed", "level", "gain_db", "prompt_mapping",
-                                       "$schema", "spk_vec"};
+                                       "$schema", "spk_vec", "default_controls"};
 
 static int cmp_str(const void* a, const void* b) { return strcmp(*(const char* const*)a, *(const char* const*)b); }
 
@@ -967,6 +968,16 @@ static int validate_request(steertts_engine* e, const st_json* j, req_t* r, int 
     return -1;
   }
   if (!(r->text = st_strdup(text->str))) return -1;
+  {
+    const st_json* dc = st_json_get(j, "default_controls");
+    if (!is_null(dc)) {
+      if (dc->type != ST_JBOOL) {
+        st_seterr("default_controls must be true or false");
+        return -1;
+      }
+      r->no_profile = dc->num == 0;
+    }
+  }
   if (!is_null(sv)) {
     if (sv->type != ST_JARR || sv->n != 512) {
       st_seterr("spk_vec must be a list of 512 numbers");
@@ -1316,6 +1327,7 @@ static int req_from_options(steertts_engine* e, const char* text, const steertts
   if (o->pace != 0) sb_str(&b, ", \"pace\": "), sb_num(&b, o->pace);   /* 0 (a zeroed struct) = default */
   if (o->guidance >= 0 || isnan(o->guidance)) sb_str(&b, ", \"guidance\": "), sb_num(&b, o->guidance);
   if (o->markup) sb_str(&b, ", \"markup\": true");
+  if (o->raw) sb_str(&b, ", \"default_controls\": false");
   if (o->flow >= 0) sb_fmt(&b, ", \"flow\": %s", o->flow ? "true" : "false");
   if (o->seed < 0) {
     st_seterr("seed must be a non-negative integer");
@@ -1346,7 +1358,39 @@ fail:
 }
 
 /* SteerTTS.resolve: map the prompt (explicit tag wins, explicit ctrl dims override the prompt's) */
+static int resolve_prompt_only(steertts_engine* e, req_t* r);
+
+/* The voice's default profile (config.json "default_controls", see steertts/defaults.py), applied once after the
+ * prompt mapping, as SteerTTS.resolve: pace *= profile pace (clipped to [0.25, 4]); each control the request sets
+ * += its offset (clipped to [-5, 5]); unset controls stay unset. No table / voice: identity. */
+static void apply_profile(const steertts_engine* e, req_t* r) {
+  if (r->no_profile) return;
+  const st_json* dc = st_json_get(e->cfg_json, "default_controls");
+  if (!dc) return;
+  const st_json* p = NULL;
+  if (r->ref_wav || r->spk_vec) p = st_json_get(dc, "clone");
+  else {
+    p = r->voice ? st_json_get(st_json_get(dc, "voices"), r->voice) : NULL;
+    if (!p) p = st_json_get(dc, "*");
+  }
+  if (!p) return;
+  double pm = st_json_num(st_json_get(p, "pace"), 1.0);
+  r->pace = fmin(fmax(r->pace * pm, 0.25), 4.0);
+  const st_json* off = st_json_get(p, "ctrl");
+  for (int i = 0; i < r->n_ctrl; ++i) {
+    double o = st_json_num(st_json_get(off, k_controls[r->ctrl_dim[i]]), 0.0);
+    r->ctrl_val[i] = fmin(fmax(r->ctrl_val[i] + o, -5.0), 5.0);
+  }
+  r->no_profile = 1;   /* applied: a resolved request renders identically */
+}
+
 static int resolve_prompt(steertts_engine* e, req_t* r) {
+  int rc = resolve_prompt_only(e, r);
+  if (rc == 0) apply_profile(e, r);
+  return rc;
+}
+
+static int resolve_prompt_only(steertts_engine* e, req_t* r) {
   if (!r->prompt || !*r->prompt) {
     st_free(r->prompt);
     r->prompt = NULL;
@@ -2088,6 +2132,7 @@ int steertts_resolve_json(steertts_engine* e, const char* json, char** out, char
       py_float(rep, sizeof rep, r.gain_db, 0);
       sb_fmt(&b, ", \"gain_db\": %s", rep);
     }
+    sb_str(&b, ", \"default_controls\": false");   /* the profile is folded into pace / ctrl */
     if (r.n_ws) {
       sb_str(&b, ", \"word_shift\": {");
       for (int i = 0; i < r.n_ws; ++i) {   /* only the keys the request gave, as normalize_request */

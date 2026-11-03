@@ -18,6 +18,7 @@ What runs where:
 | Duration rounding, per-word shifts, length regulation, guidance | C++ (`src/engine.cpp`) |
 | iSTFT, fades, WAV | C++ (`src/dsp.cpp`), no FFT library |
 | Output level: neutral speech at -17 LUFS, -1 dBTP cap; stream: fixed gain + soft limiter; `Request::level = "off"` for the raw output | C++ (`src/output.cpp`), the Python packages' stage |
+| Default pace: the voice's config.json `default_controls` multiplies `pace` (×1.10 for `voice_1688`); `Request::default_controls = false` (`--raw`) for the raw model | C++ (`src/engine.cpp`), the Python packages' table |
 
 ## Build
 

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .config import CONTROL_DIMS, CONTROL_RANGE, HOP, N_FFT, PITCH_SCALE, SR
+from .config import CONTROL_DIMS, CONTROL_RANGE, HOP, N_FFT, PITCH_SCALE, SR, profiled
 from .text import SYM2ID, set_assets, to_phonemes
 
 
@@ -136,10 +136,12 @@ class OnnxTTS:
                              f"(see tts.voices), e.g. {', '.join(self.voices[:3])}")
 
     def __call__(self, text, voice=None, tag="none", ctrl=None, pace=1.0, word_shift=None, guidance=None,
-                 spk_vec=None, markup=False, level=None, gain_db=None, **_ignored):
+                 spk_vec=None, markup=False, level=None, gain_db=None, default_controls=True, **_ignored):
         tag = tag or "none"
         level = level or self.level
         self._check(voice if spk_vec is None else None, tag, dict(_ignored, word_shift=word_shift if markup else None))
+        if default_controls:
+            ctrl, pace = profiled(self.cfg, voice or self.default_voice, spk_vec, ctrl, pace)
         if markup or (self.events and not word_shift and self._has_event(text)):
             from .markup import MarkupSynth
             wav = MarkupSynth(self).render(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
@@ -151,10 +153,12 @@ class OnnxTTS:
     synthesize = __call__
 
     def stream(self, text, voice=None, tag="none", ctrl=None, pace=1.0, guidance=None, spk_vec=None, level=None,
-               gain_db=None, **_ignored):
+               gain_db=None, default_controls=True, **_ignored):
         from .markup import MarkupSynth
         tag = tag or "none"
         self._check(voice if spk_vec is None else None, tag, _ignored)
+        if default_controls:
+            ctrl, pace = profiled(self.cfg, voice or self.default_voice, spk_vec, ctrl, pace)
         from .output import check_level, leveled
         level = level or self.level
         check_level(level, gain_db)

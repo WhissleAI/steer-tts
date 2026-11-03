@@ -34,6 +34,7 @@ for chunk in tts.stream("First sentence. Second sentence."):        # sentence-l
     play(chunk.audio)
 tts.save(wav, "out.wav")
 wav = tts("Raw level.", level="off")     # output defaults to -17 LUFS / -1 dBTP ("clip": exact per clip)
+wav = tts("Raw pace.", default_controls=False)   # voice_1688 renders at pace x1.10 by default (config.json default_controls)
 ```
 
 CLI: `steertts say "Hello." -o hello.wav`, `steertts play "..."` (streams to the speakers), `steertts voices`,

@@ -251,6 +251,28 @@ struct Engine::Impl {
   std::vector<VoiceInfo> voices;
   std::map<std::string, int> voice2i;
   std::string default_voice;
+  struct Profile { float pace = 1.0f; std::map<std::string, float> ctrl; };
+  std::map<std::string, Profile> profiles;   // config.json default_controls.voices (+ "*" and "clone")
+
+  // The request the model sees: the voice's default profile applied underneath it (see steertts/defaults.py).
+  Request profiled(const Request& r) const {
+    Request q = r;
+    if (!r.default_controls || profiles.empty()) return q;
+    auto it = profiles.end();
+    if (!r.spk_vec.empty()) it = profiles.find("clone");
+    else {
+      it = profiles.find(r.voice.empty() ? default_voice : r.voice);
+      if (it == profiles.end()) it = profiles.find("*");
+    }
+    if (it == profiles.end()) return q;
+    q.pace = std::min(std::max(r.pace * it->second.pace, 0.25f), 4.0f);
+    for (auto& kv : q.ctrl) {
+      auto o = it->second.ctrl.find(kv.first);
+      if (o != it->second.ctrl.end()) kv.second = std::min(std::max(kv.second + o->second, -5.0f), 5.0f);
+    }
+    q.default_controls = false;
+    return q;
+  }
   std::vector<float> slots;            // [V, 64] voice conditioning slots
   std::vector<float> spk_w, spk_b;     // spk_proj [64, 512], [64]
   int n_sym = 0, aa0 = 0;
@@ -471,6 +493,21 @@ Engine::Engine(const std::string& package_dir, Options opt) : p_(new Impl) {
   p.default_voice = cfg.has("default_voice") ? cfg["default_voice"].str : p.voices.at(0).name;
   output::parse_level(opt.level);
   p.out.load(cfg);
+  if (cfg.has("default_controls")) {
+    const json::Value& dc = cfg["default_controls"];
+    auto add = [&](const std::string& name, const json::Value& v) {
+      Impl::Profile pr;
+      if (v.has("pace")) pr.pace = float(v["pace"].num);
+      if (v.has("ctrl"))
+        for (auto& kv : v["ctrl"].obj) pr.ctrl[kv.first] = float(kv.second.num);
+      if (!(pr.pace >= 0.5f && pr.pace <= 2.0f)) throw std::runtime_error("default_controls: pace outside [0.5, 2]");
+      p.profiles[name] = pr;
+    };
+    if (dc.has("voices"))
+      for (auto& kv : dc["voices"].obj) add(kv.first, kv.second);
+    if (dc.has("*")) add("*", dc["*"]);
+    if (dc.has("clone")) add("clone", dc["clone"]);
+  }
   auto vt = load_safetensors(package_dir + "/voices.safetensors");
   p.slots = std::move(vt.at("s"));
   if (p.slots.size() != p.voices.size() * 64) throw std::runtime_error("voices.safetensors does not match voices.json");
@@ -501,9 +538,10 @@ Engine::Engine(const std::string& package_dir, Options opt) : p_(new Impl) {
 
 Engine::~Engine() = default;
 
-std::vector<float> Engine::synthesize(const Request& r) {
-  bool events = r.word_shift.empty() && has_bank_event(p_->events.get(), r.text);   // event tokens render as chunks
-  p_->check(r, r.markup);
+std::vector<float> Engine::synthesize(const Request& req) {
+  bool events = req.word_shift.empty() && has_bank_event(p_->events.get(), req.text);   // event tokens render as chunks
+  p_->check(req, req.markup);
+  const Request r = p_->profiled(req);   // the voice's default profile (config.json default_controls)
   const output::Level level = p_->level_of(r);
   std::vector<float> out;
   if (!r.markup && !events) {
@@ -521,8 +559,9 @@ std::vector<float> Engine::synthesize(const Request& r) {
   return out;
 }
 
-void Engine::stream(const Request& r, const std::function<bool(const Chunk&)>& on_chunk) {
-  p_->check(r, true);
+void Engine::stream(const Request& req, const std::function<bool(const Chunk&)>& on_chunk) {
+  p_->check(req, true);
+  const Request r = p_->profiled(req);
   const output::Level level = p_->level_of(r);
   const std::string voice = p_->level_voice(r);
   stream_raw(r, [&](const Chunk& c) {
@@ -595,8 +634,9 @@ void Engine::stream_raw(const Request& r, const std::function<bool(const Chunk&)
     if (!event(std::move(w))) return;
 }
 
-int Engine::mel(const Request& r, std::vector<float>& out) {
-  p_->check(r, false);
+int Engine::mel(const Request& req, std::vector<float>& out) {
+  p_->check(req, false);
+  const Request r = p_->profiled(req);
   return p_->mel(r.text, r.voice, r.tag, r.ctrl, r.pace, r.word_shift, r.guidance, r.spk_vec, out);
 }
 

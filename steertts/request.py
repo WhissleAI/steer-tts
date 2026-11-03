@@ -7,9 +7,9 @@ from importlib import resources
 
 from .config import CONTROL_DIMS, CONTROL_RANGE
 
-DEFAULTS = dict(pace=1.0, guidance=1.0, flow=True, seed=0, markup=False, level="auto")
+DEFAULTS = dict(pace=1.0, guidance=1.0, flow=True, seed=0, markup=False, level="auto", default_controls=True)
 FIELDS = {"text", "voice", "ref_wav", "prompt", "tag", "ctrl", "pace", "guidance", "word_shift", "markup", "flow",
-          "seed", "level", "gain_db", "prompt_mapping", "$schema"}
+          "seed", "level", "gain_db", "prompt_mapping", "default_controls", "$schema"}
 WORD_SHIFT_KEYS = {"pitch": (-12.0, 12.0), "energy": (-20.0, 20.0), "dur": (0.25, 4.0)}
 
 
@@ -69,7 +69,7 @@ def normalize_request(req, tts=None):
             out[k] = v
     out["pace"] = _num("pace", out["pace"], 0.25, 4.0)
     out["guidance"] = _num("guidance", out["guidance"], 0.0, 4.0)
-    for k in ("flow", "markup"):
+    for k in ("flow", "markup", "default_controls"):
         if not isinstance(out[k], bool):
             raise ValueError(f"{k} must be true or false")
     from .output import check_level

@@ -55,11 +55,37 @@ int main(void) {
   CHECK(steertts_synthesize(e, "Hello there.", &o, &y, &n, err, sizeof err) == 0, "ctrl string with fractions");
   steertts_free(y);
   char* r = NULL;
-  CHECK(steertts_resolve_json(e, "{\"text\": \"x\", \"pace\": 1.25}", &r, err, sizeof err) == 0 && r &&
-            strstr(r, "\"pace\": 1.25"),
+  CHECK(steertts_resolve_json(e, "{\"text\": \"x\", \"pace\": 1.25, \"default_controls\": false}", &r, err,
+                              sizeof err) == 0 && r && strstr(r, "\"pace\": 1.25"),
         "resolve prints '.' decimals under the locale");
   steertts_free(r);
   setlocale(LC_ALL, "C");
+
+  /* the voice's default profile (config.json default_controls): resolve() folds it into pace / ctrl, so the
+   * resolved request renders identically; options.raw = 1 is the same as "default_controls": false */
+  {
+    const char* q = "{\"text\": \"The meeting moved to Thursday.\", \"ctrl\": {\"rate\": 0.5}}";
+    char* rj = NULL;
+    float *a = NULL, *b = NULL, *c = NULL, *d = NULL;
+    size_t na = 0, nb = 0, nc = 0, nd = 0;
+    CHECK(steertts_resolve_json(e, q, &rj, err, sizeof err) == 0 && rj && strstr(rj, "\"default_controls\": false"),
+          "resolve folds the default profile in");
+    CHECK(rj && steertts_synthesize_json(e, q, &a, &na, err, sizeof err) == 0 &&
+              steertts_synthesize_json(e, rj, &b, &nb, err, sizeof err) == 0 && na == nb &&
+              !memcmp(a, b, sizeof(float) * na),
+          "a resolved request renders identically");
+    steertts_default_options(&o);
+    o.raw = 1;
+    CHECK(steertts_synthesize(e, "The meeting moved to Thursday.", &o, &c, &nc, err, sizeof err) == 0 &&
+              steertts_synthesize_json(e, "{\"text\": \"The meeting moved to Thursday.\", \"default_controls\": false}",
+                                       &d, &nd, err, sizeof err) == 0 && nc == nd && !memcmp(c, d, sizeof(float) * nc),
+          "options.raw = 1 == \"default_controls\": false");
+    steertts_free(rj);
+    steertts_free(a);
+    steertts_free(b);
+    steertts_free(c);
+    steertts_free(d);
+  }
 
   /* outputs are reset before validation can fail */
   y = (float*)1;

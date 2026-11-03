@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .config import CONTROL_DIMS, CONTROL_RANGE, PITCH_SCALE, SR
+from .config import CONTROL_DIMS, CONTROL_RANGE, PITCH_SCALE, SR, profiled
 from .model import SteerTTSModel
 from .packed import load_packed
 from .text import SYM2ID, set_assets, to_phonemes
@@ -65,7 +65,7 @@ class EdgeTTS:
         self.events = EventBank.find(d, cfg)  # recorded [laugh] [cough] ... (None: tokens stay silent)
         self.spk_ref = self._vi   # name -> row (markup / request checks use `voice in tts.spk_ref`)
 
-    # RELEASE (steer-tts-edge 1.0.0): load from a Hugging Face repo id or a local directory.
+    # Load from a Hugging Face repo id or a local directory.
     @classmethod
     def from_pretrained(cls, repo_id="WhissleAI/steer-tts-edge", revision=None, **kw):
         """EdgeTTS from a local package directory or a Hugging Face model repo (needs `huggingface_hub`, the
@@ -99,9 +99,8 @@ class EdgeTTS:
         return dict(zip(CONTROL_DIMS, self._mean[self._vi[voice]].tolist()))
 
     def _check(self, voice, tag, ignored):
-        # RELEASE: reject full-model-only arguments instead of silently ignoring them (flow / seed stay accepted
-        # and ignored, for call compatibility with steertts.SteerTTS), and list the valid names in the errors.
-        if ignored.get("word_shift"):  # RELEASE: as steertts v1.0.1, instead of dropping it silently
+        # full-model-only arguments raise (flow / seed are accepted and ignored, as in steertts.SteerTTS)
+        if ignored.get("word_shift"):
             raise ValueError("word_shift does not combine with markup / stream(); use inline markup "
                              "(*word*, <slow>, <high> ...) there")
         for k in ("prompt", "ref_wav"):
@@ -115,10 +114,12 @@ class EdgeTTS:
                              f"(see tts.voices), e.g. {', '.join(self.voices[:3])}")
 
     def __call__(self, text, voice=None, tag="none", ctrl=None, pace=1.0, word_shift=None, guidance=None,
-                 spk_vec=None, markup=False, level=None, gain_db=None, **_ignored):
+                 spk_vec=None, markup=False, level=None, gain_db=None, default_controls=True, **_ignored):
         tag = tag or "none"
-        level = level or self.level  # RELEASE: tag=None means no style tag (was: ValueError "unknown tag None")
+        level = level or self.level  # tag=None: no style tag
         self._check(voice if spk_vec is None else None, tag, dict(_ignored, word_shift=word_shift if markup else None))
+        if default_controls:
+            ctrl, pace = profiled(self.cfg, voice or self.default_voice, spk_vec, ctrl, pace)
         if markup or (self.events and not word_shift and self._has_event(text)):
             from .markup import MarkupSynth
             wav = MarkupSynth(self).render(text, voice=voice, tag=tag, ctrl=ctrl, pace=pace, guidance=guidance,
@@ -130,12 +131,14 @@ class EdgeTTS:
     synthesize = __call__
 
     def stream(self, text, voice=None, tag="none", ctrl=None, pace=1.0, guidance=None, spk_vec=None, level=None,
-               gain_db=None, **_ignored):
+               gain_db=None, default_controls=True, **_ignored):
         """Sentence-level streaming with inline markup: yields markup.Chunk (.audio float32, .segment, .synth_ms)
-        per sentence / pause / style span, in order. RELEASE: was only reachable as MarkupSynth(tts).stream."""
+        per sentence / pause / style span, in order."""
         from .markup import MarkupSynth
         tag = tag or "none"
         self._check(voice if spk_vec is None else None, tag, _ignored)
+        if default_controls:
+            ctrl, pace = profiled(self.cfg, voice or self.default_voice, spk_vec, ctrl, pace)
         from .output import check_level, leveled
         level = level or self.level
         check_level(level, gain_db)
@@ -151,9 +154,7 @@ class EdgeTTS:
     @torch.no_grad()
     def mel(self, text, voice=None, tag="none", ctrl=None, pace=1.0, word_shift=None, guidance=None, spk_vec=None):
         ids, widx, _ = to_phonemes(text)
-        # RELEASE: to_phonemes always returns at least the leading <sp>, so the original `if not ids` never fired and
-        # empty / whitespace / punctuation-only / non-Latin-script text rendered ~10-200 ms of near-silence. Text
-        # with nothing to say (no phoneme or sound-event token) now returns an empty waveform, as documented.
+        # text with nothing to say (no phoneme or sound-event token): an empty waveform
         if not any(i >= SYM2ID["AA0"] for i in ids):
             return None
         n_sym = self.model.emb.num_embeddings
@@ -202,8 +203,7 @@ class EdgeTTS:
         return any(m.group(1).lower() in self.events for m in _EVENT_RE.finditer(text or ""))
 
     def save(self, wav, path):
-        """16-bit PCM WAV at 24 kHz (clipped to [-1, 1]). RELEASE: stdlib `wave` instead of soundfile, one
-        dependency fewer; same format as soundfile's default WAV subtype (PCM_16)."""
+        """16-bit PCM WAV at 24 kHz (clipped to [-1, 1]), stdlib `wave` (soundfile's PCM_16 format)."""
         import wave
         y = np.clip(np.asarray(wav, np.float32).reshape(-1), -1.0, 1.0)
         with wave.open(str(path), "wb") as w:

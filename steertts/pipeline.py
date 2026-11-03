@@ -24,7 +24,8 @@ import numpy as np
 import torch
 
 from .audio import load_wav, mel_extractor, save_wav
-from .config import CONTROL_DIMS, DEFAULT_VOICE, PITCH_SCALE, SR
+from .config import CONTROL_DIMS, CONTROL_RANGE, DEFAULT_VOICE, PITCH_SCALE, SR
+from .defaults import apply_profile, check_table, voice_profile
 from .model import SteerTTSModel
 from .request import normalize_request
 from .text import to_phonemes
@@ -97,6 +98,7 @@ class SteerTTS:
         self.level, self.output = level, Output(self.cfg, SR)
         from .events import EventBank
         self.events = EventBank.find(d, self.cfg)  # recorded [laugh] [cough] [dog] ... (None: tokens stay silent)
+        check_table(self.cfg, set(self.voices), CONTROL_DIMS)
 
     @classmethod
     def from_pretrained(cls, repo_or_path=None, revision=None, token=None, precision="fp32", **kw):
@@ -170,7 +172,15 @@ class SteerTTS:
         req.setdefault("tag", "none")
         if req["tag"] is None:
             req["tag"] = "none"
+        if req["default_controls"]:  # the voice's default profile (config.json default_controls), applied once
+            prof = voice_profile(self.cfg, req.get("voice"), clone=req.get("ref_wav") is not None)
+            req["ctrl"], req["pace"] = apply_profile(prof, req["ctrl"], req["pace"], CONTROL_RANGE)
+            req["default_controls"] = False  # already applied: the resolved request renders identically
         return req
+
+    def default_profile(self, voice=None):
+        """This voice's default profile: {"pace": multiplier, "ctrl": {dim: offset}} (identity if none)."""
+        return voice_profile(self.cfg, voice or self.default_voice)
 
     def synthesize(self, request=None, **kw):
         """Render a request -> float32 waveform at 24 kHz. Markup requests are rendered segment by segment."""

@@ -56,6 +56,9 @@ def main():
     # 9. output level: by default the voice's neutral speech plays at -17 LUFS (peaks <= -1 dBTP); level="off" is
     #    the raw model output, level="clip" puts every clip at exactly -17 LUFS
     tts.save(tts("The same sentence at the raw model level.", level="off"), out / "09_level_off.wav")
+    # 10. default pace: the default voice renders at pace x1.10 (config.json default_controls); default_controls=False
+    #     is the raw model at exactly the requested pace
+    tts.save(tts("The same sentence at the raw model pace.", default_controls=False), out / "10_raw_pace.wav")
     print("wrote", sorted(p.name for p in out.glob("*.wav")))
 
 

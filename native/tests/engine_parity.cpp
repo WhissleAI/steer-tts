@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
     auto c = steertts::json::parse(line);
     steertts::Request r;
     r.level = "off";   // the goldens are the raw Python output (the output stage is tested by the Python packages)
+    r.default_controls = false;   // ... of the raw model (no default profile)
     r.text = c["text"].str;
     if (c.has("voice")) r.voice = c["voice"].str;
     if (c.has("tag")) r.tag = c["tag"].str;

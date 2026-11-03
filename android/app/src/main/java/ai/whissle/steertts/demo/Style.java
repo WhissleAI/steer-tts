@@ -22,9 +22,9 @@ final class Style {
     String tag = "none";
     final float[] z = new float[SteerTTS.CONTROLS.length];
     boolean contextual = true;       // let ContextStyler adjust system utterances
-    float pace = DEFAULT_PACE;       // speaking speed (1 = the voice's own; the default voice is a slow speaker)
+    float pace = DEFAULT_PACE;       // speaking speed (1 = the package default: the default voice already plays at x1.1, config.json default_controls)
     String preset = "Natural";       // the Voices screen's style chip (the tag and controls hold the delivery itself)
-    static final float DEFAULT_PACE = 1.1f, MIN_PACE = 0.7f, MAX_PACE = 1.6f;
+    static final float DEFAULT_PACE = 1.0f, MIN_PACE = 0.7f, MAX_PACE = 1.6f;
     boolean smooth;                  // "Smoother sound": the Smooth filter on every voice
     String reason = "";              // why a context style looks the way it does (shown in the app)
 
