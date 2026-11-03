@@ -28,6 +28,11 @@ typedef struct {
   float pace;          /* 1.0 */
   float guidance;      /* < 0: engine default (1.0) */
   int markup;          /* parse inline markup */
+  /* output level: NULL / "auto" (neutral speech at -17 LUFS, peaks <= -1 dBTP; stream: fixed gain + soft
+   * limiter), "clip" (every clip at exactly -17 LUFS), "off" (raw model output) */
+  const char* level;
+  int use_gain_db;     /* 1: gain_db overrides the calibrated gain (dB, -6 .. 18) */
+  float gain_db;
 } steertts_options;
 
 /* Returns NULL on failure (message in err). threads: ONNX Runtime intra-op threads. */

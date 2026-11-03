@@ -227,6 +227,22 @@
    "default": 0,
    "description": "Noise seed of the flow sampler (renders are deterministic per device for a given seed)."
   },
+  "level": {
+   "type": "string",
+   "enum": [
+    "auto",
+    "clip",
+    "off"
+   ],
+   "default": "auto",
+   "description": "Output level. auto: the voice's calibrated gain puts its neutral speech at the package's output.target_lufs (-17 LUFS), a soft limiter and a true-peak cap (-1 dBTP) keep the peaks down, and steering (loud, soft, whisper) keeps its relative level; streamed chunks get the same fixed gain and limiter. clip: every whole clip normalised to exactly -17 LUFS (flattens loudness steering). off: the raw model output."
+  },
+  "gain_db": {
+   "type": "number",
+   "minimum": -6,
+   "maximum": 18,
+   "description": "Overrides the calibrated output gain (dB) of level auto / clip; the limiter and true-peak cap still apply."
+  },
   "prompt_mapping": {
    "type": "object",
    "description": "Written by resolve(): what `prompt` mapped to {tag, ctrl, top_tags}. Informational; ignored on input.",

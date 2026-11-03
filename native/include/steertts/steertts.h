@@ -11,6 +11,7 @@
 // Same rendering path as the Python runtimes (steertts_edge.EdgeTTS / OnnxTTS): text front end -> encoder graph ->
 // duration rounding + per-word shifts + length regulation -> decoder graph -> vocoder graph -> iSTFT.
 #pragma once
+#include <cmath>
 #include <functional>
 #include <map>
 #include <memory>
@@ -34,6 +35,12 @@ struct Request {
   std::map<int, WordShift> word_shift;                // per-word edits (semitones / dB / duration factor); plain text only
   bool markup = false;                                // parse inline markup (*emph*, [pause 400ms], <slow>, <whisper> ...)
   std::vector<float> spk_vec;                         // optional 512-d host-computed speaker vector (clone); overrides voice
+  // output level (config.json "output"): "" = the engine default (Options::level); "auto": the voice's calibrated
+  // gain puts its neutral speech at -17 LUFS, a soft limiter + -1 dBTP true-peak cap keep the peaks down, steering
+  // keeps its relative level (stream(): the same fixed gain + limiter per chunk, no added latency); "clip": every
+  // whole clip at exactly -17 LUFS; "off": the raw model output
+  std::string level;
+  float gain_db = NAN;                                // overrides the calibrated gain (dB, -6 .. 18); NaN = calibrated
 };
 
 struct Chunk {
@@ -50,6 +57,7 @@ struct VoiceInfo {
 struct Options {
   int threads = 1;            // ONNX Runtime intra-op threads
   float guidance = 1.0f;      // default steering scale
+  std::string level = "auto"; // default output level of requests (Request::level)
 };
 
 class Engine {
@@ -75,6 +83,7 @@ class Engine {
   static void save_wav(const std::vector<float>& audio, const std::string& path);   // 16-bit PCM, 24 kHz
 
  private:
+  void stream_raw(const Request& r, const std::function<bool(const Chunk&)>& on_chunk);   // before the output stage
   struct Impl;
   std::unique_ptr<Impl> p_;
 };

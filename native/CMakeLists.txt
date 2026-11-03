@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(steertts_edge_native VERSION 1.2.0 LANGUAGES CXX)
+project(steertts_edge_native VERSION 1.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -38,7 +38,7 @@ endif()
 
 add_subdirectory(src/front)
 
-add_library(steertts STATIC src/engine.cpp src/dsp.cpp src/c_api.cpp)
+add_library(steertts STATIC src/engine.cpp src/dsp.cpp src/output.cpp src/c_api.cpp)
 target_include_directories(steertts PUBLIC include PRIVATE src ${ORT_INCLUDE})
 target_link_libraries(steertts PUBLIC steertts_front ${ORT_LIB})
 

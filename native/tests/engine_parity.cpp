@@ -25,6 +25,7 @@ int main(int argc, char** argv) {
     if (line.empty()) continue;
     auto c = steertts::json::parse(line);
     steertts::Request r;
+    r.level = "off";   // the goldens are the raw Python output (the output stage is tested by the Python packages)
     r.text = c["text"].str;
     if (c.has("voice")) r.voice = c["voice"].str;
     if (c.has("tag")) r.tag = c["tag"].str;

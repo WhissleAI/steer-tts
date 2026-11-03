@@ -12,6 +12,7 @@ steertts-edge "Are you coming with us tonight?" --ctrl f0_end=2,f0_iqr=1.5 -o qu
 from steertts_edge import OnnxTTS          # ONNX Runtime (default); EdgeTTS = the PyTorch runtime ([torch] extra)
 tts = OnnxTTS.from_pretrained("WhissleAI/steer-tts-edge")
 wav = tts("I can't believe it worked.", tag="happiness", ctrl={"rate": 1.0})
+raw = tts("I can't believe it worked.", level="off")   # default output: -17 LUFS / -1 dBTP; off = raw model output
 ```
 
 Longer text as a performance, planned sentence by sentence by the director (`director.bin`, numpy only):

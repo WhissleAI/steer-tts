@@ -33,6 +33,7 @@ wav = tts.synthesize(req)        # a resolved request renders exactly as the pro
 for chunk in tts.stream("First sentence. Second sentence."):        # sentence-level streaming
     play(chunk.audio)
 tts.save(wav, "out.wav")
+wav = tts("Raw level.", level="off")     # output defaults to -17 LUFS / -1 dBTP ("clip": exact per clip)
 ```
 
 CLI: `steertts say "Hello." -o hello.wav`, `steertts play "..."` (streams to the speakers), `steertts voices`,

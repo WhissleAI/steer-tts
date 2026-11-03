@@ -23,6 +23,7 @@
 #include "st_flow.h"
 #include "st_events.h"
 #include "st_mel.h"
+#include "st_output.h"
 #include "st_prompt.h"
 #include "st_vocoder.h"
 #include "st_wavlm.h"
@@ -262,6 +263,8 @@ struct steertts_engine {
   st_json* cfg_json;
   xv_cache xv;
   int first_chunk_ms;        /* streaming: > 0 hands the first sentence over in pieces (steertts_set_first_chunk_ms) */
+  st_output out;             /* config.json "output": calibrated gains, limiter, true-peak cap (st_output.h) */
+  int level;                 /* default output level of requests (ST_LEVEL_*; steertts_config.level) */
 };
 
 static char* path_join(const char* a, const char* b) {
@@ -377,6 +380,7 @@ void steertts_default_config(steertts_config* c) {
   c->flow_steps = 10;
   c->flow_temp = 0.4f;
   c->guidance = 1.0f;
+  c->level = NULL;
 }
 
 static int n_cpus(void) {
@@ -555,6 +559,12 @@ steertts_engine* steertts_create_ex(const char* model_dir, const steertts_config
     goto fail;
   }
   if (load_genders(e)) goto fail;
+  e->level = cfg->level ? st_output_level(cfg->level) : ST_LEVEL_AUTO;
+  if (e->level < 0) {
+    st_seterr("level must be one of auto, clip, off, got '%s'", cfg->level);
+    goto fail;
+  }
+  if (st_output_load(&e->out, e->cfg_json, e->voices, e->n_voices)) goto fail;
   {  /* EventBank.find: config "events" file, else events.safetensors; absent = no bank */
     const char* ev = st_json_str(st_json_get(st_json_get(e->cfg_json, "events"), "file"), "events.safetensors");
     char* p = path_join(e->dir, ev);
@@ -605,6 +615,7 @@ void steertts_destroy(steertts_engine* e) {
   st_free(e->voice_gender);
   st_free(e->voice_f0);
   st_events_free(e->events);
+  st_output_free(&e->out);
   st_free(e->dir);
   st_free(e->assets);
   st_free(e->precision);
@@ -760,6 +771,9 @@ typedef struct {
   double ctrl_val[N_CTRL];
   double pace, guidance;
   int markup, flow;
+  int level;        /* ST_LEVEL_* */
+  int has_gain;     /* gain_db given */
+  double gain_db;
   int64_t seed;
   int n_ws;
   wshift* ws;
@@ -840,7 +854,8 @@ static int json_num(const char* name, const st_json* v, double lo, double hi, co
 }
 
 static const char* const k_fields[] = {"text", "voice", "ref_wav", "prompt", "tag", "ctrl", "pace", "guidance",
-                                       "word_shift", "markup", "flow", "seed", "prompt_mapping", "$schema", "spk_vec"};
+                                       "word_shift", "markup", "flow", "seed", "level", "gain_db", "prompt_mapping",
+                                       "$schema", "spk_vec"};
 
 static int cmp_str(const void* a, const void* b) { return strcmp(*(const char* const*)a, *(const char* const*)b); }
 
@@ -1117,6 +1132,23 @@ static int validate_request(steertts_engine* e, const st_json* j, req_t* r, int 
       r->seed = (int64_t)seed->num;
     }
   }
+  {  /* output level (steertts.output.check_level) */
+    const st_json *lv = st_json_get(j, "level"), *gd = st_json_get(j, "gain_db");
+    r->level = e->level;
+    if (!is_null(lv)) {
+      r->level = lv->type == ST_JSTR ? st_output_level(lv->str) : -1;
+      if (r->level < 0) {
+        char rep[64];
+        py_repr(lv, rep, sizeof rep);
+        st_seterr("level must be one of auto, clip, off, got %s", rep);
+        return -1;
+      }
+    }
+    if (!is_null(gd)) {
+      if (json_num("gain_db", gd, ST_GAIN_MIN, ST_GAIN_MAX, "-6.0", "18.0", 0, &r->gain_db)) return -1;
+      r->has_gain = 1;
+    }
+  }
   if (py_truthy(ws)) {
     if (ws->type != ST_JOBJ) {
       st_seterr("word_shift must be an object {word_index: {pitch, energy, dur}}");
@@ -1290,6 +1322,8 @@ static int req_from_options(steertts_engine* e, const char* text, const steertts
     goto fail;
   }
   if (o->seed) sb_fmt(&b, ", \"seed\": %lld", (long long)o->seed);
+  if (o->level) sb_str(&b, ", \"level\": "), sb_json_str(&b, o->level);
+  if (o->use_gain_db) sb_str(&b, ", \"gain_db\": "), sb_num(&b, o->gain_db);
   if (o->spk_vec) {
     sb_str(&b, ", \"spk_vec\": [");
     for (int i = 0; i < 512; ++i) {
@@ -1845,6 +1879,12 @@ static int collect_sink(void* user, const float* y, size_t n, const steertts_chu
   return fb_add(b, y, n) ? -1 : 0;
 }
 
+/* the voice whose calibrated output gain applies: -1 for a cloned / custom speaker (the fallback gain) */
+static int level_voice(const steertts_engine* e, const req_t* r) {
+  if (r->ref_wav || r->spk_vec) return -1;
+  return find_str(e->voices, e->n_voices, r->voice ? r->voice : e->default_voice);
+}
+
 static int synth_req(steertts_engine* e, req_t* r, float** audio, size_t* n) {
   *audio = NULL;
   *n = 0;
@@ -1872,6 +1912,8 @@ static int synth_req(steertts_engine* e, req_t* r, float** audio, size_t* n) {
     rc = render(e, r->text, &spk, r->tag, r->n_ctrl, r->ctrl_dim, r->ctrl_val, r->pace, r->ws, r->n_ws, r->guidance,
                 r->flow, r->seed, audio, n, NULL, NULL, NULL);
   }
+  if (rc == 0 && *audio)
+    st_output_clip(&e->out, *audio, *n, SR, r->level, level_voice(e, r), r->has_gain ? r->gain_db : NAN);
   st_free(spk.owned_ref);
   return rc;
 }
@@ -1880,10 +1922,29 @@ typedef struct {
   steertts_chunk_ex_fn fn;
   steertts_chunk_fn plain;
   void* user;
+  /* output stage of the stream (set by stream_req) */
+  const st_output* out;
+  int level, vi;
+  double gain_db;
+  float* buf;
+  size_t cap;
 } stream_ctx;
 
 static int stream_sink(void* user, const float* y, size_t n, const steertts_chunk_info* info) {
   stream_ctx* s = (stream_ctx*)user;
+  if (s->out && s->level != ST_LEVEL_OFF && n) {   /* fixed gain + limiter, per chunk (no look-ahead) */
+    if (n > s->cap) {
+      float* b = (float*)realloc(s->buf, sizeof(float) * n);
+      if (!b) {
+        st_seterr("out of memory");
+        return -1;
+      }
+      s->buf = b, s->cap = n;
+    }
+    memcpy(s->buf, y, sizeof(float) * n);
+    st_output_chunk(s->out, s->buf, n, s->level, s->vi, s->gain_db);
+    y = s->buf;
+  }
   return (s->fn ? s->fn(y, n, info, s->user) : s->plain(y, n, s->user)) != 0;   /* > 0: stop */
 }
 
@@ -1899,7 +1960,10 @@ static int stream_req(steertts_engine* e, req_t* r, stream_ctx* sc) {
     st_free(spk.owned_ref);
     return -1;
   }
+  sc->out = &e->out, sc->level = r->level, sc->vi = level_voice(e, r), sc->gain_db = r->has_gain ? r->gain_db : NAN;
   int rc = run_segments(e, r, &spk, stream_sink, sc);
+  free(sc->buf);
+  sc->buf = NULL, sc->cap = 0;
   st_free(spk.owned_ref);
   return rc;
 }
@@ -1944,13 +2008,13 @@ static int stream_entry(steertts_engine* e, const char* text, const char* json, 
 
 int steertts_stream(steertts_engine* e, const char* text, const steertts_options* o, steertts_chunk_fn fn, void* user,
                     char* err, size_t err_len) {
-  stream_ctx sc = {NULL, fn, user};
+  stream_ctx sc = {.plain = fn, .user = user};
   return stream_entry(e, text ? text : NULL, NULL, o, &sc, err, err_len);
 }
 
 int steertts_stream_ex(steertts_engine* e, const char* text, const steertts_options* o, steertts_chunk_ex_fn fn,
                        void* user, char* err, size_t err_len) {
-  stream_ctx sc = {fn, NULL, user};
+  stream_ctx sc = {.fn = fn, .user = user};
   return stream_entry(e, text, NULL, o, &sc, err, err_len);
 }
 
@@ -1972,7 +2036,7 @@ int steertts_synthesize_json(steertts_engine* e, const char* json, float** audio
 int steertts_stream_json(steertts_engine* e, const char* json, steertts_chunk_ex_fn fn, void* user, char* err,
                          size_t err_len) {
   NEED(json, "a request is a JSON object");
-  stream_ctx sc = {fn, NULL, user};
+  stream_ctx sc = {.fn = fn, .user = user};
   return stream_entry(e, NULL, json, NULL, &sc, err, err_len);
 }
 
@@ -2019,6 +2083,11 @@ int steertts_resolve_json(steertts_engine* e, const char* json, char** out, char
     sb_fmt(&b, ", \"guidance\": %s", rep);
     if (!e->edge) sb_fmt(&b, ", \"flow\": %s, \"seed\": %lld", r.flow ? "true" : "false", (long long)r.seed);
     sb_fmt(&b, ", \"markup\": %s", r.markup ? "true" : "false");
+    sb_fmt(&b, ", \"level\": \"%s\"", st_output_level_name(r.level));
+    if (r.has_gain) {
+      py_float(rep, sizeof rep, r.gain_db, 0);
+      sb_fmt(&b, ", \"gain_db\": %s", rep);
+    }
     if (r.n_ws) {
       sb_str(&b, ", \"word_shift\": {");
       for (int i = 0; i < r.n_ws; ++i) {   /* only the keys the request gave, as normalize_request */

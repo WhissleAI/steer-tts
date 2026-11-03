@@ -49,6 +49,6 @@ def test_parity_with_source_package(tts, tmp_path):
         c = dict(c)
         if "word_shift" in c:
             c["word_shift"] = {int(k): v for k, v in c["word_shift"].items()}
-        y = tts(c.pop("text"), **c)
+        y = tts(c.pop("text"), level="off", **c)  # the raw path (the reference predates the output stage)
         assert y.shape == ref[str(i)].shape, (i, y.shape, ref[str(i)].shape)
         assert np.array_equal(y, ref[str(i)]), (i, float(np.abs(y - ref[str(i)]).max()))

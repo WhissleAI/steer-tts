@@ -53,6 +53,9 @@ def main():
     # 8. zero-shot cloning (needs the `clone` extra and a CONSENTING speaker's clip)
     if a.ref_wav:
         tts.save(tts("This is a cloned voice reading a new sentence.", ref_wav=a.ref_wav), out / "08_clone.wav")
+    # 9. output level: by default the voice's neutral speech plays at -17 LUFS (peaks <= -1 dBTP); level="off" is
+    #    the raw model output, level="clip" puts every clip at exactly -17 LUFS
+    tts.save(tts("The same sentence at the raw model level.", level="off"), out / "09_level_off.wav")
     print("wrote", sorted(p.name for p in out.glob("*.wav")))
 
 

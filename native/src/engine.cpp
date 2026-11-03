@@ -18,6 +18,7 @@
 
 #include "dsp.h"
 #include "json.h"
+#include "output.h"
 
 namespace steertts {
 
@@ -258,6 +259,15 @@ struct Engine::Impl {
   std::unique_ptr<Ort::Session> enc, dec, voc;
   Ort::MemoryInfo mem = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
   std::unique_ptr<EventBank> events;   // events.safetensors ([laugh] [cough] ...), null = tokens stay silent
+  output::Stage out;                   // config.json "output" (output.h)
+  output::Level level_of(const Request& r) const {
+    output::Level l = output::parse_level(r.level.empty() ? opt.level : r.level);
+    output::check_gain(r.gain_db);
+    return l;
+  }
+  std::string level_voice(const Request& r) const {   // empty for a custom speaker vector: the fallback gain
+    return !r.spk_vec.empty() && r.voice.empty() ? std::string() : (r.voice.empty() ? default_voice : r.voice);
+  }
 
   void check(const Request& r, bool markup) const {
     if (markup && !r.word_shift.empty())
@@ -459,6 +469,8 @@ Engine::Engine(const std::string& package_dir, Options opt) : p_(new Impl) {
     p.voices.push_back(vi);
   }
   p.default_voice = cfg.has("default_voice") ? cfg["default_voice"].str : p.voices.at(0).name;
+  output::parse_level(opt.level);
+  p.out.load(cfg);
   auto vt = load_safetensors(package_dir + "/voices.safetensors");
   p.slots = std::move(vt.at("s"));
   if (p.slots.size() != p.voices.size() * 64) throw std::runtime_error("voices.safetensors does not match voices.json");
@@ -492,20 +504,36 @@ Engine::~Engine() = default;
 std::vector<float> Engine::synthesize(const Request& r) {
   bool events = r.word_shift.empty() && has_bank_event(p_->events.get(), r.text);   // event tokens render as chunks
   p_->check(r, r.markup);
-  if (!r.markup && !events)
-    return p_->render(r.text, r.voice, r.tag, r.ctrl, r.pace, r.word_shift, r.guidance, r.spk_vec);
+  const output::Level level = p_->level_of(r);
   std::vector<float> out;
-  bool any = false;
-  stream(r, [&](const Chunk& c) {
-    out.insert(out.end(), c.audio.begin(), c.audio.end());
-    any = true;
-    return true;
-  });
-  if (!any) out.assign(1, 0.0f);   // MarkupSynth.render: np.zeros(1) when there is no segment
+  if (!r.markup && !events) {
+    out = p_->render(r.text, r.voice, r.tag, r.ctrl, r.pace, r.word_shift, r.guidance, r.spk_vec);
+  } else {
+    bool any = false;
+    stream_raw(r, [&](const Chunk& c) {
+      out.insert(out.end(), c.audio.begin(), c.audio.end());
+      any = true;
+      return true;
+    });
+    if (!any) out.assign(1, 0.0f);   // MarkupSynth.render: np.zeros(1) when there is no segment
+  }
+  p_->out.clip(out, level, p_->level_voice(r), r.gain_db, kSampleRate);
   return out;
 }
 
 void Engine::stream(const Request& r, const std::function<bool(const Chunk&)>& on_chunk) {
+  p_->check(r, true);
+  const output::Level level = p_->level_of(r);
+  const std::string voice = p_->level_voice(r);
+  stream_raw(r, [&](const Chunk& c) {
+    if (level == output::kOff) return on_chunk(c);
+    Chunk d = c;
+    p_->out.chunk(d.audio, level, voice, r.gain_db);
+    return on_chunk(d);
+  });
+}
+
+void Engine::stream_raw(const Request& r, const std::function<bool(const Chunk&)>& on_chunk) {
   Request q = r;
   q.word_shift.clear();
   p_->check(r, true);

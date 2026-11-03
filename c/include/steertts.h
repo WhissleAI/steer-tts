@@ -56,7 +56,7 @@ extern "C" {
 #define STEERTTS_API
 #endif
 
-#define STEERTTS_VERSION "1.2.0"
+#define STEERTTS_VERSION "1.3.0"
 #define STEERTTS_SAMPLE_RATE 24000
 
 typedef struct steertts_engine steertts_engine;
@@ -72,6 +72,8 @@ typedef struct {
   float guidance;           /* default guidance scale for requests that do not set one (default 1.0) */
   const char* assets_dir;   /* directory with the converted helper models and text front-end assets;
                                NULL: <model_dir>/native */
+  const char* level;        /* default output level of requests that do not set one (NULL = "auto"; see
+                               steertts_options.level) */
 } steertts_config;
 
 STEERTTS_API void steertts_default_config(steertts_config* c);
@@ -132,6 +134,14 @@ typedef struct {
   int64_t seed;             /* v1 refiner noise seed (default 0) */
   const char* word_shift;   /* per-word prosody "word:key=v,key=v;word:..." with keys pitch (semitones),
                                energy (dB), dur (factor); word = index into the words of the text. Not with markup. */
+  /* output level (config.json "output"). NULL = engine default ("auto"): the voice's calibrated gain puts its
+   * neutral speech at -17 LUFS, a soft limiter (tanh above -3 dBFS, ceiling -1) and, for a whole clip, a -1 dBTP
+   * true-peak cap keep the peaks down; steering keeps its relative level. Streamed chunks get the same fixed gain and
+   * limiter (no look-ahead, no added latency). "clip": every whole clip at exactly -17 LUFS. "off": the raw model
+   * output. */
+  const char* level;
+  int use_gain_db;          /* 1: gain_db overrides the calibrated gain (dB, -6 .. 18) */
+  float gain_db;
 } steertts_options;
 
 STEERTTS_API void steertts_default_options(steertts_options* o);

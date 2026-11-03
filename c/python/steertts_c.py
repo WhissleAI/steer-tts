@@ -45,7 +45,7 @@ def _load():
 
 class _Config(ctypes.Structure):
     _fields_ = [("threads", c_int), ("precision", c_char_p), ("flow", c_int), ("flow_steps", c_int),
-                ("flow_temp", c_float), ("guidance", c_float), ("assets_dir", c_char_p)]
+                ("flow_temp", c_float), ("guidance", c_float), ("assets_dir", c_char_p), ("level", c_char_p)]
 
 
 class _ChunkInfo(ctypes.Structure):
@@ -132,13 +132,16 @@ class Engine:
     sample_rate = SAMPLE_RATE
 
     def __init__(self, model_dir=None, threads=1, precision="fp32", flow=True, flow_steps=10, flow_temp=0.4,
-                 guidance=1.0, assets_dir=None):
+                 guidance=1.0, assets_dir=None, level="auto"):
+        """level: default output level of requests ("auto": the voice's neutral speech at -17 LUFS, peaks <= -1 dBTP;
+        "clip": every clip at exactly -17 LUFS; "off": the raw model output). Requests may set "level" / "gain_db"."""
         L = _api()
         c = _Config()
         L.steertts_default_config(ctypes.byref(c))
         c.threads, c.precision, c.flow, c.flow_steps = threads, precision.encode(), int(flow), flow_steps
         c.flow_temp, c.guidance = flow_temp, guidance
         c.assets_dir = os.fsencode(str(assets_dir)) if assets_dir else None
+        c.level = level.encode() if level else None
         err = ctypes.create_string_buffer(1024)
         md = os.fsencode(str(model_dir)) if model_dir else None   # None: $STEERTTS_MODEL
         self._e = L.steertts_create_ex(md, ctypes.byref(c), err, len(err))

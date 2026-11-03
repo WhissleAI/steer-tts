@@ -43,6 +43,7 @@ static const char* usage =
     "                [--rate Z] [--pace X] [--guidance S] [--markup] [--stream] [--threads N]\n"
     "                [--prompt TEXT] [--ref-wav WAV] [--word-shift W:key=v,...;...] [--seed N] [--no-flow]\n"
     "                [--flow-steps N] [--precision fp32|int8] [--assets DIR] [--json REQUEST] [--resolve]\n"
+    "                [--level auto|clip|off] [--gain-db DB]\n"
     "                [--play] [-i] [--list voices|tags|controls] [--gender female|male] [--bench] [--bench-json]\n"
     "                [--first-chunk-ms MS]\n"
     "                [--perform FILE [--plan] [--genre G] [--strength S] [--director PATH]] [--version]\n"
@@ -58,6 +59,10 @@ static const char* usage =
     "                 -o -). Lines starting with / are commands: /voice NAME, /tag TAG, /ctrl k=z,..., /voices, /help\n"
     "  --guidance S   style guidance scale (1.0 = off)\n"
     "  --pace X       global duration divisor (1.2 = 20% faster)\n"
+    "  --level L      output level: auto (default; the voice's neutral speech at -17 LUFS, peaks <= -1 dBTP,\n"
+    "                 streaming: the same fixed gain + soft limiter), clip (every clip at exactly -17 LUFS),\n"
+    "                 off (the raw model output)\n"
+    "  --gain-db DB   override the calibrated output gain (-6 .. 18 dB)\n"
     "  --threads N    worker threads (default 1, 0 = all CPUs)\n"
     "  --first-chunk-ms MS  streaming: hand the first sentence over in pieces, the first about MS of audio (lower\n"
     "                 time to first audio, same samples; 0 = one chunk per sentence, the default)\n"
@@ -732,6 +737,8 @@ int main(int argc, char** argv) {
     else if (!strcmp(a, "--ref-wav")) o.ref_wav = NEXT();
     else if (!strcmp(a, "--word-shift")) o.word_shift = NEXT();
     else if (!strcmp(a, "--seed")) o.seed = (int64_t)num_arg(a, NEXT());
+    else if (!strcmp(a, "--level")) cfg.level = o.level = NEXT();
+    else if (!strcmp(a, "--gain-db")) o.use_gain_db = 1, o.gain_db = (float)num_arg(a, NEXT());
     else if (!strcmp(a, "--no-flow")) cfg.flow = 0;
     else if (!strcmp(a, "--flow-steps")) cfg.flow_steps = (int)num_arg(a, NEXT());
     else if (!strcmp(a, "--precision")) cfg.precision = NEXT();

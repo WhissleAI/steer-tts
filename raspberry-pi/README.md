@@ -55,7 +55,9 @@ curl -sN localhost:8080/stream -d '{"text": "First sentence. <whisper>Second.</w
 ```
 
 `POST /synthesize` and `/stream` take the usual JSON [request](../docs/request.md); `GET /voices`, `/tags`, `/controls`,
-`/health`; `--stdin` reads one request per line. `steertts-pi --help` lists the options.
+`/health`; `--stdin` reads one request per line. `steertts-pi --help` lists the options. Audio comes out at -17 LUFS
+(peaks <= -1 dBTP; `/stream` uses a fixed gain + soft limiter, no added latency); `level=off` (query, JSON, or
+`--level off` for the whole server) gives the raw model output.
 
 ## Measured on a Raspberry Pi 5
 

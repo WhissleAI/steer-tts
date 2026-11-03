@@ -26,6 +26,8 @@ WER 0.93 % / 2.44 % and UTMOS 4.17 / 4.15, more intelligible than v1 without its
 0.03 UTMOS below it ([numbers](docs/models.md#quality)). Inline sound events (`[laugh]`, `[cough]` …) play recorded
 sounds matched to the voice.
 
+**Output level.** Every runtime (Python, edge, C library, native) plays each voice's neutral speech at -17 LUFS with peaks capped at -1 dBTP (per-voice gains from the model's `config.json` `output` block; streamed chunks get the same fixed gain and a soft limiter, no added latency), and steering keeps its relative level. `level: "off"` gives the raw model output ([request](docs/request.md)).
+
 ## Quick start
 
 **v1** (the Hugging Face repo asks you to accept the licence once; `huggingface-cli login` first):

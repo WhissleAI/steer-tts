@@ -3,6 +3,7 @@
     steertts-edge "Hello there." -o hello.wav
     steertts-edge "I can't believe it worked." --voice voice_0042 --tag happiness --ctrl rate=1,f0_iqr=1.5 -o happy.wav
     steertts-edge "Well, *that* was fast. [pause 400ms] <slow>Let me think.</slow>" --markup -o markup.wav
+    steertts-edge "Hello there." --level off -o raw.wav     # raw output level (default auto: -17 LUFS, -1 dBTP)
     steertts-edge --list voices | tags | controls
 
 The package is looked up in --model, else $STEERTTS_EDGE_MODEL, else the current directory if it holds config.json,
@@ -42,6 +43,10 @@ def main(argv=None):
     ap.add_argument("--pace", type=float, default=1.0, help="global duration divisor (1.2 = 20%% faster)")
     ap.add_argument("--guidance", type=float, default=None, help="style guidance scale (1.0 = off)")
     ap.add_argument("--markup", action="store_true", help="parse inline markup (*emphasis*, [pause 300ms], <whisper>..)")
+    ap.add_argument("--level", choices=["auto", "clip", "off"], default="auto",
+                    help="output level: auto (neutral speech at -17 LUFS, peaks <= -1 dBTP), clip (every clip at "
+                         "exactly -17 LUFS), off (raw model output)")
+    ap.add_argument("--gain-db", dest="gain_db", type=float, default=None, help="override the calibrated output gain (dB)")
     ap.add_argument("--threads", type=int, default=None, help="CPU threads")
     ap.add_argument("--runtime", choices=["auto", "onnx", "torch"], default="auto",
                     help="onnx: ONNX Runtime (default when onnxruntime is installed); torch: PyTorch")
@@ -75,7 +80,7 @@ def main(argv=None):
     t1 = time.time()
     try:
         wav = tts(text, voice=a.voice, tag=a.tag, ctrl=ctrl or None, pace=a.pace, guidance=a.guidance,
-                  markup=a.markup)
+                  markup=a.markup, level=a.level, gain_db=a.gain_db)
     except ValueError as e:
         print(f"steertts-edge: {e}", file=sys.stderr)
         return 2

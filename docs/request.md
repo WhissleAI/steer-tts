@@ -18,6 +18,8 @@ required.
 | `prompt` | Free-text direction ("excited, a bit faster"), mapped to `tag` + `ctrl` by a small text encoder. | ✓ | host only¹ |
 | `ref_wav` | Clone a voice from a reference clip (first 8 s, at least 0.5 s). | ✓ | host only¹ |
 | `flow`, `seed` | Flow-matching mel refiner (v1 default on) and its sampler seed. | ✓ | — |
+| `level` | Output level: `auto` (default; the voice's neutral speech at -17 LUFS, a soft limiter and a -1 dBTP true-peak cap, steering keeps its relative level; streamed chunks get the same fixed gain + limiter), `clip` (every whole clip at exactly -17 LUFS), `off` (the raw model output). | ✓ | ✓ |
+| `gain_db` | Overrides the calibrated output gain (dB, -6 .. 18); limiter and cap still apply. | ✓ | ✓ |
 
 ¹ The edge build leaves the prompt encoder (MiniLM) and the speaker encoder (WavLM) off the device. Resolve a prompt
 on a host with the full model (`SteerTTS.resolve()`) and send the resulting `tag` + `ctrl`; for cloning, compute the
