@@ -36,6 +36,16 @@ if (steertts_synthesize(e, "Are you coming with us tonight?", &o, &audio, &n, er
 steertts_destroy(e);
 ```
 
+GPU (optional; CUDA, or ggml's Metal / Vulkan backends): build with ggml and pick a device at run time. The default
+build is unchanged and dependency-free.
+
+```bash
+cmake -B build-cuda -DSTEERTTS_GGML=ON -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native && cmake --build build-cuda -j
+./build-cuda/steertts --model models/steer-tts --device gpu "Hello from the GPU." -o hello.wav
+```
+
+See [docs/c.md](../docs/c.md#gpu-optional-ggml) for what runs where, parity and speed.
+
 v1 additionally needs its helper models converted once (`python tools/export_assets.py <v1 dir>/native --front
 <edge dir>/native/front`); see [docs/c.md](../docs/c.md#models).
 
