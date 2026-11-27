@@ -16,6 +16,7 @@
 
 #include "../include/steertts.h"
 #include "front/st_front.h"
+#include "st_gpu.h"
 #include "st_acoustic.h"
 #include "st_audio.h"
 #include "st_base.h"
@@ -265,6 +266,7 @@ struct steertts_engine {
   int first_chunk_ms;        /* streaming: > 0 hands the first sentence over in pieces (steertts_set_first_chunk_ms) */
   st_output out;             /* config.json "output": calibrated gains, limiter, true-peak cap (st_output.h) */
   int level;                 /* default output level of requests (ST_LEVEL_*; steertts_config.level) */
+  st_gpu* gpu;               /* steertts_create_device: the ggml device the networks run on, NULL = CPU */
 };
 
 static char* path_join(const char* a, const char* b) {
@@ -487,7 +489,37 @@ static void copy_err(char* err, size_t len) {
   if (err && len) snprintf(err, len, "%s", st_geterr());
 }
 
+static int attach_gpu(steertts_engine* e, const char* device) {
+  if (!device || !*device || !strcmp(device, "cpu")) return 0;
+  int opt = !strcmp(device, "auto");
+  if (opt && !st_gpu_built()) return 0;
+  e->gpu = st_gpu_open(opt ? "gpu" : device, e->cfg.threads == 0 ? n_cpus() : e->cfg.threads);
+  if (!e->gpu) return opt ? 0 : -1;
+  if (st_acoustic_gpu_attach(e->ac, e->gpu) || st_vocoder_gpu_attach(e->voc, e->gpu) ||
+      (e->flow && st_flow_gpu_attach(e->flow, e->gpu))) {
+    st_seterr("%s: %s", st_gpu_name(e->gpu), st_geterr());
+    return -1;
+  }
+  return 0;
+}
+
+static steertts_engine* create(const char* model_dir, const steertts_config* cfg, const char* device, char* err,
+                               size_t err_len);
+
 steertts_engine* steertts_create_ex(const char* model_dir, const steertts_config* cfg, char* err, size_t err_len) {
+  return create(model_dir, cfg, getenv("STEERTTS_DEVICE"), err, err_len);
+}
+
+steertts_engine* steertts_create_device(const char* model_dir, const steertts_config* cfg, const char* device,
+                                        char* err, size_t err_len) {
+  return create(model_dir, cfg, device, err, err_len);
+}
+
+const char* steertts_device(const steertts_engine* e) { return e && e->gpu ? st_gpu_name(e->gpu) : "cpu"; }
+int steertts_gpu_available(void) { return st_gpu_built(); }
+
+static steertts_engine* create(const char* model_dir, const steertts_config* cfg, const char* device, char* err,
+                               size_t err_len) {
   steertts_config dflt;
   if (!cfg) {
     steertts_default_config(&dflt);
@@ -541,6 +573,7 @@ steertts_engine* steertts_create_ex(const char* model_dir, const steertts_config
   }
   st_free(p);
   if ((e->edge ? load_edge(e) : load_v1(e)) != 0) goto fail;
+  if (attach_gpu(e, device)) goto fail;
   /* the engine passes 512-d speaker vectors and keeps g on the stack; a model with other sizes is not supported */
   if (st_acoustic_g_dim(e->ac) > 512 || st_acoustic_spk_enc_dim(e->ac) != 512) {
     st_seterr("%s: unsupported acoustic model (g_dim %d, speaker vector %d; expected <= 512 and 512)", model_dir,
@@ -597,6 +630,7 @@ void steertts_destroy(steertts_engine* e) {
   st_flow_free(e->pflow);
   st_vocoder_free(e->voc);
   st_acoustic_free(e->ac);
+  st_gpu_close(e->gpu);   /* after the models (they detach from it) */
   st_weights_close(e->w_minilm);
   st_weights_close(e->w_adapter);
   st_weights_close(e->w_wavlm);
@@ -749,6 +783,12 @@ static int get_pflow(steertts_engine* e, st_flow** out) {
   }
   if (!e->w_pflow && !(e->w_pflow = open_weights(e->dir, strcmp(e->precision, "int8") ? NULL : "int8", f))) return -1;
   if (!(e->pflow = st_flow_load(e->w_pflow, st_json_get(r, "cfg")))) return -1;   /* not cached: retried next time */
+  if (e->gpu && st_flow_gpu_attach(e->pflow, e->gpu)) {
+    st_seterr("%s: %s", st_gpu_name(e->gpu), st_geterr());
+    st_flow_free(e->pflow);
+    e->pflow = NULL;
+    return -1;
+  }
   *out = e->pflow;
   return 0;
 }
@@ -1588,9 +1628,11 @@ static int render(steertts_engine* e, const char* text, const spk_t* spk, const 
     shifts = (float*)sh;
   }
   int T;
+  double t_ac = st_time_ms(), t_fl = 0, t_vo;
   if (st_acoustic_infer(e->ac, e->pool, ph.ids, ph.widx, N, g, guided ? g0 : NULL, (float)guidance, (float)pace, sh,
                         sh ? n_words : 0, &mel, &T, NULL))
     goto done;
+  t_ac = st_time_ms() - t_ac;
   if (!e->edge && flow) {
     st_flow* fl = NULL;
     st_flow* pf = NULL;
@@ -1608,8 +1650,10 @@ static int render(steertts_engine* e, const char* text, const spk_t* spk, const 
         st_free(pm);
         goto done;
       }
+      t_fl = st_time_ms();
       int frc = st_flow_sample(fl, e->pool, mel, T, g, e->cfg.flow_steps, e->cfg.flow_temp, (uint64_t)seed, pm, P, 0.0f,
                                out);
+      t_fl = st_time_ms() - t_fl;
       st_free(pm);
       st_free(mel);
       mel = out;
@@ -1625,7 +1669,12 @@ static int render(steertts_engine* e, const char* text, const spk_t* spk, const 
       goto done;
     }
   }
+  t_vo = st_time_ms();
   if (st_vocoder_decode(e->voc, e->pool, mel, T, y, n)) goto done;
+  t_vo = st_time_ms() - t_vo;
+  if (st_profile_on())
+    fprintf(stderr, "steertts profile: N=%d T=%d acoustic %.1f ms, flow %.1f ms, vocoder %.1f ms\n", N, T, t_ac, t_fl,
+            t_vo);
   rc = 0;
 done:
   st_free(shifts);

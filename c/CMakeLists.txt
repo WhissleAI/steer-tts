@@ -20,6 +20,12 @@ option(STEERTTS_BUILD_SERVER "build steertts-pi, the HTTP / stdin server (POSIX)
 # (portable: any CPU of the target architecture). Only instruction selection and scheduling change, never the
 # arithmetic (no fast-math, no FMA contraction), so a tuned build renders the same samples as a portable one.
 # A cortex-a76 build does not run on a Pi 4.
+# Optional GPU / accelerator path through ggml (CUDA, Metal, Vulkan; see README "GPU"). OFF: the library stays
+# dependency-free. ggml comes from STEERTTS_GGML_DIR (a local checkout) or is fetched at the pinned tag below; pick
+# its backends with ggml's own options (-DGGML_CUDA=ON, -DGGML_METAL=ON, -DGGML_VULKAN=ON).
+option(STEERTTS_GGML "GPU / accelerator path through ggml" OFF)
+set(STEERTTS_GGML_DIR "" CACHE PATH "local ggml source tree (default: fetch ggml ${STEERTTS_GGML_TAG})")
+set(STEERTTS_GGML_TAG "v1.0.0" CACHE STRING "ggml release tag fetched when STEERTTS_GGML_DIR is empty")
 set(STEERTTS_CPU "" CACHE STRING "-mcpu= target (cortex-a72, cortex-a76, native, or empty)")
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -45,6 +51,26 @@ endif()
 
 include(GNUInstallDirs)
 find_package(Threads REQUIRED)
+if(STEERTTS_GGML)
+  set(BUILD_SHARED_LIBS_SAVED ${BUILD_SHARED_LIBS})
+  set(BUILD_SHARED_LIBS OFF)   # ggml linked into libsteertts (static archives, position independent)
+  set(GGML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  if(STEERTTS_GGML_DIR)
+    add_subdirectory(${STEERTTS_GGML_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ggml EXCLUDE_FROM_ALL)
+  else()
+    include(FetchContent)
+    FetchContent_Declare(ggml GIT_REPOSITORY https://github.com/ggml-org/ggml.git GIT_TAG ${STEERTTS_GGML_TAG}
+                         GIT_SHALLOW TRUE)
+    FetchContent_GetProperties(ggml)
+    if(NOT ggml_POPULATED)
+      FetchContent_Populate(ggml)
+      add_subdirectory(${ggml_SOURCE_DIR} ${ggml_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+  endif()
+  set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
+endif()
+
 file(GLOB ST_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/front/*.c)
 
 # one set of objects for both libraries; only the steertts_* API (STEERTTS_API) is exported from the shared library
@@ -52,6 +78,10 @@ add_library(steertts_obj OBJECT ${ST_SOURCES})
 target_include_directories(steertts_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_definitions(steertts_obj PRIVATE STEERTTS_BUILD)
 set_target_properties(steertts_obj PROPERTIES C_VISIBILITY_PRESET hidden)
+if(STEERTTS_GGML)
+  target_compile_definitions(steertts_obj PRIVATE STEERTTS_GGML)
+  target_link_libraries(steertts_obj PRIVATE ggml)   # include directories
+endif()
 if(WIN32 AND STEERTTS_BUILD_SHARED)
   target_compile_definitions(steertts_obj PRIVATE STEERTTS_SHARED)
 endif()
@@ -64,6 +94,9 @@ endif()
 target_include_directories(steertts_static PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                                                   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(steertts_static PUBLIC Threads::Threads $<$<NOT:$<PLATFORM_ID:Windows>>:m>)
+if(STEERTTS_GGML)
+  target_link_libraries(steertts_static PUBLIC $<BUILD_INTERFACE:ggml>)
+endif()
 set(ST_INSTALL steertts_static)
 
 if(STEERTTS_BUILD_SHARED)
@@ -72,6 +105,9 @@ if(STEERTTS_BUILD_SHARED)
   target_include_directories(steertts PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                                              $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
   target_link_libraries(steertts PRIVATE Threads::Threads $<$<NOT:$<PLATFORM_ID:Windows>>:m>)
+  if(STEERTTS_GGML)
+    target_link_libraries(steertts PRIVATE $<BUILD_INTERFACE:ggml>)
+  endif()
   if(WIN32)
     target_compile_definitions(steertts INTERFACE STEERTTS_SHARED)   # consumers import the DLL's symbols
   endif()
@@ -160,6 +196,9 @@ if(STEERTTS_BUILD_TESTS)
     add_executable(${name} ${t})
     target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/front)
     target_link_libraries(${name} steertts_static)
+    if(STEERTTS_GGML)
+      target_compile_definitions(${name} PRIVATE STEERTTS_GGML)
+    endif()
     add_test(NAME ${name} COMMAND ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     set_tests_properties(${name} PROPERTIES SKIP_RETURN_CODE 77)
   endforeach()

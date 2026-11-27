@@ -6,7 +6,9 @@
  *
  * Model dirs: $STEERTTS_V1_MODEL (c_native/v1 layout: config.json, model.safetensors, int8/, native/vocos.safetensors)
  * and $STEERTTS_EDGE_MODEL (edge package). Exit 77 (skip) when they are missing. Goldens: $STEERTTS_GOLDEN or
- * tests/golden/acoustic next to this file. */
+ * tests/golden/acoustic next to this file.
+ * STEERTTS_TEST_DEVICE=gpu (or cuda, vulkan, metal, ggml-cpu): run the networks on that ggml device instead (exit 77 when
+ * the library has no GPU support or the device is missing). */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,12 +16,14 @@
 
 #include "../src/st_acoustic.h"
 #include "../src/st_base.h"
+#include "../src/st_gpu.h"
 #include "../src/st_vocoder.h"
 
 #define V1_DEFAULT "../models/steer-tts"
 #define EDGE_DEFAULT "../models/steer-tts-edge"
 
 static int g_fail = 0;
+static st_gpu* g_dev;   /* STEERTTS_TEST_DEVICE */
 static char g_golden[1024];
 
 static const char* envor(const char* k, const char* d) {
@@ -105,6 +109,7 @@ static int load_model(model* m, const char* dir, const char* wfile) {
   snprintf(path, sizeof path, "%s/%s", dir, wfile);
   if (!(m->w = st_weights_open(path))) return -1;
   m->a = st_acoustic_load(m->w, st_json_get(st_json_get(m->cfg, "acoustic"), "arch"));
+  if (m->a && g_dev && st_acoustic_gpu_attach(m->a, g_dev)) return -1;
   return m->a ? 0 : -1;
 }
 
@@ -187,6 +192,7 @@ static void run_vocoder(const char* label, const char* wpath, int dim, int inter
   st_file* f = st_file_open(path);
   st_weights* w = st_weights_open(wpath);
   st_vocoder* v = w ? st_vocoder_load(w, dim, inter, 8, 1024, 256) : NULL;
+  if (v && g_dev && st_vocoder_gpu_attach(v, g_dev)) st_vocoder_free(v), v = NULL;
   if (!f || !v) {
     printf("%s: %s\n", label, st_geterr());
     g_fail = 1;
@@ -226,6 +232,7 @@ static void bench(const char* label, model* m, const char* voc_path, int dim, in
   st_file* f = st_file_open(path);
   st_weights* vw = st_weights_open(voc_path);
   st_vocoder* v = vw ? st_vocoder_load(vw, dim, inter, 8, 1024, 256) : NULL;
+  if (v && g_dev && st_vocoder_gpu_attach(v, g_dev)) st_vocoder_free(v), v = NULL;
   if (!f || !v) {
     printf("%s: %s\n", label, st_geterr());
     exit(1);
@@ -301,6 +308,14 @@ int main(int argc, char** argv) {
            "tools/export_vocos.py)\n", v1, edge);
     return 77;
   }
+  const char* dev = getenv("STEERTTS_TEST_DEVICE");
+  if (dev && *dev) {
+    if (!st_gpu_built() || !(g_dev = st_gpu_open(dev, threads))) {
+      printf("skip: device %s: %s\n", dev, st_gpu_built() ? st_geterr() : "built without GPU support");
+      return 77;
+    }
+    printf("device: %s\n", st_gpu_name(g_dev));
+  }
   st_pool* p = st_pool_create(threads);
   model m;
   if (!strcmp(what, "bench")) {
@@ -337,6 +352,7 @@ int main(int argc, char** argv) {
     run_vocoder("edge vocoder", p5, 384, 896, "wav_edge", p, 30);
   }
   st_pool_destroy(p);
+  st_gpu_close(g_dev);
   printf("peak RSS %zu MB\n%s\n", st_peak_rss_kb() / 1024, g_fail ? "FAILED" : "all passed");
   return g_fail;
 }

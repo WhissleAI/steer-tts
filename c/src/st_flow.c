@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "st_flow_impl.h"
+#include "st_gpu.h"
 #include "st_rng.h"
 
 #ifdef __clang__
@@ -33,35 +35,6 @@
 #define ST_X86 1
 #include <immintrin.h>
 #endif
-
-enum { MAXL = 64, NMEL = 100, KW = 7, HEADS = 6 };
-
-typedef struct {
-  float* wT;   /* [KW, d] depthwise weight, tap-major (owned) */
-  const float* dwb;
-  int dil;
-  const st_mat *mod, *pw1, *pw2;
-  const float *modb, *pw1b, *pw2b;
-} fblock;
-
-typedef struct {
-  const st_mat *mod, *in, *out;
-  const float *modb, *inb, *outb;
-} fattn;
-
-struct st_flow {
-  int d, n_layers, g_dim, prompt, mu_cmn, cin;
-  float mean, std;
-  st_mat inp_x, inp_c;   /* inp weight split: x columns [0, 300), constant columns [300, 3 * cin) (owned) */
-  void *inp_x_buf, *inp_c_buf;
-  const float* inp_b;
-  const st_mat *t1, *t2, *g1, *g2, *ce1, *ce2, *co, *outw;
-  const float *t1b, *t2b, *g1b, *g2b, *ce1b, *ce2b, *cob, *outb;
-  float* freq;   /* [d/2] TimeEmb frequencies */
-  fblock blk[MAXL];
-  fattn att[MAXL];
-  int has_att[MAXL];
-};
 
 #ifdef ST_X86
 static int use_avx2(void) { return st_cpu_avx2(); }   /* cached atomically there */
@@ -200,6 +173,7 @@ fail:
 
 void st_flow_free(st_flow* f) {
   if (!f) return;
+  st_flow_gpu_detach(f);
   for (int i = 0; i < MAXL; ++i) st_free(f->blk[i].wT);
   st_free(f->inp_x_buf);
   st_free(f->inp_c_buf);
@@ -675,6 +649,10 @@ int st_flow_sample(st_flow* f, st_pool* p, const float* mu, int T, const float* 
     for (int b = 0; b < NMEL; ++b) x[(size_t)t * NMEL + b] = temp * noise[(size_t)b * N + t];
 
   size_t mstr = ms;
+  if (f->gpu) {
+    if (st_flow_gpu_run(f, x, N, hc, bmod, amod, hcu, bmodu, amodu, guided, cfg, ts, steps)) goto done;
+    steps = 0;   /* the ODE ran on the device */
+  }
   for (int i = 0; i < steps; ++i) {
     float dt = ts[i + 1] - ts[i], hdt = 0.5f * dt;
     for (int s = 0; s < 2; ++s) {

@@ -13,52 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "st_acoustic_impl.h"
+#include "st_gpu.h"
+
 /* keep every float op rounded separately (torch semantics for the duration arithmetic) */
 #if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
-
-typedef struct {
-  const st_mat* W;
-  const float* b;
-} lin;
-
-typedef struct {
-  int H, N, P;
-  const float *norm_w, *kn_w, *qn_w, *k_bias, *q_bias;
-  float* decay;   /* -exp(decay_log), [H] (owned) */
-  lin in, k, q, v, step, rot, mix, out;
-} seqmix;
-
-typedef struct {
-  int ada1, ada_seq, ada2;   /* indices into the AdaLN table */
-  int seq;                   /* hybrid: a second, sequence-mixing branch */
-  lin qkv, o;
-  seqmix seq_f, seq_b;
-  lin c1, c2;
-} block;
-
-typedef struct {
-  int n;
-  block* l;
-  int ada_out;
-} stack;
-
-typedef struct {
-  lin c1, c2, out;
-  int ada1, ada2;
-} varpred;
-
-struct st_acoustic {
-  int d, heads, ffn, k, g_dim, spk_dim, tag_dim, n_sym, n_tags, spk_enc, state_dim;
-  const st_mat *emb, *tag;
-  lin spk_proj, cond0, cond2;
-  stack enc, dec;
-  varpred dur, pitch, energy;
-  lin pitch_emb, energy_emb, to_mel;
-  int n_ada;
-  lin* ada;   /* [n_ada] proj: g -> 2d */
-};
 
 /* ------------------------------------------------------------------ loading */
 static int load_lin(st_weights* w, lin* l, const char* pfx, int O, int K) {
@@ -240,6 +201,7 @@ static void free_stack(stack* s) {
 
 void st_acoustic_free(st_acoustic* a) {
   if (!a) return;
+  st_acoustic_gpu_detach(a);
   free_stack(&a->enc);
   free_stack(&a->dec);
   st_free(a->ada);
@@ -583,7 +545,7 @@ static void biseqmix(const st_acoustic* a, st_pool* p, const seqmix* f, const se
 }
 
 /* ------------------------------------------------------------------ stacks */
-static void add_pos(float* x, int T, int d) {
+void st_acoustic_add_pos(float* x, int T, int d) {
   float sc = (float)(-log(10000.0) / d);
   for (int i = 0; i < d / 2; ++i) {
     float div = expf((float)(2 * i) * sc);
@@ -606,7 +568,7 @@ static int run_stack(const st_acoustic* a, st_pool* p, const stack* s, const flo
   if (!ws) return -1;
   float* h = ws;
   float* rest = ws + (size_t)T * d;
-  add_pos(x, T, d);
+  st_acoustic_add_pos(x, T, d);
   for (int i = 0; i < s->n; ++i) {
     const block* b = &s->l[i];
     adaln(p, x, T, d, tab + (size_t)b->ada1 * 2 * d, h);
@@ -665,6 +627,10 @@ static int encode_predict(const st_acoustic* a, st_pool* p, const int* ids, int 
                           float* logdur, float* pitch, float* energy) {
   int d = a->d;
   for (int i = 0; i < N; ++i) st_mat_row(a->emb, ids[i], h + (size_t)i * d);
+  if (a->gpu) {
+    st_acoustic_add_pos(h, N, d);
+    return st_acoustic_gpu_encode((st_acoustic*)a, h, N, tab, logdur, pitch, energy);
+  }
   ST_CHECK(run_stack(a, p, &a->enc, tab, h, N));
   ST_CHECK(run_varpred(a, p, &a->dur, tab, h, N, logdur));
   ST_CHECK(run_varpred(a, p, &a->pitch, tab, h, N, pitch));
@@ -685,6 +651,12 @@ static int decode(const st_acoustic* a, st_pool* p, const float* h, const float*
       const float *hi = h + (size_t)i * d, *pi = pe + (size_t)i * d;
       for (int c = 0; c < d; ++c) o[c] = hi[c] + pi[c];
     }
+  if (a->gpu) {
+    st_acoustic_add_pos(x, T, d);
+    int rc = st_acoustic_gpu_decode((st_acoustic*)a, x, T, tab, mel);
+    st_free(x);
+    return rc;
+  }
   if (run_stack(a, p, &a->dec, tab, x, T)) {
     st_free(x);
     return -1;

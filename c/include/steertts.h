@@ -82,6 +82,18 @@ STEERTTS_API steertts_engine* steertts_create_ex(const char* model_dir, const st
                                                  size_t err_len);
 /* = steertts_create_ex with the default config and `threads` worker threads. */
 STEERTTS_API steertts_engine* steertts_create(const char* model_dir, int threads, char* err, size_t err_len);
+/* GPU / accelerator (a library built with -DSTEERTTS_GGML=ON; see README "GPU"): the acoustic model, the v1 flow
+ * refiner and the vocoder run on a ggml device, everything else (text front end, durations, noise, iSTFT, levels) on
+ * the CPU. device: NULL or "cpu" = the plain C kernels; "auto" = the first GPU if there is one, else the CPU;
+ * "gpu" = the first GPU (error without one); "cuda", "vulkan", "metal" = the first device of that backend; or a ggml
+ * device name ("CUDA0"). Output equals the CPU path to float rounding (fp32 throughout), not bit for bit.
+ * steertts_create_ex() uses $STEERTTS_DEVICE when it is set, else the CPU. */
+STEERTTS_API steertts_engine* steertts_create_device(const char* model_dir, const steertts_config* c, const char* device,
+                                                     char* err, size_t err_len);
+/* "cpu", or the device in use ("CUDA0 (NVIDIA GeForce RTX 5070)"). */
+STEERTTS_API const char* steertts_device(const steertts_engine* e);
+/* 1 if this library was built with GPU support (it may still find no device). */
+STEERTTS_API int steertts_gpu_available(void);
 STEERTTS_API void steertts_destroy(steertts_engine* e);
 /* Replaces the worker pool with one of `threads` threads (0 = number of CPUs), without reloading the model: e.g. when
  * the CPUs the process may use change (Android moves background apps to its slow cores). The new workers inherit the

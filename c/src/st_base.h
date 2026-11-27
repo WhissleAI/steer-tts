@@ -43,6 +43,7 @@ void st_free(void* p);
 char* st_strdup(const char* s);
 int st_read_file(const char* path, char** data, size_t* len);   /* whole file, NUL-terminated, st_free() it */
 double st_time_ms(void);              /* monotonic clock */
+int st_profile_on(void);              /* STEERTTS_PROFILE set (non-empty, not "0"): per-stage timings on stderr */
 size_t st_peak_rss_kb(void);          /* 0 where unsupported */
 
 /* ------------------------------------------------------------------ thread pool */

@@ -1,7 +1,8 @@
 /* Flow refiner / prompted flow / mel / prompt_mel / torch randn against golden data from make_golden_flow.py.
  *
  *   test_flow [golden_dir]      model dir: $STEERTTS_V1_MODEL (exit 77 if missing)
- *   FLOW_BENCH=1 test_flow      also times the refiner (fp32 / int8, 1 and 4 threads) */
+ *   FLOW_BENCH=1 test_flow      also times the refiner (fp32 / int8, 1 and 4 threads)
+ *   STEERTTS_TEST_DEVICE=gpu    the refiner on that ggml device (gpu, cuda, vulkan, metal, ggml-cpu); exit 77 without one */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,11 +10,13 @@
 
 #include "../src/st_base.h"
 #include "../src/st_flow.h"
+#include "../src/st_gpu.h"
 #include "../src/st_mel.h"
 #include "../src/st_rng.h"
 
 static const char* g_dir;
 static int g_fails;
+static st_gpu* g_dev;   /* STEERTTS_TEST_DEVICE */
 
 static void* load_bin(const char* name, size_t elem, size_t n) {
   char path[1024];
@@ -153,6 +156,11 @@ static st_flow* open_flow(const char* model, const st_json* config, const char* 
   }
   st_flow* f = st_flow_load(*w, st_json_get(e, "cfg"));
   if (!f) fprintf(stderr, "flow load %s: %s\n", path, st_geterr());
+  if (f && g_dev && st_flow_gpu_attach(f, g_dev)) {
+    fprintf(stderr, "flow on %s: %s\n", st_gpu_name(g_dev), st_geterr());
+    st_flow_free(f);
+    return NULL;
+  }
   return f;
 }
 
@@ -170,6 +178,14 @@ int main(int argc, char** argv) {
       fprintf(stderr, "golden dir not found; pass it as the first argument\n");
       return 1;
     }
+  }
+  const char* dev = getenv("STEERTTS_TEST_DEVICE");
+  if (dev && *dev) {
+    if (!st_gpu_built() || !(g_dev = st_gpu_open(dev, 4))) {
+      printf("skip: device %s: %s\n", dev, st_gpu_built() ? st_geterr() : "built without GPU support");
+      return 77;
+    }
+    printf("device: %s\n", st_gpu_name(g_dev));
   }
   const char* model = getenv("STEERTTS_V1_MODEL");
   if (!model) model = "../models/steer-tts";
@@ -281,6 +297,7 @@ int main(int argc, char** argv) {
   st_pool_destroy(pool);
   st_json_free(config);
   st_json_free(meta);
+  st_gpu_close(g_dev);
   printf(g_fails ? "test_flow: %d FAILED\n" : "test_flow: all passed\n", g_fails);
   return g_fails ? 1 : 0;
 }
