@@ -176,6 +176,17 @@ double st_time_ms(void) {
 #endif
 }
 
+int st_profile_on(void) {
+  static atomic_int cached = -1;
+  int v = atomic_load(&cached);
+  if (v < 0) {
+    const char* s = getenv("STEERTTS_PROFILE");
+    v = s && *s && strcmp(s, "0") ? 1 : 0;
+    atomic_store(&cached, v);
+  }
+  return v;
+}
+
 size_t st_peak_rss_kb(void) {
 #ifdef _WIN32
   PROCESS_MEMORY_COUNTERS pmc;

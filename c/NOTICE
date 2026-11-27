@@ -13,3 +13,10 @@ The code re-implements, from their public descriptions and reference implementat
 tools/export_*.py convert those checkpoints to safetensors; the converted weights keep their original licences.
 src/front/ is a C port of the edge text front end; it reads the same native/front assets, whose notices are in
 ../native/NOTICE (CMUdict, the g2p_en GRU, NLTK-derived tables, inflect).
+
+Optional GPU path (-DSTEERTTS_GGML=ON, off by default): src/st_gpu*.c build ggml graphs and link ggml
+(https://github.com/ggml-org/ggml, MIT licence, Copyright (c) 2023-2026 The ggml authors). ggml is not part of this
+repository: CMake fetches the pinned release (STEERTTS_GGML_TAG) or uses STEERTTS_GGML_DIR. A binary built this way
+contains ggml and must carry its MIT notice; GPU backends bring their vendors' runtime licences (e.g. the CUDA
+toolkit's EULA for cudart / cuBLAS).
+tools/to_gguf.py writes GGUF files (ggml's format); the converted weights keep the licence of their source.

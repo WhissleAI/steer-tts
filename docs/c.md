@@ -326,6 +326,86 @@ the matrix multiply, never expanded). The flow refiner (20 network evaluations p
 `--no-flow` or the edge build are the fast options. Cloning adds the WavLM pass (~0.9 s for an 8 s clip at 4
 threads, once per reference clip) and the prompted flow.
 
+## GPU (optional, ggml)
+
+The networks (acoustic model, v1 flow refiner and prompted flow, vocoder) can run on a GPU through
+[ggml](https://github.com/ggml-org/ggml): CUDA, and ggml's other backends (Metal, Vulkan) through ggml's own build
+options. Everything else stays on the CPU exactly as before: text front end, conditioning and AdaLN tables, durations
+and their rounding, noise (torch.randn), length regulation, iSTFT, output level. The GPU path is a build option, off by
+default; without it the library is unchanged and dependency-free.
+
+```bash
+cd c
+# CUDA (pick your GPU's architecture: 120 = RTX 50xx, 89 = RTX 40xx, 86 = RTX 30xx)
+cmake -B build-cuda -DSTEERTTS_GGML=ON -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=120 && cmake --build build-cuda -j
+# Metal (macOS): -DSTEERTTS_GGML=ON -DGGML_METAL=ON        Vulkan: -DSTEERTTS_GGML=ON -DGGML_VULKAN=ON
+# ggml is fetched at the pinned release (STEERTTS_GGML_TAG, v1.0.0); -DSTEERTTS_GGML_DIR=/path/to/ggml uses a checkout
+./build-cuda/steertts --model models/steer-tts --device gpu "Hello from the GPU." -o hello.wav
+```
+
+`--device` (or `$STEERTTS_DEVICE`, or `steertts_create_device()` in the API) takes `cpu` (the default), `auto` (a GPU
+if there is one, else the CPU), `gpu`, `cuda`, `vulkan`, `metal`, a ggml device name such as `CUDA0`, or `ggml-cpu`
+(the same graphs on ggml's CPU backend, for testing). `steertts_device(e)` reports what is in use. The public structs
+are unchanged, so the ABI stays compatible.
+
+How it maps: weights are uploaded once as fp32 (int8 / int4 storage dequantized exactly as the CPU kernels do; v1
+~165 MB, edge ~60 MB), each network is one ggml graph per call (the flow's whole ODE, all 20 evaluations and the
+midpoint updates, is a single graph, so x never leaves the device), and compute is fp32. The bidirectional
+sequence-mixing layer (a Mamba-3 style recurrence with data-dependent state rotations and a two-term input) runs on
+ggml's Mamba-2 scan: 2-D rotations commute, so rotating the state by the cumulative angle turns it into a scalar-decay
+scan with two rank-1 inputs, which is one scan over twice the heads (`src/st_gpu_acoustic.c` has the derivation). The
+depthwise and dilated convolutions use ggml's `ssm_conv` (a dilated conv is `dil` interleaved dense ones).
+
+Precision: the CUDA backend would use TF32 tensor cores for fp32 matrix products; the library keeps them in full fp32
+(`NVIDIA_TF32_OVERRIDE=0` for cuBLAS, and small batches padded off ggml's TF32 kernel). `STEERTTS_GPU_TF32=1` allows
+TF32 (faster on large inputs, ~1e-3 relative error per product). `STEERTTS_GPU_PARTS=vocoder,flow` (any subset of
+acoustic, flow, vocoder) offloads only some networks.
+
+Parity (`ctest` in a GPU build adds `test_acoustic_device`, `test_flow_device` and `test_gpu`; they skip without a
+device):
+
+| Check | CPU (C) | GPU (CUDA) |
+|---|---|---|
+| Acoustic model vs PyTorch (v1 fp32 / int8, edge) | identical durations, mel 121–126 dB | identical durations, mel 116–124 dB |
+| Vocos / edge vocoder vs PyTorch | 96–109 dB | 99–105 dB |
+| Flow refiner, prompted flow vs PyTorch (fp32, int8, cfg) | 124–133 dB | 124–132 dB |
+| Whole requests, GPU vs CPU (18: v1 fp32 / int8 with flow, edge) | | identical lengths; 73–95 dB, 49 dB with guidance 1.5 |
+
+Speed on the same machine as above (Threadripper 2970WX, RTX 5070 shared with a training job; GPU memory in use by the
+engine: 348 MB for v1, 272 MB for edge, CUDA context included). `--bench`, 20 sentences, 65.7 s of audio:
+
+| Build | Device | RTF | Short sentence | First streamed chunk |
+|---|---|---|---|---|
+| v1 fp32, flow | CPU, 1 thread | 0.933 | 1412 ms | 1412 ms |
+| v1 fp32, flow | CPU, 8 threads | 0.248 | 407 ms | 414 ms |
+| v1 fp32, flow | CPU, 24 threads | 0.231 | 471 ms | 421 ms |
+| **v1 fp32, flow** | **RTX 5070** | **0.029** | **63 ms** | **62 ms** |
+| v1 int8, flow | CPU, 8 threads | 0.229 | 338 ms | 346 ms |
+| **v1 int8, flow** | **RTX 5070** | **0.030** | **52 ms** | **55 ms** |
+| edge | CPU, 1 thread | 0.058 | 84 ms | 84 ms |
+| edge | CPU, 8 threads | 0.021 | 32 ms | 32 ms |
+| **edge** | **RTX 5070** | **0.012** | **20 ms** | **20 ms** |
+
+Long inputs (API, best of 2): one 18.5 s sentence, and four such sentences (71 s) in one `steertts_synthesize` call
+(one pass: attention cost grows with the square of the length); "first audio" is `steertts_stream_ex` with
+`steertts_set_first_chunk_ms(e, 300)`:
+
+| Build | Device | 18.5 s sentence | RTF | 71 s, one pass | RTF | First audio (streamed) |
+|---|---|---|---|---|---|---|
+| v1 fp32, flow | CPU, 1 thread | 16.95 s | 0.918 | 85.1 s | 1.188 | 15.9 s |
+| v1 fp32, flow | CPU, 8 threads | 3.88 s | 0.210 | 15.8 s | 0.220 | 3.7 s |
+| **v1 fp32, flow** | **RTX 5070** | **0.29 s** | **0.016** | **1.05 s** | **0.015** | **0.23 s** |
+| edge | CPU, 1 thread | 1.26 s | 0.068 | 10.0 s | 0.140 | 0.77 s |
+| edge | CPU, 8 threads | 0.33 s | 0.018 | 1.99 s | 0.028 | 0.19 s |
+| **edge** | **RTX 5070** | **0.16 s** | **0.008** | **0.59 s** | **0.008** | **0.10 s** |
+
+Streaming splits only the vocoder, so with the flow on the first audio of a long sentence waits for the whole
+sentence's acoustic model and refiner; on the GPU that is ~0.2 s.
+
+The GPU is limited by kernel launches on short inputs (a sentence is a few hundred small kernels), so its advantage
+grows with length; on the CPU side one thread drives it. Load time grows by ~0.25 s (device start-up and upload). GPU memory grows with the length of a single pass: 0.64 GB for 72 s of audio, 0.91 GB for 175 s (v1 with
+flow, CUDA context included).
+
 ## Layout
 
 | Path | What |
@@ -339,9 +419,11 @@ threads, once per reference clip) and the prompted flow.
 | `src/st_prompt.c`, `st_wordpiece.c`, `st_unicode_tab.c` | MiniLM + prompt adapter, WordPiece tokenizer and its Unicode tables |
 | `src/st_wavlm.c`, `st_audio.c` | WavLM x-vectors, WAV reading, resampling |
 | `src/st_api.c` | requests, rendering, streaming |
+| `src/st_gpu*.c`, `st_ggml.h` | the optional ggml (GPU) path: device, weight upload, the three networks as graphs |
 | `tools/steertts_cli.c` | the command line |
 | `examples/` | example programs |
 | `python/steertts_c.py` | ctypes binding |
 | `eval/` | the evaluation below: render with C and Python, score WER / UTMOSv2 / parity |
 | `tools/export_*.py`, `st_pack.py` | helper-model converters |
+| `tools/to_gguf.py` | weights to GGUF for other ggml programs (lossless: int8 -> Q8_0, int4 -> Q4_0) |
 | `tests/` | per-component and end-to-end parity tests, reference generators |

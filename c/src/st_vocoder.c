@@ -8,21 +8,8 @@
 #include <string.h>
 
 #include "st_dsp.h"
-
-#define N_MELS 100
-
-typedef struct {
-  float* dw_t;   /* depthwise weights transposed to [7, dim] (owned) */
-  const float *dw_w, *dw_b, *ln_w, *ln_b, *gamma, *b1, *b2;
-  const st_mat *w1, *w2;
-} cnx;
-
-struct st_vocoder {
-  int dim, inter, layers, n_fft, hop;
-  const st_mat *embed, *out;
-  const float *embed_b, *ln_w, *ln_b, *fln_w, *fln_b, *out_b;
-  cnx* blk;
-};
+#include "st_gpu.h"
+#include "st_vocoder_impl.h"
 
 static const float* vec(st_weights* w, const char* name, int n) { return st_weights_f32(w, name, n); }
 
@@ -64,6 +51,7 @@ fail:
 
 void st_vocoder_free(st_vocoder* v) {
   if (!v) return;
+  st_vocoder_gpu_detach(v);
   if (v->blk)
     for (int i = 0; i < v->layers; ++i) st_free(v->blk[i].dw_t);
   st_free(v->blk);
@@ -148,6 +136,7 @@ static void rows(st_pool* p, row_job* j) {
 
 /* backbone + head for T frames of mel -> half spectra ri: re [T, nb] then im [T, nb] */
 static int spectra(st_vocoder* v, st_pool* p, const float* mel, int T, float* ri) {
+  if (v->gpu) return st_vocoder_gpu_spectra(v, mel, T, ri);
   int D = v->dim, I = v->inter, nb = v->n_fft / 2 + 1, rc = -1;
   size_t ho = (size_t)T * (size_t)(v->n_fft + 2);
   size_t scratch = (size_t)T * I > ho ? (size_t)T * I : ho;

@@ -45,7 +45,7 @@ static const char* usage =
     "                [--flow-steps N] [--precision fp32|int8] [--assets DIR] [--json REQUEST] [--resolve]\n"
     "                [--level auto|clip|off] [--gain-db DB] [--raw]\n"
     "                [--play] [-i] [--list voices|tags|controls] [--gender female|male] [--bench] [--bench-json]\n"
-    "                [--first-chunk-ms MS]\n"
+    "                [--first-chunk-ms MS] [--device cpu|auto|gpu|cuda|vulkan|metal|NAME]\n"
     "                [--perform FILE [--plan] [--genre G] [--strength S] [--director PATH]] [--version]\n"
     "\n"
     "  TEXT           text to speak ('-' reads stdin)\n"
@@ -72,6 +72,8 @@ static const char* usage =
     "  --ref-wav W    v1: clone the voice of a WAV file\n"
     "  --no-flow      v1: skip the flow refiner (~12x less compute)\n"
     "  --precision P  v1: fp32 (default) or int8 weights\n"
+    "  --device D     where the networks run: cpu (default), auto (a GPU if there is one), gpu, cuda, vulkan,\n"
+    "                 metal, or a ggml device name; needs a build with -DSTEERTTS_GGML=ON (default: $STEERTTS_DEVICE)\n"
     "  --json R       a full request as JSON (request.schema.json); TEXT and the request flags are then ignored\n"
     "  --resolve      print the resolved request (prompt mapped, defaults filled in) instead of rendering\n"
     "  --bench        render 20 fixed sentences, print real-time factor, latency and peak memory\n"
@@ -330,13 +332,14 @@ static int bench(steertts_engine* e, const steertts_options* base, double load_s
   if (as_json)
     printf("{\"threads\": %d, \"load_s\": %.3f, \"rtf\": %.4f, \"rtf_median\": %.4f, \"audio_s\": %.2f, "
            "\"synth_s\": %.3f, \"ttfa_short_s\": %.3f, \"ttfa_stream_first_chunk_s\": %.3f, \"peak_rss_mb\": %.1f, "
-           "\"runtime\": \"c\", \"model\": \"%s\", \"version\": \"%s\"}\n",
-           threads, load_s, synth / audio, per[10], audio, synth, ttfa[2], first[2], rss, steertts_model_type(e),
+           "\"runtime\": \"c\", \"device\": \"%s\", \"model\": \"%s\", \"version\": \"%s\"}\n",
+           threads, load_s, synth / audio, per[10], audio, synth, ttfa[2], first[2], rss, steertts_device(e),
+           steertts_model_type(e),
            steertts_version());
   else
-    printf("%s, threads %d: load %.2f s, RTF %.4f (median %.4f) over %.1f s of audio, short sentence %.0f ms, "
+    printf("%s on %s, threads %d: load %.2f s, RTF %.4f (median %.4f) over %.1f s of audio, short sentence %.0f ms, "
            "first streamed chunk %.0f ms, peak RSS %.0f MB\n",
-           steertts_model_type(e), threads, load_s, synth / audio, per[10], audio, ttfa[2] * 1000, first[2] * 1000, rss);
+           steertts_model_type(e), steertts_device(e), threads, load_s, synth / audio, per[10], audio, ttfa[2] * 1000, first[2] * 1000, rss);
   return 0;
 }
 
@@ -710,6 +713,7 @@ int main(int argc, char** argv) {
   char ctrl_buf[512];
   double rate = 0;
   int first_chunk_ms = 0;
+  const char* device = NULL;
   int have_rate = 0, stream = 0, do_bench = 0, bench_json = 0, resolve = 0, play = 0, inter = 0, out_set = 0;
   const char *perform_file = NULL, *director_path = NULL, *genre = NULL;
   int plan_only = 0;
@@ -757,6 +761,7 @@ int main(int argc, char** argv) {
     else if (!strcmp(a, "--no-flow")) cfg.flow = 0;
     else if (!strcmp(a, "--flow-steps")) cfg.flow_steps = (int)num_arg(a, NEXT());
     else if (!strcmp(a, "--precision")) cfg.precision = NEXT();
+    else if (!strcmp(a, "--device")) device = NEXT();
     else if (!strcmp(a, "--assets")) cfg.assets_dir = NEXT();
     else if (!strcmp(a, "--json")) json = NEXT();
     else if (!strcmp(a, "--resolve")) resolve = 1;
@@ -802,6 +807,15 @@ int main(int argc, char** argv) {
   if (!model) model = ".";
   char err[1024];
   double t0 = now_ms();
+  if (device) {   /* steertts_create_ex reads it (also for --perform) */
+#ifdef _WIN32
+    char ev[256];
+    snprintf(ev, sizeof ev, "STEERTTS_DEVICE=%s", device);
+    _putenv(ev);
+#else
+    setenv("STEERTTS_DEVICE", device, 1);
+#endif
+  }
   if (perform_file)
     return perform(model, &cfg, &o, ctrl, perform_file, director_path, genre, strength, plan_only, out);
   steertts_engine* e = steertts_create_ex(model, &cfg, err, sizeof err);
