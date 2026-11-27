@@ -1,5 +1,8 @@
 /* Optional ggml backend: device selection, weight upload, graph evaluation and the ops the three networks share.
  * Without STEERTTS_GGML only the stubs at the end are compiled. */
+#if !defined(_WIN32) && !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200809L   /* setenv */
+#endif
 #include "st_gpu.h"
 
 #include <stdio.h>
@@ -13,6 +16,13 @@
 #include "st_ggml.h"
 
 int st_gpu_built(void) { return 1; }
+
+/* Matmuls with 2..16 activation columns: ggml-cuda runs F32 weights through its "mmf" kernel on tensor cores in
+ * TF32 (10-bit mantissa) whatever NVIDIA_TF32_OVERRIDE says, which costs ~40 dB of parity on short inputs. In strict
+ * mode such activations are zero-padded to 17 columns (cuBLAS SGEMM, or the plain fp32 vector kernel) and the real
+ * columns are taken back. 0 = no padding (TF32 allowed). */
+static int g_min_cols = 0;
+
 
 static void quiet_log(enum ggml_log_level level, const char* text, void* user) {
   (void)user;
@@ -75,6 +85,7 @@ st_gpu* st_gpu_open(const char* device, int threads) {
     st_free(g);
     return NULL;
   }
+  g_min_cols = tf && *tf && strcmp(tf, "0") ? 0 : 17;
   g->is_cpu = ggml_backend_is_cpu(g->be);
   if (g->is_cpu) ggml_backend_cpu_set_n_threads(g->be, threads > 0 ? threads : 1);
   snprintf(g->name, sizeof g->name, "%s (%s)", ggml_backend_dev_name(dev), ggml_backend_dev_description(dev));
@@ -248,9 +259,17 @@ void st_gr_set(struct ggml_tensor* t, const void* data, size_t nbytes) { ggml_ba
 void st_gr_get(const struct ggml_tensor* t, void* data, size_t nbytes) { ggml_backend_tensor_get(t, data, 0, nbytes); }
 
 /* ------------------------------------------------------------------ ops */
+struct ggml_tensor* st_g_mul_mat(struct ggml_context* c, struct ggml_tensor* a, struct ggml_tensor* b) {
+  int64_t n = b->ne[1];
+  if (n < 2 || n >= g_min_cols) return ggml_mul_mat(c, a, b);
+  struct ggml_tensor* bp = ggml_pad_ext(c, b, 0, 0, 0, (int)(g_min_cols - n), 0, 0, 0, 0);
+  struct ggml_tensor* r = ggml_mul_mat(c, a, bp);
+  return ggml_cont(c, ggml_view_4d(c, r, r->ne[0], n, r->ne[2], r->ne[3], r->nb[1], r->nb[2], r->nb[3], 0));
+}
+
 struct ggml_tensor* st_g_linear(struct ggml_context* c, struct ggml_tensor* x, struct ggml_tensor* W,
                                 struct ggml_tensor* b) {
-  struct ggml_tensor* y = ggml_mul_mat(c, W, x);
+  struct ggml_tensor* y = st_g_mul_mat(c, W, x);
   return b ? ggml_add(c, y, b) : y;
 }
 
@@ -307,9 +326,9 @@ struct ggml_tensor* st_g_mha(struct ggml_context* c, struct ggml_tensor* qkv, in
   for (int64_t q0 = 0; q0 < T; q0 += qc) {
     int64_t nq = T - q0 < qc ? T - q0 : qc;
     struct ggml_tensor* qq = qc == T ? q : ggml_view_3d(c, q, dh, nq, heads, q->nb[1], q->nb[2], (size_t)q0 * q->nb[1]);
-    struct ggml_tensor* kq = ggml_mul_mat(c, k, qq);   /* {Tk, nq, H} */
+    struct ggml_tensor* kq = st_g_mul_mat(c, k, qq);   /* {Tk, nq, H} */
     kq = ggml_soft_max_ext(c, kq, NULL, scale, 0.0f);
-    struct ggml_tensor* o = ggml_mul_mat(c, vt, kq);   /* {dh, nq, H} */
+    struct ggml_tensor* o = st_g_mul_mat(c, vt, kq);   /* {dh, nq, H} */
     o = ggml_cont(c, ggml_permute(c, o, 0, 2, 1, 3));   /* {dh, H, nq} */
     o = ggml_reshape_2d(c, o, d, nq);
     out = out ? ggml_concat(c, out, o, 1) : o;

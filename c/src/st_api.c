@@ -266,6 +266,7 @@ struct steertts_engine {
   int first_chunk_ms;        /* streaming: > 0 hands the first sentence over in pieces (steertts_set_first_chunk_ms) */
   st_output out;             /* config.json "output": calibrated gains, limiter, true-peak cap (st_output.h) */
   int level;                 /* default output level of requests (ST_LEVEL_*; steertts_config.level) */
+  int gpu_flow;              /* the flow refiners run on the device too */
   st_gpu* gpu;               /* steertts_create_device: the ggml device the networks run on, NULL = CPU */
 };
 
@@ -495,8 +496,12 @@ static int attach_gpu(steertts_engine* e, const char* device) {
   if (opt && !st_gpu_built()) return 0;
   e->gpu = st_gpu_open(opt ? "gpu" : device, e->cfg.threads == 0 ? n_cpus() : e->cfg.threads);
   if (!e->gpu) return opt ? 0 : -1;
-  if (st_acoustic_gpu_attach(e->ac, e->gpu) || st_vocoder_gpu_attach(e->voc, e->gpu) ||
-      (e->flow && st_flow_gpu_attach(e->flow, e->gpu))) {
+  /* STEERTTS_GPU_PARTS: which networks go to the device, e.g. "vocoder,flow" (default: all; for diagnosis) */
+  const char* parts = getenv("STEERTTS_GPU_PARTS");
+  int ac = !parts || strstr(parts, "acoustic"), vo = !parts || strstr(parts, "vocoder");
+  e->gpu_flow = !parts || strstr(parts, "flow");
+  if ((ac && st_acoustic_gpu_attach(e->ac, e->gpu)) || (vo && st_vocoder_gpu_attach(e->voc, e->gpu)) ||
+      (e->flow && e->gpu_flow && st_flow_gpu_attach(e->flow, e->gpu))) {
     st_seterr("%s: %s", st_gpu_name(e->gpu), st_geterr());
     return -1;
   }
@@ -783,7 +788,7 @@ static int get_pflow(steertts_engine* e, st_flow** out) {
   }
   if (!e->w_pflow && !(e->w_pflow = open_weights(e->dir, strcmp(e->precision, "int8") ? NULL : "int8", f))) return -1;
   if (!(e->pflow = st_flow_load(e->w_pflow, st_json_get(r, "cfg")))) return -1;   /* not cached: retried next time */
-  if (e->gpu && st_flow_gpu_attach(e->pflow, e->gpu)) {
+  if (e->gpu && e->gpu_flow && st_flow_gpu_attach(e->pflow, e->gpu)) {
     st_seterr("%s: %s", st_gpu_name(e->gpu), st_geterr());
     st_flow_free(e->pflow);
     e->pflow = NULL;

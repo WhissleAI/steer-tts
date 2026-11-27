@@ -64,6 +64,8 @@ void st_gr_set(struct ggml_tensor* t, const void* data, size_t nbytes);
 void st_gr_get(const struct ggml_tensor* t, void* data, size_t nbytes);
 
 /* ------------------------------------------------------------------ ops on time-major activations */
+/* ggml_mul_mat(a, b), keeping fp32 GEMMs off TF32 tensor cores for 2..16 columns (see st_gpu.c) */
+struct ggml_tensor* st_g_mul_mat(struct ggml_context* c, struct ggml_tensor* a, struct ggml_tensor* b);
 /* y = W x + b (b may be NULL) */
 struct ggml_tensor* st_g_linear(struct ggml_context* c, struct ggml_tensor* x, struct ggml_tensor* W,
                                 struct ggml_tensor* b);
