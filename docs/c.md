@@ -14,7 +14,9 @@ Every request field of the Python packages is supported (text, voice, tag, ctrl,
 prompt, ref_wav, flow, seed, level, gain_db), with the same validation and error messages, plus sentence streaming.
 The output level is the Python packages' (`src/st_output.c`): neutral speech at -17 LUFS, peaks <= -1 dBTP,
 streaming with a fixed gain + soft limiter; `steertts_options.level = "off"` (or `--level off`, `"level": "off"`)
-gives the raw output.
+gives the raw output. The gains are calibrated in the model's `config.json` (`"output"`): model files downloaded before
+the output level (steertts 1.4 / steertts-edge 2.1) have none and play at the raw level, about 8 dB quieter, so
+re-run `tools/get_models.sh` (the CLI prints a note; `steertts_has(engine, "level")` is 0 for such files).
 The voice's default profile (config.json `default_controls`: pace ×1.10 for `voice_1688`) applies as in the Python
 packages; `steertts_options.raw = 1` (or `--raw`, `"default_controls": false`) renders the raw model pace.
 
@@ -107,7 +109,7 @@ python c/tools/export_assets.py steer-tts/native --front steer-tts-edge/native/f
 | `wavlm_sv.safetensors` | `ref_wav` | 401 MB | 115 MB |
 
 Prompts and cloning load on first use; without their files the rest works and those requests return an error that
-names the missing file. `steertts_has(engine, "prompt")` / `"clone"` tell you what is available.
+names the missing file. `steertts_has(engine, "prompt")` / `"clone"` / `"level"` tell you what is available.
 
 ## Command line
 

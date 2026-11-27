@@ -2,7 +2,8 @@
 # Download the model files the C library reads, with curl only (no Python):
 #
 #   c/tools/get_models.sh edge            -> models/steer-tts-edge   (12 MB + 2.6 MB front-end assets + 0.5 MB director)
-#   c/tools/get_models.sh v1 [int8|fp32]  -> models/steer-tts        (int8: 52 MB + helpers; fp32: 215 MB + helpers)
+#   c/tools/get_models.sh v1 [int8|fp32]  -> models/steer-tts        (int8: 52 MB + helpers; fp32: 215 MB + helpers;
+#                                                                     + 0.5 MB director)
 #   c/tools/get_models.sh edge /opt/tts   (any destination directory; default ./models)
 #
 # The Hugging Face repos may ask visitors to accept their licence (CC BY-NC 4.0) once: accept it on the model page, then
@@ -31,20 +32,25 @@ get() {   # repo dir file...
   done
 }
 
+# the director (docs/director.md, 0.5 MB, calibrated for each model's voice): optional, so a missing file only warns
+director() {   # repo dir
+  printf '  %s\n' director.bin
+  curl -fL --retry 3 -s ${auth:+-H "$auth"} -o "$2/director.bin" "https://huggingface.co/$1/resolve/main/director.bin" \
+    || { rm -f "$2/director.bin"; echo "  (director.bin not available: --perform and steertts_director_* need it)" >&2; }
+}
+
 front="native/front/gru.bin native/front/hetero.tsv native/front/lexicon.bin native/front/oov.bin native/front/SYMBOLS.txt
        native/front/unicode.bin"
 if [ "$what" = edge ]; then
   d=$dest/steer-tts-edge
   echo "WhissleAI/steer-tts-edge -> $d"
   get WhissleAI/steer-tts-edge "$d" config.json voices.json acoustic.safetensors vocoder.safetensors voices.safetensors $front
-  # the director (docs/director.md, 0.5 MB): optional, so a missing file only warns
-  printf '  %s\n' director.bin
-  curl -fL --retry 3 -s ${auth:+-H "$auth"} -o "$d/director.bin" "https://huggingface.co/WhissleAI/steer-tts-edge/resolve/main/director.bin" \
-    || { rm -f "$d/director.bin"; echo "  (director.bin not available: --perform and steertts_director_* need it)" >&2; }
+  director WhissleAI/steer-tts-edge "$d"
 else
   d=$dest/steer-tts
   echo "WhissleAI/steer-tts ($prec) -> $d"
   get WhissleAI/steer-tts "$d" config.json control_stats.json voices.json request.schema.json $front native/minilm_vocab.txt
+  director WhissleAI/steer-tts "$d"
   if [ "$prec" = int8 ]; then
     get WhissleAI/steer-tts "$d" int8/model.safetensors int8/flow.safetensors int8/pflow.safetensors \
         int8/prompt_adapter.safetensors int8/speaker_vectors.safetensors native/int8/vocos.safetensors \

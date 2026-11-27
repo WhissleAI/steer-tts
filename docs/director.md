@@ -7,8 +7,9 @@ has no performance across sentences:
 - no pause that says "new paragraph",
 - no ending that says "more to come" or "that's it".
 
-The **director** supplies that. It is a ~0.44M-parameter model (8-bit, ~0.5 MB, `director.bin` in the edge model
-directory) that reads the text in order and plans each sentence, in the units SteerTTS's controls already use:
+The **director** supplies that. It is a ~0.44M-parameter model (8-bit, ~0.5 MB, `director.bin` in the model directory
+of both SteerTTS v1 and edge: the same file) that reads the text in order and plans each sentence, in the units
+SteerTTS's controls already use:
 
 | Plan | Meaning | Becomes |
 |---|---|---|
@@ -37,6 +38,7 @@ under a second, before the first sentence is rendered.
 steertts --model models/steer-tts-edge --perform chapter.txt --genre children -o chapter.wav
 steertts --model models/steer-tts-edge --perform chapter.txt --plan          # print the plans, render nothing
 steertts --model models/steer-tts-edge --perform poem.txt --genre poetry --strength 0.7 --voice male
+steertts --model models/steer-tts --perform chapter.txt --genre mystery -o chapter.wav   # v1
 ```
 
 `--perform FILE` (`-` reads stdin) splits the text into paragraphs at blank lines and into sentences, plans them, and
@@ -108,8 +110,11 @@ r = d.reading("children")                           # sentence by sentence, keep
 p = r.next("A new message arrived.")
 ```
 
-The edge Python package has the same class in numpy, with no C library: `from steertts_edge import Director` (same
-methods; `edge/tests/test_director.py` checks it is bit-identical to the C library).
+Both Python packages have the same class in numpy, with no C library: `from steertts import Director` (v1) and
+`from steertts_edge import Director` (same file, same methods; `tests/test_director.py` and
+`edge/tests/test_director.py` check it is bit-identical to the C library). Load it from a model directory,
+`Director("models/steer-tts")`, or from Hugging Face, `Director.from_pretrained("WhissleAI/steer-tts")` (downloads
+`director.bin` only).
 
 A sentence can be a string (the list is then one paragraph; quotes mark dialogue) or a dict with `text`, `dialogue`,
 `has_speaker`, `para_len` and `para_index`. `Director.genres()` lists the genres. `c/tests/test_director_py.py`
@@ -135,6 +140,11 @@ Rendering 161 held-out sentences with and without their plans, the measured chan
 - pitch range: r = 0.39 (0.20 uncalibrated)
 
 Small pitch-level plans (a spread of about 0.3 z) stay below the voice's own sentence-to-sentence variation (r ≈ 0.1).
+
+v1 reads the same `director.bin`. Its default voice (flow refiner on) responds to controls like the edge voice (rate,
+pitch level, range and ending within 0.1 of the shares above), and on 80 held-out sentences rendered by v1 the measured
+change follows the plan for rate r = 0.97, loudness 0.80, pitch range 0.51 (0.02 uncalibrated) and endings 0.51 (0.19
+uncalibrated); a calibration measured on v1 itself tracks no better.
 
 ## Using it well
 

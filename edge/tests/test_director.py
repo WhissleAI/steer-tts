@@ -89,3 +89,8 @@ def test_errors(tmp_path):
     (tmp_path / "director.bin").write_bytes(b"XXXX" + bytes(64))
     with pytest.raises(ValueError):
         Director(tmp_path)
+
+
+def test_from_pretrained_local():
+    d = _director_path()
+    assert Director.from_pretrained(str(d)).plan(["Nobody answered."]) == Director(d).plan(["Nobody answered."])

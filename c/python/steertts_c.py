@@ -167,7 +167,7 @@ class Engine:
             raise SteerTTSError("first_chunk_ms takes a number >= 0")
 
     def has(self, feature):
-        """'prompt', 'clone' or 'flow'."""
+        """'prompt', 'clone', 'flow' or 'level' (config.json has the output calibration)."""
         return bool(_api().steertts_has(self._e, feature.encode()))
 
     def synthesize(self, request=None, **kw):

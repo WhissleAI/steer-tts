@@ -12,6 +12,7 @@
 int st_output_load(st_output* o, const st_json* cfg, char* const* voices, int n_voices) {
   memset(o, 0, sizeof *o);
   const st_json* j = st_json_get(cfg, "output");
+  o->calibrated = j != NULL && j->type == ST_JOBJ;
   o->target_lufs = (float)st_json_num(st_json_get(j, "target_lufs"), -17.0);
   o->true_peak_db = (float)st_json_num(st_json_get(j, "true_peak_db"), -1.0);
   o->knee_db = (float)st_json_num(st_json_get(j, "knee_db"), -3.0);

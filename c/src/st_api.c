@@ -678,6 +678,7 @@ static int asset_exists(const steertts_engine* e, const char* name) {
 int steertts_has(const steertts_engine* e, const char* f) {
   if (!e || !f) return 0;
   if (!strcmp(f, "flow")) return e->flow != NULL;
+  if (!strcmp(f, "level")) return e->out.calibrated;
   if (e->edge) return 0;
   if (!strcmp(f, "prompt")) {
     char* v = path_join(e->assets, "minilm_vocab.txt");
