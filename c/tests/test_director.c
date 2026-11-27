@@ -1,7 +1,8 @@
 /* The director: plans against the trained model's (golden/director/plans.txt, from the 8-bit PyTorch model on
  * held-out chapters), sentence-by-sentence readings equal to whole-text planning, the ctrl string in a comma-decimal
  * locale, pause bounds, and NULL arguments. Needs director.bin in the edge model directory
- * ($STEERTTS_EDGE_MODEL, default ../models/steer-tts-edge); skipped without it. */
+ * ($STEERTTS_EDGE_MODEL, default ../models/steer-tts-edge); skipped without it. v1's director.bin
+ * ($STEERTTS_V1_MODEL, default ../models/steer-tts), when present: the same plans, calibrated. */
 #define _POSIX_C_SOURCE 200809L   /* strdup under -std=c11: undeclared, it returned a truncated int pointer */
 #include <locale.h>
 #include <math.h>
@@ -121,6 +122,28 @@ int main(void) {
         "genre names");
   steertts_director_free(NULL);
   steertts_reading_free(NULL);
+
+  /* v1's director.bin ($STEERTTS_V1_MODEL, default ../models/steer-tts; skipped without it): the same network, so the
+   * same plans, and calibrated (requests differ from the uncalibrated plan) */
+  const char* v1 = getenv("STEERTTS_V1_MODEL");
+  if (!v1) v1 = "../models/steer-tts";
+  steertts_director* d1 = steertts_director_load(v1, err, sizeof err);
+  if (!d1) {
+    printf("skip: v1 director: %s\n", err);
+  } else {
+    steertts_sentence t[2] = {{"It was a dark and stormy night.", 0, 0, 2, 0},
+                              {"\u201cWho goes there?\u201d he cried.", 1, 1, 2, 1}};
+    float pe[2 * STEERTTS_PLAN_DIMS], p1v[2 * STEERTTS_PLAN_DIMS];
+    CHECK(steertts_director_plan(d, t, 2, "gothic", pe, err, sizeof err) == 0 &&
+              steertts_director_plan(d1, t, 2, "gothic", p1v, err, sizeof err) == 0 &&
+              memcmp(pe, p1v, sizeof pe) == 0,
+          "v1 director: the same plans as the edge director");
+    float cn[5], c1[5];
+    steertts_plan_controls(NULL, pe + STEERTTS_PLAN_DIMS, 1.0f, cn);
+    steertts_plan_controls(d1, pe + STEERTTS_PLAN_DIMS, 1.0f, c1);
+    CHECK(memcmp(cn, c1, sizeof cn) != 0, "v1 director: calibrated");
+    steertts_director_free(d1);
+  }
   steertts_director_free(d);
   printf("%s\n", fails ? "FAILED" : "all passed");
   return fails != 0;

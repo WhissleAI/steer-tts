@@ -56,7 +56,7 @@ extern "C" {
 #define STEERTTS_API
 #endif
 
-#define STEERTTS_VERSION "1.3.0"
+#define STEERTTS_VERSION "1.4.0"
 #define STEERTTS_SAMPLE_RATE 24000
 
 typedef struct steertts_engine steertts_engine;
@@ -113,7 +113,9 @@ STEERTTS_API int steertts_num_tags(const steertts_engine* e);
 STEERTTS_API const char* steertts_tag(const steertts_engine* e, int i);
 STEERTTS_API int steertts_num_controls(void);                                /* 12 */
 STEERTTS_API const char* steertts_control(int i);                            /* "rate", "loud", ... */
-/* Capabilities of the loaded model: "prompt" (free-text prompts), "clone" (ref_wav), "flow". 1 = available. */
+/* Capabilities of the loaded model: "prompt" (free-text prompts), "clone" (ref_wav), "flow", "level" (config.json has
+ * the "output" calibration; model files from before it play level "auto" at the raw, ~8 dB quieter level).
+ * 1 = available. */
 STEERTTS_API int steertts_has(const steertts_engine* e, const char* feature);
 
 /* ------------------------------------------------------------------ requests */

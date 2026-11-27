@@ -33,6 +33,10 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 # the model: weights, voices and the text front end (the ONNX export is not used by the C engine)
 mkdir -p "$APP/Contents/Resources/model"
+# model files from before the output level (steertts-edge 2.1) would play ~8 dB quieter than other voices
+grep -q '"output"' ../c/models/steer-tts-edge/config.json || {
+  echo "../c/models/steer-tts-edge/config.json has no \"output\" calibration" \
+       "(model files from before steertts-edge 2.1): re-run c/tools/get_models.sh edge" >&2; exit 1; }
 rsync -a --exclude onnx ../c/models/steer-tts-edge/ "$APP/Contents/Resources/model/"
 
 if [[ "$MODE" == "--dev" ]]; then

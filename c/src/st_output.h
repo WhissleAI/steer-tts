@@ -21,6 +21,7 @@ typedef struct {
   float target_lufs, true_peak_db, knee_db, gain_db;
   float* voice_gain;   /* [n_voices] dB; NaN = the fallback gain_db */
   int n_voices;
+  int calibrated;      /* 1: config.json has an "output" block (steertts_has(e, "level")) */
 } st_output;
 
 /* Reads cfg "output" (absent: target -17, cap -1, knee -3, gain 0 dB, i.e. the limiter only). 0 on success. */

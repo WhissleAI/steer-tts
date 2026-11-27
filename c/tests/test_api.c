@@ -104,6 +104,9 @@ int main(void) {
   CHECK(steertts_resolve_json(e, "{\"text\": \"x\"}", NULL, err, sizeof err) != 0, "NULL resolve output");
   CHECK(steertts_has(e, NULL) == 0 && steertts_model_type(NULL) == NULL && steertts_num_voices(NULL) == 0,
         "NULL-tolerant getters");
+  CHECK(steertts_has(NULL, "level") == 0, "NULL-tolerant has(level)");
+  if (!steertts_has(e, "level"))   /* not an error: the goldens of some tests are from model files of that age */
+    printf("note: %s/config.json has no \"output\" calibration (model files from before steertts-edge 2.1)\n", model);
   /* per-gender defaults: each names a voice of that gender; the default voice is the female one when it is female */
   for (int gi = 0; gi < 2; ++gi) {
     const char* g = gi ? "male" : "female";

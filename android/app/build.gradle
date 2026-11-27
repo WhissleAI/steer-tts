@@ -12,6 +12,11 @@ tasks.register("copySteerttsModel", Copy) {
     doFirst {
         if (!new File(modelDir, "config.json").exists())
             throw new GradleException("no SteerTTS edge model in ${modelDir}: run c/tools/get_models.sh or pass -PsteerttsModel=DIR")
+        // model files from before the output level (steertts-edge 2.1) have no "output" calibration: the app would play
+        // ~8 dB quieter than other TTS voices (the raw model level)
+        if (!new File(modelDir, "config.json").text.contains('"output"'))
+            throw new GradleException("${modelDir}/config.json has no \"output\" calibration (model files from " +
+                    "before steertts-edge 2.1, ~8 dB quiet): re-run c/tools/get_models.sh edge")
     }
     from(modelDir) {
         include "config.json", "acoustic.safetensors", "vocoder.safetensors", "voices.json", "voices.safetensors",

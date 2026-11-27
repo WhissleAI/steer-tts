@@ -613,6 +613,17 @@ static void split_text(const char* text, sentences* v) {
   }
 }
 
+/* Model files from before the output level (config.json without "output") play at the raw model level, ~8 dB under
+ * other TTS engines: say so once, since nothing else would. */
+static void level_note(steertts_engine* e, const char* level, const char* model) {
+  if ((!level || strcmp(level, "off")) && !steertts_has(e, "level"))
+    fprintf(stderr,
+            "steertts: note: %s/config.json has no \"output\" calibration (model files from before steertts 1.4 / "
+            "steertts-edge 2.1), so the output is the raw model level (~-25 LUFS, ~8 dB quiet); download the "
+            "current config.json (c/tools/get_models.sh) for -17 LUFS\n",
+            model);
+}
+
 static int perform(const char* model, const steertts_config* cfg, const steertts_options* base, const char* user_ctrl,
                    const char* file, const char* director_path, const char* genre, float strength, int plan_only,
                    const char* out) {
@@ -652,6 +663,7 @@ static int perform(const char* model, const steertts_config* cfg, const steertts
       fprintf(stderr, "steertts: %s\n", err);
       return 1;
     }
+    level_note(e, cfg->level, model);
     float* all = NULL;
     size_t total = 0;
     for (size_t i = 0; i < v.n && !rc; i++) {
@@ -797,6 +809,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "steertts: %s\n", err);
     return 2;
   }
+  if (!list) level_note(e, cfg.level, model);
   double load = (now_ms() - t0) / 1000;
   int rc = 0;
   if (first_chunk_ms > 0) steertts_set_first_chunk_ms(e, first_chunk_ms);

@@ -1,9 +1,11 @@
 """The director (docs/director.md) in numpy: plans how each sentence of a longer text is performed (rate, loudness,
 pitch level and range, the ending, the pause after) from the text and the sentences around it. A port of the C
-library's c/src/st_director.c with the same API as its ctypes binding (c/python/steertts_c.py: Director):
+library's c/src/st_director.c with the same API as its ctypes binding (c/python/steertts_c.py: Director). The same
+file ships in steertts (v1) and steertts_edge; each model directory holds a director.bin calibrated for its own voice:
 
-    from steertts_edge.director import Director
-    d = Director("steer-tts-edge")                  # the edge directory, or director.bin itself
+    from steertts_edge.director import Director     # or: from steertts import Director
+    d = Director("steer-tts-edge")                  # the model directory (steer-tts or steer-tts-edge), or director.bin
+    d = Director.from_pretrained("WhissleAI/steer-tts")   # or a Hugging Face repo (downloads director.bin only)
     plans = d.plan(["“Who are you?” she asked.", "Nobody answered."], genre="children")
     ctrl, gap = d.ctrl(plans[0]), Director.pause_ms(plans[0])
 
@@ -180,7 +182,7 @@ def _sentence(x, i, n):
 class Director:
     """The director: plans how each sentence of a longer text is performed. A plan is 6 floats (rate, loud, f0_med,
     f0_iqr, end, gap); ctrl(plan) turns it into request controls for the paired voice, pause_ms(plan) into the
-    silence after. path: director.bin, or a directory holding it (the edge model's)."""
+    silence after. path: director.bin, or a model directory holding it (steer-tts or steer-tts-edge)."""
 
     GENRES = GENRES
 
@@ -193,6 +195,16 @@ class Director:
         except OSError as e:
             raise OSError(f"cannot open {p}") from e
         self._load(buf)
+
+    @classmethod
+    def from_pretrained(cls, repo_or_path, revision=None, token=None):
+        """From a model directory / director.bin, or a Hugging Face model repo ("WhissleAI/steer-tts" or
+        "WhissleAI/steer-tts-edge"): downloads director.bin only (0.5 MB; needs huggingface_hub). Use the repo of the
+        model you render with: each director.bin carries its own voice's calibration."""
+        if Path(repo_or_path).exists():
+            return cls(repo_or_path)
+        from huggingface_hub import hf_hub_download
+        return cls(hf_hub_download(repo_or_path, "director.bin", revision=revision, token=token))
 
     @classmethod
     def from_bytes(cls, data):
